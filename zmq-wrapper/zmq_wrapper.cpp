@@ -14,6 +14,8 @@ zmq::message_t * ZmqWrapperMessage::getMessage() {
 
 
 ZmqWrapper::ZmqWrapper() : context(new zmq::context_t(1)), socket(new zmq::socket_t(*context, ZMQ_DEALER)), isWorking(false), worker(nullptr) {
+	int timeOut = 100;
+	this->socket->setsockopt(ZMQ_RCVTIMEO, &timeOut, sizeof(timeOut));
 }
 
 void ZmqWrapper::setCallback(ZmqWrapperCallback_t cb) {
@@ -33,9 +35,7 @@ void ZmqWrapper::start() {
 	this->worker = new std::thread([this] {
 		while (this->isWorking) {
 			zmq::message_t message;
-			if(!this->socket->recv(&message, ZMQ_DONTWAIT)) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			} else {
+			if(this->socket->recv(&message)) {
 				ZmqWrapperMessage msg(&message);
 				this->callback(msg, this);
 			}
