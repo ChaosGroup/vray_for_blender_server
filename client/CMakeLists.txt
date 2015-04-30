@@ -22,6 +22,8 @@ file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 file(GLOB UI      "*.ui")
 
-add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS};${UI}")
+QT5_WRAP_UI(UIS_HDRS ${UI})
+
+add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS};${UI};${UIS_HDRS}")
 
 target_link_libraries(${PROJECT_NAME} zmq_wrapper Qt5::Gui Qt5::Core Qt5::Widgets)
