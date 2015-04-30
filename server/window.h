@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <memory>
+#include "../zmq-wrapper/zmq_wrapper.h"
 
 namespace Ui {
 class MainWindow;
@@ -19,7 +21,8 @@ public slots:
     void send();
 
 private:
-
+	char * dummyData;
+	ZmqServer server;
     Ui::MainWindow *ui;
 };
 
