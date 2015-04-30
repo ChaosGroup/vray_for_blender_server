@@ -11,19 +11,19 @@ class MainWindow;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+	explicit MainWindow(QWidget *parent = 0);
+	~MainWindow();
 
 public slots:
-    void send();
+	void send();
 
 private:
 	char * dummyData;
 	ZmqClient client;
-    Ui::MainWindow *ui;
+	Ui::MainWindow *ui;
 };
 
 

@@ -5,27 +5,27 @@
 const int msg_size = (1 << 20) * 200;
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
+	QMainWindow(parent),
 	ui(new Ui::MainWindow)
 {
 	dummyData = new char[msg_size];
-    ui->setupUi(this);
-    connect(ui->horizontalSlider, &QSlider::sliderMoved, this, &MainWindow::send);
+	ui->setupUi(this);
+	connect(ui->horizontalSlider, &QSlider::sliderMoved, this, &MainWindow::send);
 
-    server.bind("tcp://*:5555");
+	server.bind("tcp://*:5555");
 	server.setCallback([this](ZmqWrapperMessage & message, ZmqWrapper * server) {
-    	int value = *(reinterpret_cast<int*>(message.data()));
-    	this->ui->horizontalSlider->setValue(value);
+		int value = *(reinterpret_cast<int*>(message.data()));
+		this->ui->horizontalSlider->setValue(value);
 		std::cout << "Set to: " << value << std::endl;
-    });
-    server.start();
+	});
+	server.start();
 }
 
 MainWindow::~MainWindow()
 {
 	server.stop();
 	delete[] dummyData;
-    delete ui;
+	delete ui;
 }
 
 void MainWindow::send()

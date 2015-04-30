@@ -4,9 +4,9 @@
 #include <thread>
 
 namespace zmq {
-	class message_t;
-	class context_t;
-	class socket_t;
+class message_t;
+class context_t;
+class socket_t;
 }
 
 class ZmqWrapperMessage {
@@ -38,7 +38,7 @@ public:
 private:
 	ZmqWrapperCallback_t callback;
 	std::thread * worker;
-	bool isWorking;	
+	bool isWorking;
 	zmq::context_t * context;
 
 protected:

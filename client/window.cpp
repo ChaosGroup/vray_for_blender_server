@@ -9,8 +9,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui(new Ui::MainWindow)
 {
 	dummyData = new char[msg_size];
-    ui->setupUi(this);
-    connect(ui->horizontalSlider, &QSlider::sliderMoved, this, &MainWindow::send);
+	ui->setupUi(this);
+	connect(ui->horizontalSlider, &QSlider::sliderMoved, this, &MainWindow::send);
 
 	client.connect("tcp://localhost:5555");
 	client.setCallback([this](ZmqWrapperMessage & message, ZmqWrapper * client) {
@@ -25,7 +25,7 @@ MainWindow::~MainWindow()
 {
 	client.stop();
 	delete[] dummyData;
-    delete ui;
+	delete ui;
 }
 
 void MainWindow::send()
