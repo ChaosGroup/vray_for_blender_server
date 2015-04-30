@@ -1,13 +1,28 @@
+#
+# Copyright (c) 2015, Chaos Software Ltd
+#
+# V-Ray For Houdini
+#
+# Andrei Izrantcev <andrei.izrantcev@chaosgroup.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 project(zmq_wrapper)
 
-file(GLOB SOURCES . "*.cpp")
-file(GLOB HEADERS . "*.h")
+file(GLOB SOURCES "*.cpp")
+file(GLOB HEADERS "*.h")
 
-set(ZMQ_ROOT "D:/libs/ZeroMQ 4.0.4")
+add_library(${PROJECT_NAME} STATIC "${SOURCES};${HEADERS}")
 
-include_directories(${ZMQ_ROOT}/include)
-link_directories(${ZMQ_ROOT}/lib)
-
-add_library(zmq_wrapper STATIC ${SOURCES} ${HEADERS})
-target_link_libraries(zmq_wrapper PUBLIC zmq-v120-mt-gd-4_0_4)
-
+target_link_libraries(${PROJECT_NAME} PUBLIC ${ZMQ_LIB})

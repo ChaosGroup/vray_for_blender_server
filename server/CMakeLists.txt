@@ -1,25 +1,27 @@
-cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
+#
+# Copyright (c) 2015, Chaos Software Ltd
+#
+# VRayAppSDK Server Library
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 project(qt_server)
 
-set(CMAKE_PREFIX_PATH "D:\\libs\\QT\\5.4\\msvc2013_64")
+file(GLOB SOURCES "*.cpp")
+file(GLOB HEADERS "*.h")
+file(GLOB UI      "*.ui")
 
+add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS};${UI}")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5Widgets REQUIRED)
-
-
-file(GLOB SOURCES . "*.cpp")
-file(GLOB HEADERS . "*.h")
-
-set(ZMQ_ROOT "D:/libs/ZeroMQ 4.0.4")
-
-include_directories(${ZMQ_ROOT}/include)
-link_directories(${ZMQ_ROOT}/lib)
-
-add_executable(qt_server ${SOURCES} ${HEADERS})
-target_link_libraries(qt_server zmq_wrapper Qt5::Gui Qt5::Core Qt5::Widgets)
+target_link_libraries(${PROJECT_NAME} zmq_wrapper Qt5::Gui Qt5::Core Qt5::Widgets)
