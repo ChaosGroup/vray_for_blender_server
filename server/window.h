@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <vraysdk.hpp>
 #include <QMainWindow>
 #include <memory>
 #include "../zmq-wrapper/zmq_wrapper.h"
@@ -24,6 +25,8 @@ private:
 	char * dummyData;
 	ZmqServer server;
 	Ui::MainWindow *ui;
+	VRay::VRayInit *vray;
+	VRay::VRayRenderer *renderer;
 };
 
 
