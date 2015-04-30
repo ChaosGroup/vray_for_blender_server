@@ -33,9 +33,12 @@ void ZmqWrapper::start() {
 	this->worker = new std::thread([this] {
 		while (this->isWorking) {
 			zmq::message_t message;
-			this->socket->recv(&message);
-			ZmqWrapperMessage msg(&message);
-			this->callback(msg, this);
+			if(!this->socket->recv(&message, ZMQ_DONTWAIT)) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			} else {
+				ZmqWrapperMessage msg(&message);
+				this->callback(msg, this);
+			}
 		}
 	});
 }
