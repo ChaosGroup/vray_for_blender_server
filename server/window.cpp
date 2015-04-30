@@ -1,6 +1,8 @@
-#include <iostream>
 #include "window.h"
 #include "ui_mainwindow.h"
+
+#include <iostream>
+#include <vraysdk.hpp>
 
 const int msg_size = (1 << 20) * 200;
 

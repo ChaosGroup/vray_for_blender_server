@@ -18,12 +18,18 @@
 
 project(qt_server)
 
+include(vfh_vrayappsdk)
+
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 file(GLOB UI      "*.ui")
 
 QT5_WRAP_UI(UIS_HDRS ${UI})
 
+use_vray_appsdk()
+
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS};${UI};${UIS_HDRS}")
+
+link_with_vray_appsdk(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} zmq_wrapper Qt5::Gui Qt5::Core Qt5::Widgets)
