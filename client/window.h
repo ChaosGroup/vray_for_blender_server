@@ -19,8 +19,13 @@ public:
 
 public slots:
 	void send();
+	void connectServer();
+
+private slots:
+	void on_pushButton_clicked();
 
 private:
+	QString address;
 	char * dummyData;
 	ZmqClient client;
 	Ui::MainWindow *ui;
