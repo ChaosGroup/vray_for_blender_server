@@ -1,14 +1,44 @@
 #include "zmq_wrapper.h"
 #include "zmq.hpp"
 
-ZmqWrapperMessage::ZmqWrapperMessage(zmq::message_t * message) : message(message) {
+VRayMessage::VRayMessage(zmq::message_t & message): message(0), plugin(""), property("") {
+	this->message.move(&message);
 }
 
-void * ZmqWrapperMessage::data() {
-	return this->message->data();
+VRayMessage::VRayMessage(int size): message(size) {
 }
 
-zmq::message_t * ZmqWrapperMessage::getMessage() {
+VRayMessage::Type VRayMessage::getType() {
+	return *reinterpret_cast<Type*>(this->data());
+}
+
+std::string VRayMessage::getPlugin() {
+	if (this->plugin == "" && this->message.size()) {
+		char * start = this->data() + sizeof(VRayMessage::Type) + sizeof(int);
+		this->plugin = std::string(start, *reinterpret_cast<int*>(this->data() + sizeof(VRayMessage::Type)));
+	}
+	return this->plugin;
+}
+
+
+std::string VRayMessage::getProperty() {
+	if (this->property == "" && this->message.size()) {
+		int offset = sizeof(VRayMessage::Type) + sizeof(int) + this->getPlugin().size();
+		char * start = this->data() + offset + sizeof(int);
+		this->property = std::string(start, *reinterpret_cast<int*>(this->data() + offset));
+	}
+	return this->property;
+}
+
+char * VRayMessage::data() {
+	return reinterpret_cast<char*>(this->message.data());
+}
+
+int VRayMessage::getValueOffset() {
+	return sizeof(Type) + sizeof(int) + this->getPlugin().size() + sizeof(int) + this->getProperty().size() + sizeof(DataType);
+}
+
+zmq::message_t & VRayMessage::getMessage() {
 	return this->message;
 }
 
@@ -22,8 +52,8 @@ void ZmqWrapper::setCallback(ZmqWrapperCallback_t cb) {
 	this->callback = cb;
 }
 
-void ZmqWrapper::send(ZmqWrapperMessage & message) {
-	this->socket->send(*message.getMessage());
+void ZmqWrapper::send(VRayMessage &message) {
+	this->socket->send(message.getMessage());
 }
 
 void ZmqWrapper::send(const char * data, int size) {
@@ -36,8 +66,7 @@ void ZmqWrapper::start() {
 		while (this->isWorking) {
 			zmq::message_t message;
 			if(this->socket->recv(&message)) {
-				ZmqWrapperMessage msg(&message);
-				this->callback(msg, this);
+				this->callback(VRayMessage(message), this);
 			}
 		}
 	});

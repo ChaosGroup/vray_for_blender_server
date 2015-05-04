@@ -18,11 +18,7 @@ public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
 
-public slots:
-	void send();
-
 private:
-	char * dummyData;
 	ZmqServer server;
 	Ui::MainWindow *ui;
 	VRay::VRayInit *vray;

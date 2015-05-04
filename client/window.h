@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <memory>
 #include "../zmq-wrapper/zmq_wrapper.h"
+#include "../zmq-wrapper/base_types.h"
+
 
 namespace Ui {
 class MainWindow;
@@ -26,7 +28,6 @@ private slots:
 
 private:
 	QString address;
-	char * dummyData;
 	ZmqClient client;
 	Ui::MainWindow *ui;
 };
