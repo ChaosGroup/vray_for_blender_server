@@ -44,7 +44,6 @@ void MainWindow::send()
 	const char * tr_name = "transform";
 
 	VRayMessage msg = VRayMessage::createMessage(pl_name, tr_name, transform);
-	std::cout << "\nMessage pl:" << msg.getPlugin() << " pr:" << msg.getProperty();
 	this->client.send(msg);
 }
 

@@ -65,7 +65,7 @@ enum ValueType {
 };
 
 struct AttrBase {
-	ValueType getType() {
+	ValueType getType() const {
 		assert(false);
 		return ValueType::ValueTypeUnknown;
 	}
@@ -74,7 +74,7 @@ struct AttrBase {
 
 struct AttrColor: public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeColor;
 	}
 
@@ -110,7 +110,7 @@ struct AttrColor: public AttrBase {
 
 struct AttrAColor: public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeAColor;
 	}
 
@@ -130,7 +130,7 @@ struct AttrAColor: public AttrBase {
 
 struct AttrVector: public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeVector;
 	}
 
@@ -188,7 +188,7 @@ struct AttrVector: public AttrBase {
 
 struct AttrVector2 : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeVector2;
 	}
 
@@ -209,7 +209,7 @@ struct AttrVector2 : public AttrBase {
 
 struct AttrMatrix : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeMatrix;
 	}
 
@@ -235,7 +235,7 @@ struct AttrMatrix : public AttrBase {
 
 struct AttrTransform : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeTransform;
 	}
 
@@ -253,7 +253,7 @@ struct AttrTransform : public AttrBase {
 
 struct AttrPlugin : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypePlugin;
 	}
 
@@ -275,7 +275,7 @@ struct AttrList : public AttrBase {
 	typedef std::vector<T>              DataType;
 	typedef boost::shared_ptr<DataType> DataArray;
 
-	ValueType getType();
+	ValueType getType() const ;
 
 	AttrList() {
 		init();
@@ -344,38 +344,38 @@ typedef AttrList<AttrPlugin>  AttrListPlugin;
 typedef AttrList<std::string> AttrListString;
 
 
-inline ValueType AttrListInt::getType() {
+inline ValueType AttrListInt::getType() const {
 	return ValueType::ValueTypeListInt;
 }
 
-inline ValueType AttrListFloat::getType() {
+inline ValueType AttrListFloat::getType() const {
 	return ValueType::ValueTypeListFloat;
 }
 
-inline ValueType AttrListColor::getType() {
+inline ValueType AttrListColor::getType() const {
 	return ValueType::ValueTypeListColor;
 }
 
-inline ValueType AttrListVector::getType() {
+inline ValueType AttrListVector::getType() const {
 	return ValueType::ValueTypeListVector;
 }
 
-inline ValueType AttrListVector2::getType() {
+inline ValueType AttrListVector2::getType() const {
 	return ValueType::ValueTypeListVector2;
 }
 
-inline ValueType AttrListPlugin::getType() {
+inline ValueType AttrListPlugin::getType() const {
 	return ValueType::ValueTypeListPlugin;
 }
 
-inline ValueType AttrListString::getType() {
+inline ValueType AttrListString::getType() const {
 	return ValueType::ValueTypeListString;
 }
 
 
 struct AttrMapChannels : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeMapChannels;
 	}
 
@@ -392,7 +392,7 @@ struct AttrMapChannels : public AttrBase {
 
 struct AttrInstancer : public AttrBase {
 
-	ValueType getType() {
+	ValueType getType() const {
 		return ValueType::ValueTypeInstancer;
 	}
 

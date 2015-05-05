@@ -4,6 +4,7 @@
 #include "zmq.hpp"
 #include "base_types.h"
 #include "serializer.hpp"
+#include "deserializer.hpp"
 
 class VRayMessage {
 public:
@@ -12,6 +13,7 @@ public:
 
 	VRayMessage(zmq::message_t & message): message(0), plugin(""), property("") {
 		this->message.move(&message);
+		this->parse();
 	}
 
 	VRayMessage(VRayMessage && other): message(0), plugin(std::move(other.plugin)), property(std::move(other.property)) {
@@ -21,60 +23,58 @@ public:
 	VRayMessage(int size): message(size) {
 	}
 
-	Type VRayMessage::getType() {
-		return *reinterpret_cast<Type*>(this->data());
-	}
-
-	std::string getPlugin() {
-		if (this->plugin == "" && this->message.size()) {
-			char * start = this->data() + sizeof(VRayMessage::Type) + sizeof(int);
-			this->plugin = std::string(start, *reinterpret_cast<int*>(this->data() + sizeof(VRayMessage::Type)));
-		}
-		return this->plugin;
-	}
-
-
-	std::string getProperty() {
-		if (this->property == "" && this->message.size()) {
-			int offset = sizeof(VRayMessage::Type) + sizeof(int) + this->getPlugin().size();
-			char * start = this->data() + offset + sizeof(int);
-			this->property = std::string(start, *reinterpret_cast<int*>(this->data() + offset));
-		}
-		return this->property;
-	}
-
 	zmq::message_t & getMessage() {
 		return this->message;
 	}
 
-	template <typename T>
-	void getValue(T &);
-
-	template <>
-	void getValue(VRayBaseTypes::AttrTransform & tr) {
-		memcpy(&tr, this->data() + this->getValueOffset(), sizeof(VRayBaseTypes::AttrTransform));
+	const std::string & getProperty() const {
+		return this->property;
 	}
 
+	const std::string & getPlugin() const {
+		return this->plugin;
+	}
+
+	VRayBaseTypes::AttrTransform getTransform() {
+		return this->tr;
+	}
 
 	template <typename T>
 	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const T & value) {
+		using namespace std;
 		SerializerStream strm;
-		strm << VRayMessage::PluginProperty << plugin << property << value;
+		strm << VRayMessage::PluginProperty << plugin << property << value.getType() << value;
 		VRayMessage msg(strm.getSize());
 		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
 		return msg;
 	}
-
-
 private:
+
+	void parse() {
+		using namespace VRayBaseTypes;
+
+		DeserializerStream stream(reinterpret_cast<char*>(message.data()), message.size());
+		stream >> type;
+
+		if (type == PluginProperty) {
+			ValueType valueType;
+			stream >> plugin >> property >> valueType;
+			switch (valueType) {
+			case ValueType::ValueTypeTransform:
+				stream >> this->tr;
+				break;
+			default:
+				break;
+			}
+		}
+
+	}
 
 	char * data() {
 		return reinterpret_cast<char*>(this->message.data());
 	}
 
-	int getValueOffset() {
-		return sizeof(Type) + sizeof(int) + this->getPlugin().size() + sizeof(int) + this->getProperty().size() + sizeof(VRayBaseTypes::ValueType);
-	}
+	VRayBaseTypes::AttrTransform tr;
 
 	zmq::message_t message;
 	std::string plugin, property;

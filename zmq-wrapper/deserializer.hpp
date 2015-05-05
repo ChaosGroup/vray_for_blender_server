@@ -5,6 +5,8 @@
 
 class DeserializerStream {
 public:
+	DeserializerStream() = delete;
+
 	DeserializerStream(const char * data, int size): first(data), last(data + size), current(data) {
 	}
 
@@ -17,7 +19,7 @@ public:
 	}
 
 	bool read(char * where, int size) {
-		if (forward(size)) {
+		if (!forward(size)) {
 			return false;
 		}
 		memcpy(where, current - size, size);
@@ -52,7 +54,7 @@ DeserializerStream & operator>>(DeserializerStream & stream, T* & value) {
 }
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, const std::string & value) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, std::string & value) {
 	int size;
 	stream >> size;
 
@@ -64,12 +66,12 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, const std::s
 }
 
 template <>
-inline DeserializerStream & operator>> (DeserializerStream & stream, const VRayBaseTypes::AttrPlugin & plugin) {
+inline DeserializerStream & operator>> (DeserializerStream & stream, VRayBaseTypes::AttrPlugin & plugin) {
 	return stream >> plugin.plugin;
 }
 
 template <typename Q>
-inline DeserializerStream & operator>>(DeserializerStream & stream, const VRayBaseTypes::AttrList<Q> & list) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrList<Q> & list) {
 	list.init();
 	int size;
 	stream >> size;
@@ -84,7 +86,7 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, const VRayBa
 }
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, const VRayBaseTypes::AttrMapChannels & map) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrMapChannels & map) {
 	map.data.clear();
 	int size;
 	stream >> size;
@@ -99,12 +101,12 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, const VRayBa
 
 
 template <>
-inline DeserializerStream & operator<<(DeserializerStream & stream, const VRayBaseTypes::AttrInstancer::Item & instItem) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancer::Item & instItem) {
 	return stream >> instItem.index >> instItem.tm >> instItem.vel >> instItem.node;
 }
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, const VRayBaseTypes::AttrInstancer & inst) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancer & inst) {
 	int size;
 	stream >> size;
 	inst.data.init();
