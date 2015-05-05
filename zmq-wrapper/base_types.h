@@ -19,6 +19,7 @@
 #ifndef VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
 #define VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
 
+
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
@@ -31,7 +32,52 @@ const int VectorBytesCount  = 3 * sizeof(float);
 const int Vector2BytesCount = 2 * sizeof(float);
 
 
-struct AttrColor {
+enum ValueType {
+	ValueTypeUnknown = 0,
+
+	ValueTypeInt,
+	ValueTypeFloat,
+	ValueTypeColor,
+	ValueTypeAColor,
+	ValueTypeVector,
+	ValueTypeVector2,
+	ValueTypeMatrix,
+	ValueTypeTransform,
+	ValueTypeString,
+	ValueTypePlugin,
+
+	ValueTypeList,
+
+	ValueTypeListInt,
+	ValueTypeListFloat,
+	ValueTypeListColor,
+	ValueTypeListVector,
+	ValueTypeListVector2,
+	ValueTypeListMatrix,
+	ValueTypeListTransform,
+	ValueTypeListString,
+	ValueTypeListPlugin,
+
+	ValueTypeListValue,
+
+	ValueTypeInstancer,
+	ValueTypeMapChannels,
+};
+
+struct AttrBase {
+	ValueType getType() {
+		assert(false);
+		return ValueType::ValueTypeUnknown;
+	}
+};
+
+
+struct AttrColor: public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeColor;
+	}
+
 	AttrColor():
 	    r(0.0f),
 	    g(0.0f),
@@ -62,7 +108,12 @@ struct AttrColor {
 };
 
 
-struct AttrAColor {
+struct AttrAColor: public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeAColor;
+	}
+
 	AttrAColor():
 	    alpha(1.0f)
 	{}
@@ -77,7 +128,12 @@ struct AttrAColor {
 };
 
 
-struct AttrVector {
+struct AttrVector: public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeVector;
+	}
+
 	AttrVector():
 	    x(0.0f),
 	    y(0.0f),
@@ -130,7 +186,12 @@ struct AttrVector {
 };
 
 
-struct AttrVector2 {
+struct AttrVector2 : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeVector2;
+	}
+
 	AttrVector2():
 	    x(0.0f),
 	    y(0.0f)
@@ -146,7 +207,12 @@ struct AttrVector2 {
 };
 
 
-struct AttrMatrix {
+struct AttrMatrix : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeMatrix;
+	}
+
 	AttrMatrix() {}
 
 	AttrMatrix(float tm[3][3]):
@@ -167,7 +233,12 @@ struct AttrMatrix {
 };
 
 
-struct AttrTransform {
+struct AttrTransform : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeTransform;
+	}
+
 	AttrTransform() {}
 
 	AttrTransform(float tm[4][4]):
@@ -180,7 +251,12 @@ struct AttrTransform {
 };
 
 
-struct AttrPlugin {
+struct AttrPlugin : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypePlugin;
+	}
+
 	AttrPlugin() {}
 	AttrPlugin(const std::string &name):
 	    plugin(name)
@@ -195,9 +271,11 @@ struct AttrPlugin {
 
 
 template <typename T>
-struct AttrList {
+struct AttrList : public AttrBase {
 	typedef std::vector<T>              DataType;
 	typedef boost::shared_ptr<DataType> DataArray;
+
+	ValueType getType();
 
 	AttrList() {
 		init();
@@ -228,9 +306,10 @@ struct AttrList {
 		return ptr.get()->size();
 	}
 
-	int getBytesCount() const {
-		return getCount() * sizeof(T);
-	}
+// wont work for AttrList<std::string>
+//	int getBytesCount() const {
+//		return getCount() * sizeof(T);
+//	}
 
 	T* operator * () {
 		return &ptr.get()->at(0);
@@ -248,9 +327,12 @@ struct AttrList {
 		return !ptr || (ptr.get()->size() == 0);
 	}
 
+	const DataArray getData() const {
+		return ptr;
+	}
+
 private:
 	DataArray ptr;
-
 };
 
 typedef AttrList<int>         AttrListInt;
@@ -262,36 +344,41 @@ typedef AttrList<AttrPlugin>  AttrListPlugin;
 typedef AttrList<std::string> AttrListString;
 
 
-enum ValueType {
-	ValueTypeUnknown = 0,
+inline ValueType AttrListInt::getType() {
+	return ValueType::ValueTypeListInt;
+}
 
-	ValueTypeInt,
-	ValueTypeFloat,
-	ValueTypeColor,
-	ValueTypeAColor,
-	ValueTypeVector,
-	ValueTypeMatrix,
-	ValueTypeTransform,
-	ValueTypeString,
-	ValueTypePlugin,
+inline ValueType AttrListFloat::getType() {
+	return ValueType::ValueTypeListFloat;
+}
 
-	ValueTypeListInt,
-	ValueTypeListFloat,
-	ValueTypeListColor,
-	ValueTypeListVector,
-	ValueTypeListMatrix,
-	ValueTypeListTransform,
-	ValueTypeListString,
-	ValueTypeListPlugin,
+inline ValueType AttrListColor::getType() {
+	return ValueType::ValueTypeListColor;
+}
 
-	ValueTypeListValue,
+inline ValueType AttrListVector::getType() {
+	return ValueType::ValueTypeListVector;
+}
 
-	ValueTypeInstancer,
-	ValueTypeMapChannels,
-};
+inline ValueType AttrListVector2::getType() {
+	return ValueType::ValueTypeListVector2;
+}
+
+inline ValueType AttrListPlugin::getType() {
+	return ValueType::ValueTypeListPlugin;
+}
+
+inline ValueType AttrListString::getType() {
+	return ValueType::ValueTypeListString;
+}
 
 
-struct AttrMapChannels {
+struct AttrMapChannels : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeMapChannels;
+	}
+
 	struct AttrMapChannel {
 		AttrListVector vertices;
 		AttrListInt    faces;
@@ -303,7 +390,12 @@ struct AttrMapChannels {
 };
 
 
-struct AttrInstancer {
+struct AttrInstancer : public AttrBase {
+
+	ValueType getType() {
+		return ValueType::ValueTypeInstancer;
+	}
+
 	struct Item {
 		int            index;
 		AttrTransform  tm;
@@ -314,7 +406,6 @@ struct AttrInstancer {
 
 	Items data;
 };
-
 
 struct AttrValue {
 	typedef AttrList<AttrValue> AttrListValue;

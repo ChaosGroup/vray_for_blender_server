@@ -21,7 +21,7 @@
 project(zmq_wrapper)
 
 file(GLOB SOURCES "*.cpp")
-file(GLOB HEADERS "*.h")
+file(GLOB HEADERS "*.h" "*.hpp")
 
 add_library(${PROJECT_NAME} STATIC "${SOURCES};${HEADERS}")
 
