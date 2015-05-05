@@ -48,23 +48,12 @@ inline SerializerStream & operator<<(SerializerStream & stream, const std::strin
 
 
 template <>
-inline SerializerStream & operator<< (SerializerStream & stream, const VRayBaseTypes::AttrPlugin & plugin) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrPlugin & plugin) {
 	return stream << plugin.plugin;
 }
 
 template <typename Q>
 inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<Q> & list) {
-	stream << list.getCount();
-	if (!list.empty()) {
-		for (auto & item : *(list.getData())) {
-			stream << item.getType() << item;
-		}
-	}
-	return stream;
-}
-
-template <>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<int> & list) {
 	stream << list.getCount();
 	if (!list.empty()) {
 		for (auto & item : *(list.getData())) {
@@ -99,6 +88,10 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 	}
 	return stream;
 }
+
+
+
+
 
 
 #endif // _SERIALIZER_HPP_
