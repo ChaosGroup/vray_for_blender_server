@@ -26,7 +26,13 @@ public slots:
 private slots:
 	void on_pushButton_clicked();
 
+	void on_horizontalSlider_2_sliderPressed();
+
+	void on_horizontalSlider_sliderPressed();
+
 private:
+	const char * pl_name;
+	unsigned char tr_data[48];
 	QString address;
 	ZmqClient client;
 	Ui::MainWindow *ui;
