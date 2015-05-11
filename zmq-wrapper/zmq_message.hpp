@@ -6,12 +6,12 @@
 #include "serializer.hpp"
 #include "deserializer.hpp"
 
+
 // Compile time max(sizeof(A), sizeof(B))
 template <size_t A, size_t B>
 struct compile_time_max {
 	enum { value = (A > B ? A : B) };
 };
-
 
 // recursive template for max of variable number of template arguments
 // general case - max of sizeof of the first type and recursive call for the rest
@@ -53,7 +53,7 @@ public:
 	enum Type : int { PluginProperty, None };
 
 
-	VRayMessage(zmq::message_t & message): message(0), plugin(""), property("") {
+	VRayMessage(zmq::message_t & message): message(0), plugin(""), property(""), type(None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown) {
 		this->message.move(&message);
 		this->parse();
 	}
@@ -166,10 +166,6 @@ private:
 				break;
 			}
 		}
-
-
-
-
 	}
 
 	char * data() {
