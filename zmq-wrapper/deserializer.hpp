@@ -10,12 +10,16 @@ public:
 	DeserializerStream(const char * data, int size): first(data), last(data + size), current(data) {
 	}
 
-	void rewid() {
+	void rewind() {
 		current = first;
 	}
 
 	int getSize() const {
 		return last - first;
+	}
+
+	int getOffset() const {
+		return last - current;
 	}
 
 	bool read(char * where, int size) {
