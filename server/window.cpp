@@ -33,10 +33,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
 		VRay::Plugin ob = renderer->getPlugin(message.getPlugin());
 
-		if (ob) {
-			VRayBaseTypes::AttrTransform tr = message.getTransform();
-			VRay::Transform * v_transform = reinterpret_cast<VRay::Transform*>(&tr);
+		if (ob && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeTransform) {
+			const VRayBaseTypes::AttrTransform * tr = message.getValue<VRayBaseTypes::AttrTransform>();
+			const VRay::Transform * v_transform = reinterpret_cast<const VRay::Transform*>(tr);
 			ob.setValue(message.getProperty(), *v_transform);
+
 			std::cout << "Set to: " << v_transform->offset.x << std::endl;
 		}
 
