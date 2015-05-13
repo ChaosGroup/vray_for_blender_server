@@ -20,6 +20,8 @@ ZmqWrapper::ZmqWrapper() :
 
 			int timeOut = 100;
 			this->frontend->setsockopt(ZMQ_RCVTIMEO, &timeOut, sizeof(timeOut));
+			timeOut *= 10;
+			this->frontend->setsockopt(ZMQ_SNDTIMEO, &timeOut, sizeof(timeOut));
 			socketInit = true;
 		}
 		threadReady.notify_all();
@@ -31,10 +33,12 @@ ZmqWrapper::ZmqWrapper() :
 		while (this->isWorking) {
 			zmq::message_t incoming;
 
-			if (this->messageQue.size()) {
+			if (this->messageQue.size() && this->frontend->connected()) {
 				std::lock_guard<std::mutex> lock(this->messageMutex);
 				while (this->messageQue.size()) {
-					this->frontend->send(this->messageQue.front().getMessage());
+					if (!this->frontend->send(this->messageQue.front().getMessage())) {
+						break;
+					}
 					this->messageQue.pop();
 				}
 			}
@@ -42,6 +46,8 @@ ZmqWrapper::ZmqWrapper() :
 			if (this->frontend->recv(&incoming)) {
 				this->callback(VRayMessage(incoming), this);
 			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
 		this->frontend->close();
