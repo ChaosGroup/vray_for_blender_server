@@ -6,6 +6,15 @@
 #include <vraysdk.hpp>
 
 
+void imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
+	ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
+
+	size_t size;
+	VRay::Jpeg * jpeg = img->getJpeg(size, 50);
+
+	server->send(jpeg, size);
+}
+
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true))
@@ -23,6 +32,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 	renderer->showFrameBuffer(true);
+
+	renderer->setOnRTImageUpdated(imageUpdate, &server);
+
 	renderer->start();
 
 	ui->setupUi(this);

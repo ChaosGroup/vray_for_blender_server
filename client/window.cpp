@@ -10,9 +10,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	connect(ui->horizontalSlider, &QSlider::sliderMoved, this, &MainWindow::send);
 	connect(ui->horizontalSlider_2, &QSlider::sliderMoved, this, &MainWindow::send);
+	this->ui->label->resize(640, 480);
 
 	client.setCallback([this](VRayMessage & message, ZmqWrapper * client) {
-		std::cout << "Server's ack\n";
+		QPixmap map;
+		map.loadFromData(reinterpret_cast<const uchar *>(message.getMessage().data()), message.getMessage().size(), "JPG");
+		this->ui->label->setPixmap(map);
 	});
 	this->connectServer();
 }
