@@ -15,12 +15,10 @@ MainWindow::MainWindow(QWidget *parent) :
 		std::cout << "Server's ack\n";
 	});
 	this->connectServer();
-	client.start();
 }
 
 MainWindow::~MainWindow()
 {
-	client.stop();
 	delete ui;
 }
 

@@ -6,6 +6,7 @@
 #include <functional>
 #include <thread>
 #include <zmq.hpp>
+#include <memory>
 
 #include "base_types.h"
 #include "zmq_message.hpp"
@@ -18,10 +19,9 @@ public:
 	typedef std::function<void(VRayMessage &, ZmqWrapper *)> ZmqWrapperCallback_t;
 
 	ZmqWrapper();
+	~ZmqWrapper();
 
-	void start();
-	void stop();
-	void send(const char * data, int size);
+	void send(const void * data, int size);
 	void send(VRayMessage & message);
 
 	void setCallback(ZmqWrapperCallback_t cb);
@@ -30,10 +30,13 @@ private:
 	ZmqWrapperCallback_t callback;
 	std::thread * worker;
 	bool isWorking;
-	zmq::context_t * context;
 
+	std::unique_ptr<zmq::context_t> context;
 protected:
-	zmq::socket_t * socket;
+	bool isInit;
+	std::unique_ptr<zmq::socket_t> inproc, frontend;
+
+	std::function<void()> setUp;
 };
 
 

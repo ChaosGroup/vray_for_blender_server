@@ -27,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	ui->setupUi(this);
 
-	server.bind("tcp://*:5555");
 	server.setCallback([this](VRayMessage & message, ZmqWrapper * server) {
 		std::cout << "Message plugin:" << message.getPlugin() << " prop:" << message.getProperty() << std::endl;
 
@@ -42,12 +41,12 @@ MainWindow::MainWindow(QWidget *parent) :
 		}
 
 	});
-	server.start();
+
+	server.bind("tcp://*:5555");
 }
 
 MainWindow::~MainWindow()
 {
-	server.stop();
 	delete renderer;
 	delete vray;
 	delete ui;
