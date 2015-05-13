@@ -7,6 +7,8 @@
 #include <thread>
 #include <zmq.hpp>
 #include <memory>
+#include <queue>
+#include <mutex>
 
 #include "base_types.h"
 #include "zmq_message.hpp"
@@ -21,7 +23,7 @@ public:
 	ZmqWrapper();
 	~ZmqWrapper();
 
-	void send(const void * data, int size);
+	void send(void *data, int size);
 	void send(VRayMessage & message);
 
 	void setCallback(ZmqWrapperCallback_t cb);
@@ -32,11 +34,12 @@ private:
 	bool isWorking;
 
 	std::unique_ptr<zmq::context_t> context;
+	std::queue<VRayMessage> messageQue;
+	std::mutex messageMutex;
+
 protected:
 	bool isInit;
-	std::unique_ptr<zmq::socket_t> inproc, frontend;
-
-	std::function<void()> setUp;
+	std::unique_ptr<zmq::socket_t> frontend;
 };
 
 

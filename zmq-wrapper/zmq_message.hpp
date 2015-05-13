@@ -101,6 +101,9 @@ public:
 		return valueType;
 	}
 
+	VRayMessage(const VRayMessage &) = delete;
+	VRayMessage & operator=(const VRayMessage &) = delete;
+
 private:
 
 	void parse() {
