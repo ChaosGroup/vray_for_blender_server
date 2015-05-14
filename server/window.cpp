@@ -37,11 +37,12 @@ void imageDone(VRay::VRayRenderer & renderer, void * arg) {
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
-	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true))
+	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true)), renderer(nullptr)
 {
 	VRay::RendererOptions options;
 	options.keepRTRunning = true;
-	renderer = new VRay::VRayRenderer(options);
+	renderer.reset(new VRay::VRayRenderer(options));
+
 	renderer->load("D:/dev/cornellbox.vrscene");
 
 	renderer->setOnDumpMessage([] (VRay::VRayRenderer &, const char * msg, int level, void *) {
@@ -56,11 +57,12 @@ MainWindow::MainWindow(QWidget *parent) :
 	renderer->setOnRTImageUpdated(imageUpdate, &server);
 	renderer->setOnImageReady(imageDone, &server);
 
-	renderer->start();
+	int x = sizeof(decltype(renderer));
+
 
 	ui->setupUi(this);
 
-	server.setCallback([this](VRayMessage & message, ZmqWrapper * server) {
+	server.setCallback([this, &options] (VRayMessage & message, ZmqWrapper * server) {
 
 		if (message.getType() == VRayMessage::Type::ChangePlugin) {
 			if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
@@ -87,10 +89,25 @@ MainWindow::MainWindow(QWidget *parent) :
 					std::cerr << "Failed to remove plugin: " << message.getPlugin() << std::endl;
 				}
 			}
-
-
+		} else if (message.getType() == VRayMessage::Type::ChangeRenderer) {
+			switch (message.getRendererAction()) {
+			case VRayMessage::RendererAction::Start:
+				renderer->start();
+				break;
+			case VRayMessage::RendererAction::Stop:
+				renderer->stop();
+				break;
+			case VRayMessage::RendererAction::Free:
+				renderer->stop();
+				renderer.release();
+				break;
+			case VRayMessage::RendererAction::Init:
+				renderer.reset(new VRay::VRayRenderer(options));
+				break;
+			default:
+				std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
+			}
 		}
-
 	});
 
 	server.bind("tcp://*:5555");
@@ -98,7 +115,5 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-	delete renderer;
-	delete vray;
 	delete ui;
 }

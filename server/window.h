@@ -21,8 +21,8 @@ public:
 private:
 	ZmqServer server;
 	Ui::MainWindow *ui;
-	VRay::VRayInit *vray;
-	VRay::VRayRenderer *renderer;
+	std::unique_ptr<VRay::VRayInit> vray;
+	std::unique_ptr<VRay::VRayRenderer> renderer;
 };
 
 
