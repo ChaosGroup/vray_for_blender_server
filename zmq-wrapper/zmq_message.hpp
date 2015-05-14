@@ -51,19 +51,30 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 
 class VRayMessage {
 public:
-	enum Type : int { SingleValue, SetPluginProperty, None };
+	enum Type : int { NoType, SingleValue, ChangePlugin };
+	enum PluginAction { NoAction, Create, Remove, Update };
 
 
-	VRayMessage(zmq::message_t & message): message(0), plugin(""), property(""), type(None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown) {
+	VRayMessage(zmq::message_t & message):
+		message(0), plugin(""), property(""),
+		type(NoType), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		action(NoAction) {
 		this->message.move(&message);
 		this->parse();
 	}
 
-	VRayMessage(VRayMessage && other): message(0), plugin(std::move(other.plugin)), property(std::move(other.property)) {
+	VRayMessage(VRayMessage && other):
+		message(0), type(other.type), valueType(other.valueType),
+		action(other.action), plugin(std::move(other.plugin)),
+		property(std::move(other.property)) {
+
 		this->message.move(&other.message);
 	}
 
-	VRayMessage(int size): message(size) {
+	VRayMessage(int size):
+		message(size), plugin(""), property(""),
+		type(NoType), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		action(NoAction) {
 	}
 
 	zmq::message_t & getMessage() {
@@ -82,14 +93,13 @@ public:
 		return type;
 	}
 
-	template <typename T>
-	const T * getValue() const {
-		return reinterpet_cast<const T *>(this->value_data);
+	PluginAction getPluginAction() const {
+		return action;
 	}
 
 	template <typename T>
-	T * getValue() {
-		return reinterpret_cast<T *>(this->value_data);
+	const T * getValue() const {
+		return reinterpret_cast<const T *>(this->value_data);
 	}
 
 	VRayBaseTypes::ValueType getValueType() const {
@@ -101,31 +111,46 @@ public:
 
 
 
+	static VRayMessage createMessage(const std::string & plugin, PluginAction action) {
+		assert(action == Create || action == Remove);
+		SerializerStream strm;
+		strm << VRayMessage::ChangePlugin << plugin << action;
+		return fromStream(strm);
+	}
+
 	/// Creates message to control a plugin property
 	template <typename T>
 	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const T & value) {
 		using namespace std;
 		SerializerStream strm;
-		strm << VRayMessage::SetPluginProperty << plugin << property << value.getType() << value;
-		VRayMessage msg(strm.getSize());
-		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
-		return msg;
+		strm << VRayMessage::ChangePlugin << plugin << PluginAction::Update << property << value.getType() << value;
+		return fromStream(strm);
 	}
-
 
 	/// Create message containing only a value, eg AttrImage
 	template <typename T>
 	static VRayMessage createMessage(const T & value) {
 		SerializerStream strm;
 		strm << VRayMessage::SingleValue << value.getType() << value;
-		VRayMessage msg(strm.getSize());
-		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
-		return msg;
+		return fromStream(strm);
 	}
 
 
 
 private:
+
+	template <typename T>
+	T * setValue() {
+		T * ptr = reinterpret_cast<T *>(this->value_data);
+		new(ptr)T();
+		return ptr;
+	}
+
+	static VRayMessage fromStream(SerializerStream & strm) {
+		VRayMessage msg(strm.getSize());
+		memcpy(msg.message.data(), strm.getData(), strm.getSize());
+		return msg;
+	}
 
 	void parse() {
 		using namespace VRayBaseTypes;
@@ -133,72 +158,75 @@ private:
 		DeserializerStream stream(reinterpret_cast<char*>(message.data()), message.size());
 		stream >> type;
 
-		if (type == SetPluginProperty) {
+		if (type == ChangePlugin) {
 
-			stream >> plugin >> property >> valueType;
-
-			switch (valueType) {
-			case ValueType::ValueTypeColor:
-				stream >> *getValue<AttrColor>();
-				break;
-			case ValueType::ValueTypeAColor:
-				stream >> *getValue<AttrAColor>();
-				break;
-			case ValueType::ValueTypeVector:
-				stream >> *getValue<AttrVector>();
-				break;
-			case ValueType::ValueTypeVector2:
-				stream >> *getValue<AttrVector2>();
-				break;
-			case ValueType::ValueTypeMatrix:
-				stream >> *getValue<AttrMatrix>();
-				break;
-			case ValueType::ValueTypeTransform:
-				stream >> *getValue<AttrTransform>();
-				break;
-			case ValueType::ValueTypePlugin:
-				stream >> *getValue<AttrPlugin>();
-				break;
-			case ValueType::ValueTypeListInt:
-				stream >> *getValue<AttrListInt>();
-				break;
-			case ValueType::ValueTypeListFloat:
-				stream >> *getValue<AttrListFloat>();
-				break;
-			case ValueType::ValueTypeListColor:
-				stream >> *getValue<AttrListColor>();
-				break;
-			case ValueType::ValueTypeListVector:
-				stream >> *getValue<AttrListVector>();
-				break;
-			case ValueType::ValueTypeListVector2:
-				stream >> *getValue<AttrListVector2>();
-				break;
-			case ValueType::ValueTypeListPlugin:
-				stream >> *getValue<AttrListPlugin>();
-				break;
-			case ValueType::ValueTypeListString:
-				stream >> *getValue<AttrListString>();
-				break;
-			case ValueType::ValueTypeMapChannels:
-				stream >> *getValue<AttrMapChannels>();
-				break;
-			case ValueType::ValueTypeInstancer:
-				stream >> *getValue<AttrInstancer>();
-				break;
-			default:
-				throw 42;
+			stream >> plugin >> action;
+			if (action == Update) {
+				stream >> property >> valueType;
+				switch (valueType) {
+				case ValueType::ValueTypeColor:
+					stream >> *setValue<AttrColor>();
+					break;
+				case ValueType::ValueTypeAColor:
+					stream >> *setValue<AttrAColor>();
+					break;
+				case ValueType::ValueTypeVector:
+					stream >> *setValue<AttrVector>();
+					break;
+				case ValueType::ValueTypeVector2:
+					stream >> *setValue<AttrVector2>();
+					break;
+				case ValueType::ValueTypeMatrix:
+					stream >> *setValue<AttrMatrix>();
+					break;
+				case ValueType::ValueTypeTransform:
+					stream >> *setValue<AttrTransform>();
+					break;
+				case ValueType::ValueTypePlugin:
+					stream >> *setValue<AttrPlugin>();
+					break;
+				case ValueType::ValueTypeListInt:
+					stream >> *setValue<AttrListInt>();
+					break;
+				case ValueType::ValueTypeListFloat:
+					stream >> *setValue<AttrListFloat>();
+					break;
+				case ValueType::ValueTypeListColor:
+					stream >> *setValue<AttrListColor>();
+					break;
+				case ValueType::ValueTypeListVector:
+					stream >> *setValue<AttrListVector>();
+					break;
+				case ValueType::ValueTypeListVector2:
+					stream >> *setValue<AttrListVector2>();
+					break;
+				case ValueType::ValueTypeListPlugin:
+					stream >> *setValue<AttrListPlugin>();
+					break;
+				case ValueType::ValueTypeListString:
+					stream >> *setValue<AttrListString>();
+					break;
+				case ValueType::ValueTypeMapChannels:
+					stream >> *setValue<AttrMapChannels>();
+					break;
+				case ValueType::ValueTypeInstancer:
+					stream >> *setValue<AttrInstancer>();
+					break;
+				default:
+					throw 42;
+				}
 			}
+
+
 		} else if(type == SingleValue) {
 			stream >> valueType;
 			switch(valueType) {
 			case ValueType::ValueTypeImage:
-				stream >> *getValue<AttrImage>();
+				stream >> *setValue<AttrImage>();
 				break;
 			default:
 				throw 42;
 			}
-
 		}
 	}
 
@@ -211,6 +239,7 @@ private:
 	zmq::message_t message;
 	std::string plugin, property;
 	Type type;
+	PluginAction action;
 	VRayBaseTypes::ValueType valueType;
 };
 

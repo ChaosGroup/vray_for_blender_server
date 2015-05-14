@@ -80,7 +80,11 @@ struct AttrImage: public AttrBase {
 
 	enum ImageType {
 		NONE, RGBA_REAL, JPG
-	} imageType;
+	};
+
+	AttrImage(): width(0), height(0), imageType(NONE), data(nullptr), size(0) {
+
+	}
 
 	AttrImage(const void * data, int size, AttrImage::ImageType type, int width, int height):
 		data(nullptr)
@@ -99,6 +103,7 @@ struct AttrImage: public AttrBase {
 
 	std::unique_ptr<char[]> data;
 	int size, width, height;
+	ImageType imageType;
 };
 
 
