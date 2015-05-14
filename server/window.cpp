@@ -124,6 +124,9 @@ MainWindow::MainWindow(QWidget *parent) :
 			case VRayMessage::RendererAction::AppendScene:
 				completed = 0 == renderer->append(message.getRendererArgument());
 				break;
+			case VRayMessage::RendererAction::ExportScene:
+				completed = 0 == renderer->exportScene(message.getRendererArgument(), nullptr);
+				break;
 			default:
 				std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
 			}

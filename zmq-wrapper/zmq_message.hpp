@@ -53,7 +53,7 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts, LoadScene, AppendScene };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts, LoadScene, AppendScene, ExportScene };
 
 
 	VRayMessage(zmq::message_t & message):
@@ -92,7 +92,7 @@ public:
 	}
 
 	const std::string & getRendererArgument() const {
-		return rendereActionArgument;
+		return rendererActionArgument;
 	}
 
 	Type getType() const {
@@ -159,7 +159,8 @@ public:
 		SerializerStream strm;
 		strm << Type::ChangeRenderer << action;
 		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts ||
-			action == RendererAction::LoadScene || action == RendererAction::AppendScene) {
+			action == RendererAction::LoadScene || action == RendererAction::AppendScene ||
+			action == RendererAction::ExportScene) {
 			strm << argument;
 		}
 		return fromStream(strm);
@@ -264,8 +265,9 @@ private:
 			if (rendererAction == RendererAction::Resize) {
 				stream >> rendererWidth >> rendererHeight;
 			} else if (rendererAction == RendererAction::AddHosts || rendererAction == RendererAction::RemoveHosts ||
-				rendererAction == RendererAction::LoadScene || rendererAction == RendererAction::AppendScene) {
-				stream >> rendereActionArgument;
+				rendererAction == RendererAction::LoadScene || rendererAction == RendererAction::AppendScene ||
+				rendererAction == RendererAction::ExportScene) {
+				stream >> rendererActionArgument;
 			}
 		}
 	}
@@ -277,7 +279,7 @@ private:
 	uint8_t value_data[MAX_MESSAGE_SIZE];
 
 	zmq::message_t message;
-	std::string plugin, property, rendereActionArgument;
+	std::string plugin, property, rendererActionArgument;
 
 	Type type;
 	PluginAction pluginAction;
