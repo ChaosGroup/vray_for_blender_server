@@ -61,16 +61,34 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 
 	server.setCallback([this](VRayMessage & message, ZmqWrapper * server) {
-		std::cout << "Message plugin:" << message.getPlugin() << " prop:" << message.getProperty() << std::endl;
 
-		VRay::Plugin ob = renderer->getPlugin(message.getPlugin());
+		if (message.getType() == VRayMessage::Type::ChangePlugin) {
+			if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
+				VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
+				if (!plugin) {
+					std::cerr << "Failed to load plugin: " << message.getPlugin() << std::endl;
+					return;
+				}
 
-		if (ob && message.getValueType() == VRayBaseTypes::ValueType::ValueTypeTransform) {
-			const VRayBaseTypes::AttrTransform * tr = message.getValue<VRayBaseTypes::AttrTransform>();
-			const VRay::Transform * v_transform = reinterpret_cast<const VRay::Transform*>(tr);
-			ob.setValue(message.getProperty(), *v_transform);
+				switch (message.getValueType()) {
+				case VRayBaseTypes::ValueType::ValueTypeTransform:
+					plugin.setValue(message.getProperty(), *reinterpret_cast<const VRay::Transform*>(message.getValue<const VRayBaseTypes::AttrTransform*>()));
+					break;
+				}
+			} else if (message.getPluginAction() == VRayMessage::PluginAction::Create) {
+				if (!renderer->newPlugin(message.getPlugin()) ){
+					std::cerr << "Failed to create plugin: " << message.getPlugin() << std::endl;
+				}
+			} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
+				VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
+				if (plugin) {
+					renderer->removePlugin(plugin);
+				} else {
+					std::cerr << "Failed to remove plugin: " << message.getPlugin() << std::endl;
+				}
+			}
 
-			std::cout << "Set to: " << v_transform->offset.x << std::endl;
+
 		}
 
 	});
