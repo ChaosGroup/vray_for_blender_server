@@ -85,10 +85,11 @@ void ZmqWrapper::send(VRayMessage &message) {
 }
 
 void ZmqWrapper::send(void * data, int size) {
-	zmq::message_t msg(data, size, nullptr, nullptr);
+	VRayMessage msg(size);
+	memcpy(msg.getMessage().data(), data, size);
 
 	std::lock_guard<std::mutex> lock(this->messageMutex);
-	this->messageQue.push(VRayMessage(msg));
+	this->messageQue.push(std::move(msg));
 }
 
 void ZmqClient::connect(const char * addr) {

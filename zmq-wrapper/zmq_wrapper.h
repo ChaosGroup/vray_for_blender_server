@@ -23,7 +23,10 @@ public:
 	ZmqWrapper();
 	~ZmqWrapper();
 
+	/// send will copy size bytes from data internally, callee can free memory immediately
 	void send(void *data, int size);
+
+	/// send steals the message contents and is ZmqWrapper's resposibility
 	void send(VRayMessage & message);
 
 	void setCallback(ZmqWrapperCallback_t cb);
