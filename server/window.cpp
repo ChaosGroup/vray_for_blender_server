@@ -6,14 +6,34 @@
 #include <vraysdk.hpp>
 
 
-void imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
+void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
 	ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
 
 	size_t size;
-	VRay::Jpeg * jpeg = img->getJpeg(size, 50);
+	std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
+	int width, height;
+	img->getSize(width, height);
 
-	server->send(jpeg, size);
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+	server->send(msg);
 }
+
+void imageDone(VRay::VRayRenderer & renderer, void * arg) {
+	ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
+
+	size_t size;
+	VRay::AColor * data = renderer.getImage()->getPixelData(size);
+	size *= sizeof(VRay::AColor);
+
+	int width, height;
+	renderer.getImage()->getSize(width, height);
+
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+
+	server->send(msg);
+}
+
+
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
@@ -34,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	renderer->showFrameBuffer(true);
 
 	renderer->setOnRTImageUpdated(imageUpdate, &server);
+	renderer->setOnImageReady(imageDone, &server);
 
 	renderer->start();
 

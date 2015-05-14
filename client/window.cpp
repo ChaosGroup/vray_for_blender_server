@@ -13,8 +13,31 @@ MainWindow::MainWindow(QWidget *parent) :
 	this->ui->label->resize(640, 480);
 
 	client.setCallback([this](VRayMessage & message, ZmqWrapper * client) {
+		auto img = message.getValue<VRayBaseTypes::AttrImage>();
 		QPixmap map;
-		map.loadFromData(reinterpret_cast<const uchar *>(message.getMessage().data()), message.getMessage().size(), "JPG");
+
+		std::cout << "IMG TYPE:" << img->imageType << "  " << img->size << "  " << message.getMessage().size() << std::endl;
+		if (img->imageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+			map.loadFromData(reinterpret_cast<const uchar *>(img->data.get()), img->size, nullptr);
+		} else {
+			const float * data = reinterpret_cast<const float *>(img->data.get());
+
+			QImage image(img->width, img->height, QImage::Format_ARGB32);
+
+			for (int w = 0; w < img->width; ++w) {
+				for (int h = 0; h < img->height; ++h) {
+					const float * pixel = data + img->width * h * 4 + w * 4;
+					QRgb col = qRgba(pixel[0] * 255.0f,
+									  pixel[1] * 255.0f,
+									  pixel[2] * 255.0f,
+									  pixel[3] * 255.0f);
+
+					image.setPixel(w, h, col);
+				}
+			}
+			map = QPixmap::fromImage(image);
+		}
+
 		this->ui->label->setPixmap(map);
 	});
 	this->connectServer();
