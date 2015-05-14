@@ -51,30 +51,32 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 
 class VRayMessage {
 public:
-	enum Type : int { NoType, SingleValue, ChangePlugin };
-	enum PluginAction { NoAction, Create, Remove, Update };
+	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
+	enum class PluginAction { None, Create, Remove, Update };
+	enum class RendererAction { None, Init, Free, Start, Stop };
 
 
 	VRayMessage(zmq::message_t & message):
 		message(0), plugin(""), property(""),
-		type(NoType), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
-		action(NoAction) {
+		type(Type::None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		pluginAction(PluginAction::None), rendererAction(RendererAction::None) {
 		this->message.move(&message);
 		this->parse();
 	}
 
 	VRayMessage(VRayMessage && other):
 		message(0), type(other.type), valueType(other.valueType),
-		action(other.action), plugin(std::move(other.plugin)),
-		property(std::move(other.property)) {
+		pluginAction(other.pluginAction), plugin(std::move(other.plugin)),
+		property(std::move(other.property)), rendererAction(other.rendererAction) {
 
 		this->message.move(&other.message);
 	}
 
 	VRayMessage(int size):
 		message(size), plugin(""), property(""),
-		type(NoType), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
-		action(NoAction) {
+		type(Type::None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		pluginAction(PluginAction::None), rendererAction(RendererAction::None) {
+
 	}
 
 	zmq::message_t & getMessage() {
@@ -94,7 +96,11 @@ public:
 	}
 
 	PluginAction getPluginAction() const {
-		return action;
+		return pluginAction;
+	}
+
+	RendererAction getRendererAction() const {
+		return rendererAction;
 	}
 
 	template <typename T>
@@ -111,10 +117,13 @@ public:
 
 
 
+
+	/// Static methods for creating messages
+
 	static VRayMessage createMessage(const std::string & plugin, PluginAction action) {
-		assert(action == Create || action == Remove);
+		assert(action == PluginAction::Create || action == PluginAction::Remove && "Wrong PluginAction");
 		SerializerStream strm;
-		strm << VRayMessage::ChangePlugin << plugin << action;
+		strm << VRayMessage::Type::ChangePlugin << plugin << action;
 		return fromStream(strm);
 	}
 
@@ -123,7 +132,7 @@ public:
 	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const T & value) {
 		using namespace std;
 		SerializerStream strm;
-		strm << VRayMessage::ChangePlugin << plugin << PluginAction::Update << property << value.getType() << value;
+		strm << VRayMessage::Type::ChangePlugin << plugin << PluginAction::Update << property << value.getType() << value;
 		return fromStream(strm);
 	}
 
@@ -131,7 +140,16 @@ public:
 	template <typename T>
 	static VRayMessage createMessage(const T & value) {
 		SerializerStream strm;
-		strm << VRayMessage::SingleValue << value.getType() << value;
+		strm << VRayMessage::Type::SingleValue << value.getType() << value;
+		return fromStream(strm);
+	}
+
+	/// create message to control renderer
+	template <>
+	static VRayMessage createMessage(const RendererAction & action) {
+		assert(action != RendererAction::None && "Wrong RendererAction");
+		SerializerStream strm;
+		strm << Type::ChangeRenderer << action;
 		return fromStream(strm);
 	}
 
@@ -158,10 +176,10 @@ private:
 		DeserializerStream stream(reinterpret_cast<char*>(message.data()), message.size());
 		stream >> type;
 
-		if (type == ChangePlugin) {
+		if (type == Type::ChangePlugin) {
 
-			stream >> plugin >> action;
-			if (action == Update) {
+			stream >> plugin >> pluginAction;
+			if (pluginAction== PluginAction::Update) {
 				stream >> property >> valueType;
 				switch (valueType) {
 				case ValueType::ValueTypeColor:
@@ -216,9 +234,7 @@ private:
 					throw 42;
 				}
 			}
-
-
-		} else if(type == SingleValue) {
+		} else if (type == Type::SingleValue) {
 			stream >> valueType;
 			switch(valueType) {
 			case ValueType::ValueTypeImage:
@@ -227,6 +243,8 @@ private:
 			default:
 				throw 42;
 			}
+		} else if (type == Type::ChangeRenderer) {
+			stream >> rendererAction;
 		}
 	}
 
@@ -239,7 +257,8 @@ private:
 	zmq::message_t message;
 	std::string plugin, property;
 	Type type;
-	PluginAction action;
+	PluginAction pluginAction;
+	RendererAction rendererAction;
 	VRayBaseTypes::ValueType valueType;
 };
 
