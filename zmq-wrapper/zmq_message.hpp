@@ -53,7 +53,7 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts, LoadScene, AppendScene };
 
 
 	VRayMessage(zmq::message_t & message):
@@ -91,8 +91,8 @@ public:
 		return this->plugin;
 	}
 
-	const std::string & getHosts() const {
-		return hosts;
+	const std::string & getRendererArgument() const {
+		return rendereActionArgument;
 	}
 
 	Type getType() const {
@@ -158,7 +158,8 @@ public:
 		assert(action != RendererAction::None && action != RendererAction::Resize && "Wrong RendererAction");
 		SerializerStream strm;
 		strm << Type::ChangeRenderer << action;
-		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts) {
+		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts ||
+			action == RendererAction::LoadScene || action == RendererAction::AppendScene) {
 			strm << argument;
 		}
 		return fromStream(strm);
@@ -262,8 +263,9 @@ private:
 			stream >> rendererAction;
 			if (rendererAction == RendererAction::Resize) {
 				stream >> rendererWidth >> rendererHeight;
-			} else if (rendererAction == RendererAction::AddHosts || rendererAction == RendererAction::RemoveHosts) {
-				stream >> hosts;
+			} else if (rendererAction == RendererAction::AddHosts || rendererAction == RendererAction::RemoveHosts ||
+				rendererAction == RendererAction::LoadScene || rendererAction == RendererAction::AppendScene) {
+				stream >> rendereActionArgument;
 			}
 		}
 	}
@@ -275,7 +277,7 @@ private:
 	uint8_t value_data[MAX_MESSAGE_SIZE];
 
 	zmq::message_t message;
-	std::string plugin, property, hosts;
+	std::string plugin, property, rendereActionArgument;
 
 	Type type;
 	PluginAction pluginAction;

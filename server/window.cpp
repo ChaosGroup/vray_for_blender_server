@@ -43,8 +43,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	options.keepRTRunning = true;
 	renderer.reset(new VRay::VRayRenderer(options));
 
-	renderer->load("D:/dev/cornellbox.vrscene");
-
 	renderer->setOnDumpMessage([] (VRay::VRayRenderer &, const char * msg, int level, void *) {
 		if (level <= VRay::MessageError) {
 			std::cout << "Error: " << msg;
@@ -87,12 +85,13 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 			}
 		} else if (message.getType() == VRayMessage::Type::ChangeRenderer) {
+			bool completed = true;
 			switch (message.getRendererAction()) {
 			case VRayMessage::RendererAction::Pause:
-				renderer->pause();
+				completed = renderer->pause();
 				break;
 			case VRayMessage::RendererAction::Resume:
-				renderer->resume();
+				completed = renderer->resume();
 				break;
 			case VRayMessage::RendererAction::Start:
 				renderer->start();
@@ -110,17 +109,29 @@ MainWindow::MainWindow(QWidget *parent) :
 			case VRayMessage::RendererAction::Resize:
 				int width, height;
 				message.getRendererSize(width, height);
-				renderer->setWidth(width);
-				renderer->setHeight(height);
+				completed = renderer->setWidth(width);
+				completed = completed && renderer->setHeight(height);
 				break;
 			case VRayMessage::RendererAction::AddHosts:
-				renderer->addHosts(message.getHosts());
+				completed = 0 == renderer->addHosts(message.getRendererArgument());
 				break;
 			case VRayMessage::RendererAction::RemoveHosts:
-				renderer->removeHosts(message.getHosts());
+				completed = 0 == renderer->removeHosts(message.getRendererArgument());
+				break;
+			case VRayMessage::RendererAction::LoadScene:
+				completed = 0 == renderer->load(message.getRendererArgument());
+				break;
+			case VRayMessage::RendererAction::AppendScene:
+				completed = 0 == renderer->append(message.getRendererArgument());
 				break;
 			default:
 				std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
+			}
+
+			if (!completed) {
+				std::cerr << "Failed renderer action: " << static_cast<int>(message.getRendererAction())
+						  << "\nerror:" << renderer->getLastError()
+						  << "\narguments: [" << message.getRendererArgument() << "]" << std::endl;
 			}
 		}
 	});

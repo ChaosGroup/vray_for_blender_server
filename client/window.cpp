@@ -51,8 +51,9 @@ MainWindow::~MainWindow()
 void MainWindow::connectServer() {
 	QString address("tcp://" + this->address);
 	client.connect(address.toStdString().c_str());
-	auto msg = VRayMessage::createMessage(VRayMessage::RendererAction::Start);
-	client.send(msg);
+
+	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::LoadScene, "D:/dev/cornellbox.vrscene"));
+	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::Start));
 }
 
 void MainWindow::send()
