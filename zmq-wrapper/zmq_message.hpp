@@ -53,7 +53,7 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume };
 
 
 	VRayMessage(zmq::message_t & message):

@@ -91,6 +91,12 @@ MainWindow::MainWindow(QWidget *parent) :
 			}
 		} else if (message.getType() == VRayMessage::Type::ChangeRenderer) {
 			switch (message.getRendererAction()) {
+			case VRayMessage::RendererAction::Pause:
+				renderer->pause();
+				break;
+			case VRayMessage::RendererAction::Resume:
+				renderer->resume();
+				break;
 			case VRayMessage::RendererAction::Start:
 				renderer->start();
 				break;
