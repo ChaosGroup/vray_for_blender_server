@@ -110,6 +110,12 @@ MainWindow::MainWindow(QWidget *parent) :
 			case VRayMessage::RendererAction::Init:
 				renderer.reset(new VRay::VRayRenderer(options));
 				break;
+			case VRayMessage::RendererAction::Resize:
+				int width, height;
+				message.getRendererSize(width, height);
+				renderer->setWidth(width);
+				renderer->setHeight(height);
+				break;
 			default:
 				std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
 			}

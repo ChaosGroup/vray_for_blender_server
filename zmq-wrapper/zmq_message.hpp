@@ -53,7 +53,7 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize };
 
 
 	VRayMessage(zmq::message_t & message):
@@ -103,6 +103,11 @@ public:
 		return rendererAction;
 	}
 
+	void getRendererSize(int & width, int & height) {
+		width = this->rendererWidth;
+		height = this->rendererHeight;
+	}
+
 	template <typename T>
 	const T * getValue() const {
 		return reinterpret_cast<const T *>(this->value_data);
@@ -145,7 +150,6 @@ public:
 	}
 
 	/// create message to control renderer
-	template <>
 	static VRayMessage createMessage(const RendererAction & action) {
 		assert(action != RendererAction::None && "Wrong RendererAction");
 		SerializerStream strm;
@@ -153,7 +157,11 @@ public:
 		return fromStream(strm);
 	}
 
-
+	static VRayMessage createMessage(int width, int height) {
+		SerializerStream strm;
+		strm << Type::ChangeRenderer << RendererAction::Resize << width << height;
+		return fromStream(strm);
+	}
 
 private:
 
@@ -245,6 +253,9 @@ private:
 			}
 		} else if (type == Type::ChangeRenderer) {
 			stream >> rendererAction;
+			if (rendererAction == RendererAction::Resize) {
+				stream >> rendererWidth >> rendererHeight;
+			}
 		}
 	}
 
@@ -256,9 +267,11 @@ private:
 
 	zmq::message_t message;
 	std::string plugin, property;
+
 	Type type;
 	PluginAction pluginAction;
 	RendererAction rendererAction;
+	int rendererWidth, rendererHeight;
 	VRayBaseTypes::ValueType valueType;
 };
 
