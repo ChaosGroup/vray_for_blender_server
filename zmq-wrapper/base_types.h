@@ -46,6 +46,8 @@ enum ValueType {
 	ValueTypeString,
 	ValueTypePlugin,
 
+	ValueTypeImage,
+
 	ValueTypeList,
 
 	ValueTypeListInt,
@@ -69,6 +71,35 @@ struct AttrBase {
 		assert(false);
 		return ValueType::ValueTypeUnknown;
 	}
+};
+
+struct AttrImage: public AttrBase {
+	ValueType getType() const {
+		return ValueType::ValueTypeImage;
+	}
+
+	enum ImageType {
+		NONE, RGBA_REAL, JPG
+	} imageType;
+
+	AttrImage(const void * data, int size, AttrImage::ImageType type, int width, int height):
+		data(nullptr)
+	{
+		set(data, size, type, width, height);
+	}
+
+	void set(const void * data, int size, AttrImage::ImageType type, int width, int height) {
+		this->width = width;
+		this->height = height;
+		this->imageType = type;
+		this->data.release();
+		this->data.reset(new char[size]);
+		this->size = size;
+		memcpy(this->data.get(), data, size);
+	}
+
+	std::unique_ptr<char[]> data;
+	int size, width, height;
 };
 
 

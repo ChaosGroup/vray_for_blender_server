@@ -44,13 +44,14 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 											VRayBaseTypes::AttrListPlugin,
 											VRayBaseTypes::AttrListString,
 											VRayBaseTypes::AttrMapChannels,
-											VRayBaseTypes::AttrInstancer>::value;
+											VRayBaseTypes::AttrInstancer,
+											VRayBaseTypes::AttrImage>::value;
 
 
 
 class VRayMessage {
 public:
-	enum Type : int { PluginProperty, None };
+	enum Type : int { SingleValue, SetPluginProperty, None };
 
 
 	VRayMessage(zmq::message_t & message): message(0), plugin(""), property(""), type(None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown) {
@@ -78,16 +79,6 @@ public:
 	}
 
 	template <typename T>
-	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const T & value) {
-		using namespace std;
-		SerializerStream strm;
-		strm << VRayMessage::PluginProperty << plugin << property << value.getType() << value;
-		VRayMessage msg(strm.getSize());
-		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
-		return msg;
-	}
-
-	template <typename T>
 	const T * getValue() const {
 		return reinterpet_cast<const T *>(this->value_data);
 	}
@@ -104,6 +95,32 @@ public:
 	VRayMessage(const VRayMessage &) = delete;
 	VRayMessage & operator=(const VRayMessage &) = delete;
 
+
+
+	/// Creates message to control a plugin property
+	template <typename T>
+	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const T & value) {
+		using namespace std;
+		SerializerStream strm;
+		strm << VRayMessage::SetPluginProperty << plugin << property << value.getType() << value;
+		VRayMessage msg(strm.getSize());
+		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
+		return msg;
+	}
+
+
+	/// Create message containing only a value, eg AttrImage
+	template <typename T>
+	static VRayMessage createMessage(const T & value) {
+		SerializerStream strm;
+		strm << VRayMessage::SingleValue << value.getType() << value;
+		VRayMessage msg(strm.getSize());
+		memcpy(msg.getMessage().data(), strm.getData(), strm.getSize());
+		return msg;
+	}
+
+
+
 private:
 
 	void parse() {
@@ -112,7 +129,7 @@ private:
 		DeserializerStream stream(reinterpret_cast<char*>(message.data()), message.size());
 		stream >> type;
 
-		if (type == PluginProperty) {
+		if (type == SetPluginProperty) {
 
 			stream >> plugin >> property >> valueType;
 
@@ -166,8 +183,18 @@ private:
 				stream >> *getValue<AttrInstancer>();
 				break;
 			default:
-				break;
+				throw 42;
 			}
+		} else if(type == SingleValue) {
+			stream >> valueType;
+			switch(valueType) {
+			case ValueType::ValueTypeImage:
+				stream >> *getValue<AttrImage>();
+				break;
+			default:
+				throw 42;
+			}
+
 		}
 	}
 

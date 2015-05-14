@@ -122,6 +122,15 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 	return stream;
 }
 
+template <>
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrImage & image) {
+	int size, width, height;
+	VRayBaseTypes::AttrImage::ImageType type;
+	stream >> type >> size >> width >> height;
+	image.set(stream.getCurrent(), size, type, width, height);
+	stream.forward(size);
+	return stream;
+}
 
 
 
