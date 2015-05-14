@@ -53,12 +53,12 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts };
 
 
 	VRayMessage(zmq::message_t & message):
-		message(0), plugin(""), property(""),
-		type(Type::None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		message(0),	type(Type::None),
+		valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
 		pluginAction(PluginAction::None), rendererAction(RendererAction::None) {
 		this->message.move(&message);
 		this->parse();
@@ -73,8 +73,8 @@ public:
 	}
 
 	VRayMessage(int size):
-		message(size), plugin(""), property(""),
-		type(Type::None), valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
+		message(size), type(Type::None),
+		valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
 		pluginAction(PluginAction::None), rendererAction(RendererAction::None) {
 
 	}
@@ -89,6 +89,10 @@ public:
 
 	const std::string & getPlugin() const {
 		return this->plugin;
+	}
+
+	const std::string & getHosts() const {
+		return hosts;
 	}
 
 	Type getType() const {
@@ -150,10 +154,13 @@ public:
 	}
 
 	/// create message to control renderer
-	static VRayMessage createMessage(const RendererAction & action) {
-		assert(action != RendererAction::None && "Wrong RendererAction");
+	static VRayMessage createMessage(const RendererAction & action, const std::string & argument = "") {
+		assert(action != RendererAction::None && action != RendererAction::Resize && "Wrong RendererAction");
 		SerializerStream strm;
 		strm << Type::ChangeRenderer << action;
+		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts) {
+			strm << argument;
+		}
 		return fromStream(strm);
 	}
 
@@ -255,6 +262,8 @@ private:
 			stream >> rendererAction;
 			if (rendererAction == RendererAction::Resize) {
 				stream >> rendererWidth >> rendererHeight;
+			} else if (rendererAction == RendererAction::AddHosts || rendererAction == RendererAction::RemoveHosts) {
+				stream >> hosts;
 			}
 		}
 	}
@@ -266,11 +275,12 @@ private:
 	uint8_t value_data[MAX_MESSAGE_SIZE];
 
 	zmq::message_t message;
-	std::string plugin, property;
+	std::string plugin, property, hosts;
 
 	Type type;
 	PluginAction pluginAction;
 	RendererAction rendererAction;
+
 	int rendererWidth, rendererHeight;
 	VRayBaseTypes::ValueType valueType;
 };

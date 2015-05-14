@@ -116,6 +116,12 @@ MainWindow::MainWindow(QWidget *parent) :
 				renderer->setWidth(width);
 				renderer->setHeight(height);
 				break;
+			case VRayMessage::RendererAction::AddHosts:
+				renderer->addHosts(message.getHosts());
+				break;
+			case VRayMessage::RendererAction::RemoveHosts:
+				renderer->removeHosts(message.getHosts());
+				break;
 			default:
 				std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
 			}
