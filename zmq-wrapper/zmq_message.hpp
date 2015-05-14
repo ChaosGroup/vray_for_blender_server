@@ -78,6 +78,10 @@ public:
 		return this->plugin;
 	}
 
+	Type getType() const {
+		return type;
+	}
+
 	template <typename T>
 	const T * getValue() const {
 		return reinterpet_cast<const T *>(this->value_data);

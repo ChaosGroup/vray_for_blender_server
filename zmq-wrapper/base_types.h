@@ -92,7 +92,6 @@ struct AttrImage: public AttrBase {
 		this->width = width;
 		this->height = height;
 		this->imageType = type;
-		this->data.release();
 		this->data.reset(new char[size]);
 		this->size = size;
 		memcpy(this->data.get(), data, size);
