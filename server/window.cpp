@@ -57,9 +57,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	renderer->setOnRTImageUpdated(imageUpdate, &server);
 	renderer->setOnImageReady(imageDone, &server);
 
-	int x = sizeof(decltype(renderer));
-
-
 	ui->setupUi(this);
 
 	server.setCallback([this, &options] (VRayMessage & message, ZmqWrapper * server) {
