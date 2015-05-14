@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	this->ui->label->resize(640, 480);
 
 	client.setCallback([this](VRayMessage & message, ZmqWrapper * client) {
-		auto img = message.getValue<VRayBaseTypes::AttrImage>();
+		const auto img = message.getValue<VRayBaseTypes::AttrImage>();
 		QPixmap map;
 
 		std::cout << "IMG TYPE:" << img->imageType << "  " << img->size << "  " << message.getMessage().size() << std::endl;
@@ -51,6 +51,8 @@ MainWindow::~MainWindow()
 void MainWindow::connectServer() {
 	QString address("tcp://" + this->address);
 	client.connect(address.toStdString().c_str());
+	auto msg = VRayMessage::createMessage(VRayMessage::RendererAction::Start);
+	client.send(msg);
 }
 
 void MainWindow::send()

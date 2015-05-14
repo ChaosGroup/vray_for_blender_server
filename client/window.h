@@ -13,6 +13,8 @@ class MainWindow;
 
 class MainWindow : public QMainWindow
 {
+	ZmqClient client;
+
 	Q_OBJECT
 
 public:
@@ -34,7 +36,6 @@ private:
 	const char * pl_name;
 	unsigned char tr_data[48];
 	QString address;
-	ZmqClient client;
 	Ui::MainWindow *ui;
 };
 
