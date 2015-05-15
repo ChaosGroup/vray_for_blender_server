@@ -187,6 +187,68 @@ private:
 		return msg;
 	}
 
+
+	void readValue(DeserializerStream & stream) {
+		using namespace VRayBaseTypes;
+
+		stream >> valueType;
+		switch (valueType) {
+		case ValueType::ValueTypeColor:
+			stream >> *setValue<AttrColor>();
+			break;
+		case ValueType::ValueTypeAColor:
+			stream >> *setValue<AttrAColor>();
+			break;
+		case ValueType::ValueTypeVector:
+			stream >> *setValue<AttrVector>();
+			break;
+		case ValueType::ValueTypeVector2:
+			stream >> *setValue<AttrVector2>();
+			break;
+		case ValueType::ValueTypeMatrix:
+			stream >> *setValue<AttrMatrix>();
+			break;
+		case ValueType::ValueTypeTransform:
+			stream >> *setValue<AttrTransform>();
+			break;
+		case ValueType::ValueTypePlugin:
+			stream >> *setValue<AttrPlugin>();
+			break;
+		case ValueType::ValueTypeListInt:
+			stream >> *setValue<AttrListInt>();
+			break;
+		case ValueType::ValueTypeListFloat:
+			stream >> *setValue<AttrListFloat>();
+			break;
+		case ValueType::ValueTypeListColor:
+			stream >> *setValue<AttrListColor>();
+			break;
+		case ValueType::ValueTypeListVector:
+			stream >> *setValue<AttrListVector>();
+			break;
+		case ValueType::ValueTypeListVector2:
+			stream >> *setValue<AttrListVector2>();
+			break;
+		case ValueType::ValueTypeListPlugin:
+			stream >> *setValue<AttrListPlugin>();
+			break;
+		case ValueType::ValueTypeListString:
+			stream >> *setValue<AttrListString>();
+			break;
+		case ValueType::ValueTypeMapChannels:
+			stream >> *setValue<AttrMapChannels>();
+			break;
+		case ValueType::ValueTypeInstancer:
+			stream >> *setValue<AttrInstancer>();
+			break;
+		case ValueType::ValueTypeImage:
+			stream >> *setValue<AttrImage>();
+			break;
+		default:
+			throw 42;
+		}
+	}
+
 	void parse() {
 		using namespace VRayBaseTypes;
 
@@ -196,70 +258,13 @@ private:
 		if (type == Type::ChangePlugin) {
 
 			stream >> plugin >> pluginAction;
-			if (pluginAction== PluginAction::Update) {
-				stream >> property >> valueType;
-				switch (valueType) {
-				case ValueType::ValueTypeColor:
-					stream >> *setValue<AttrColor>();
-					break;
-				case ValueType::ValueTypeAColor:
-					stream >> *setValue<AttrAColor>();
-					break;
-				case ValueType::ValueTypeVector:
-					stream >> *setValue<AttrVector>();
-					break;
-				case ValueType::ValueTypeVector2:
-					stream >> *setValue<AttrVector2>();
-					break;
-				case ValueType::ValueTypeMatrix:
-					stream >> *setValue<AttrMatrix>();
-					break;
-				case ValueType::ValueTypeTransform:
-					stream >> *setValue<AttrTransform>();
-					break;
-				case ValueType::ValueTypePlugin:
-					stream >> *setValue<AttrPlugin>();
-					break;
-				case ValueType::ValueTypeListInt:
-					stream >> *setValue<AttrListInt>();
-					break;
-				case ValueType::ValueTypeListFloat:
-					stream >> *setValue<AttrListFloat>();
-					break;
-				case ValueType::ValueTypeListColor:
-					stream >> *setValue<AttrListColor>();
-					break;
-				case ValueType::ValueTypeListVector:
-					stream >> *setValue<AttrListVector>();
-					break;
-				case ValueType::ValueTypeListVector2:
-					stream >> *setValue<AttrListVector2>();
-					break;
-				case ValueType::ValueTypeListPlugin:
-					stream >> *setValue<AttrListPlugin>();
-					break;
-				case ValueType::ValueTypeListString:
-					stream >> *setValue<AttrListString>();
-					break;
-				case ValueType::ValueTypeMapChannels:
-					stream >> *setValue<AttrMapChannels>();
-					break;
-				case ValueType::ValueTypeInstancer:
-					stream >> *setValue<AttrInstancer>();
-					break;
-				default:
-					throw 42;
-				}
+			if (pluginAction == PluginAction::Update) {
+				stream >> property;
+				readValue(stream);
 			}
 		} else if (type == Type::SingleValue) {
-			stream >> valueType;
-			switch(valueType) {
-			case ValueType::ValueTypeImage:
-				stream >> *setValue<AttrImage>();
-				break;
-			default:
-				throw 42;
-			}
+			readValue(stream);
+
 		} else if (type == Type::ChangeRenderer) {
 			stream >> rendererAction;
 			if (rendererAction == RendererAction::Resize) {
