@@ -53,7 +53,8 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts, RemoveHosts, LoadScene, AppendScene, ExportScene };
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts,
+		RemoveHosts, LoadScene, AppendScene, ExportScene, SetRenderMode };
 
 
 	VRayMessage(zmq::message_t & message):
@@ -160,7 +161,7 @@ public:
 		strm << Type::ChangeRenderer << action;
 		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts ||
 			action == RendererAction::LoadScene || action == RendererAction::AppendScene ||
-			action == RendererAction::ExportScene) {
+			action == RendererAction::ExportScene || action == RendererAction::SetRenderMode) {
 			strm << argument;
 		}
 		return fromStream(strm);
