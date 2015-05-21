@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
-#define VRAY_FOR_BLENDER_PLUGIN_ATTRS_H
+#ifndef VRAY_FOR_BLENDER_BASE_TYPES_H
+#define VRAY_FOR_BLENDER_BASE_TYPES_H
 
 
 #include <vector>
@@ -73,6 +73,27 @@ struct AttrBase {
 	}
 };
 
+template <typename T>
+struct AttrSimpleType: public AttrBase {
+	ValueType getType() const;
+	AttrSimpleType(): m_Value() {}
+	AttrSimpleType(const T & val): m_Value(val) {}
+
+	T m_Value;
+};
+
+inline ValueType AttrSimpleType<int>::getType() const {
+	return ValueType::ValueTypeInt;
+}
+
+inline ValueType AttrSimpleType<float>::getType() const {
+	return ValueType::ValueTypeFloat;
+}
+
+inline ValueType AttrSimpleType<std::string>::getType() const {
+	return ValueType::ValueTypeString;
+}
+
 struct AttrImage: public AttrBase {
 	ValueType getType() const {
 		return ValueType::ValueTypeImage;
@@ -107,31 +128,31 @@ struct AttrImage: public AttrBase {
 };
 
 
-struct AttrColor: public AttrBase {
+struct AttrColorBase: public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeColor;
 	}
 
-	AttrColor():
+	AttrColorBase():
 	    r(0.0f),
 	    g(0.0f),
 	    b(0.0f)
 	{}
 
-	AttrColor(const float &r, const float &g, const float &b):
+	AttrColorBase(const float &r, const float &g, const float &b):
 	    r(r),
 	    g(g),
 	    b(b)
 	{}
 
-	AttrColor(float c):
+	AttrColorBase(float c):
 		r(c),
 		g(c),
 		b(c)
 	{}
 
-	AttrColor(float color[4]):
+	AttrColorBase(float color[4]):
 		r(color[0]),
 		g(color[1]),
 		b(color[2])
@@ -143,59 +164,59 @@ struct AttrColor: public AttrBase {
 };
 
 
-struct AttrAColor: public AttrBase {
+struct AttrAColorBase: public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeAColor;
 	}
 
-	AttrAColor():
+	AttrAColorBase():
 	    alpha(1.0f)
 	{}
 
-	AttrAColor(const AttrColor &c, const float &a=1.0f):
+	AttrAColorBase(const AttrColorBase &c, const float &a=1.0f):
 	    color(c),
 	    alpha(a)
 	{}
 
-	AttrColor  color;
+	AttrColorBase  color;
 	float      alpha;
 };
 
 
-struct AttrVector: public AttrBase {
+struct AttrVectorBase: public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeVector;
 	}
 
-	AttrVector():
+	AttrVectorBase():
 	    x(0.0f),
 	    y(0.0f),
 	    z(0.0f)
 	{}
 
-	AttrVector(float vector[3]):
+	AttrVectorBase(float vector[3]):
 		x(vector[0]),
 		y(vector[1]),
 		z(vector[2])
 	{}
 
-	AttrVector(const float &_x, const float &_y, const float &_z):
+	AttrVectorBase(const float &_x, const float &_y, const float &_z):
 		x(_x),
 		y(_y),
 		z(_z)
 	{}
 
-	float operator * (const AttrVector other) {
+	float operator * (const AttrVectorBase other) {
 		return x * other.x + y * other.y + z * other.z;
 	}
 
-	AttrVector operator - (const AttrVector other) {
-		return AttrVector(x - other.x, y - other.y, z - other.z);
+	AttrVectorBase operator - (const AttrVectorBase other) {
+		return AttrVectorBase(x - other.x, y - other.y, z - other.z);
 	}
 
-	bool operator == (const AttrVector other) {
+	bool operator == (const AttrVectorBase other) {
 		return (x == other.x) && (y == other.y) && (z == other.z);
 	}
 
@@ -221,18 +242,18 @@ struct AttrVector: public AttrBase {
 };
 
 
-struct AttrVector2 : public AttrBase {
+struct AttrVector2Base : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeVector2;
 	}
 
-	AttrVector2():
+	AttrVector2Base():
 	    x(0.0f),
 	    y(0.0f)
 	{}
 
-	AttrVector2(float vector[2]):
+	AttrVector2Base(float vector[2]):
 		x(vector[0]),
 		y(vector[1])
 	{}
@@ -242,141 +263,145 @@ struct AttrVector2 : public AttrBase {
 };
 
 
-struct AttrMatrix : public AttrBase {
+struct AttrMatrixBase : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeMatrix;
 	}
 
-	AttrMatrix() {}
+	AttrMatrixBase() {}
 
-	AttrMatrix(float tm[3][3]):
+	AttrMatrixBase(float tm[3][3]):
 	    v0(tm[0]),
 	    v1(tm[1]),
 	    v2(tm[2])
 	{}
 
-	AttrMatrix(float tm[4][4]):
+	AttrMatrixBase(float tm[4][4]):
 	    v0(tm[0]),
 	    v1(tm[1]),
 	    v2(tm[2])
 	{}
 
-	AttrVector v0;
-	AttrVector v1;
-	AttrVector v2;
+	AttrVectorBase v0;
+	AttrVectorBase v1;
+	AttrVectorBase v2;
 };
 
 
-struct AttrTransform : public AttrBase {
+struct AttrTransformBase : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeTransform;
 	}
 
-	AttrTransform() {}
+	AttrTransformBase() {}
 
-	AttrTransform(float tm[4][4]):
+	AttrTransformBase(float tm[4][4]):
 	    m(tm),
 	    offs(tm[3])
 	{}
 
-	AttrMatrix m;
-	AttrVector offs;
+	AttrMatrixBase m;
+	AttrVectorBase offs;
 };
 
 
-struct AttrPlugin : public AttrBase {
+struct AttrPluginBase : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypePlugin;
 	}
 
-	AttrPlugin() {}
-	AttrPlugin(const std::string &name):
+	AttrPluginBase() {}
+	AttrPluginBase(const std::string &name):
 	    plugin(name)
 	{}
 
 	operator bool () const {
 		return !plugin.empty();
 	}
-
-	std::string  plugin;
+	std::string output;
+	std::string plugin;
 };
 
 
 template <typename T>
-struct AttrList : public AttrBase {
+struct AttrListBase : public AttrBase {
 	typedef std::vector<T>              DataType;
 	typedef boost::shared_ptr<DataType> DataArray;
 
 	ValueType getType() const ;
 
-	AttrList() {
+	AttrListBase() {
 		init();
 	}
 
-	AttrList(const int &size) {
+	AttrListBase(const int &size) {
 		init();
 		resize(size);
 	}
 
 	void init() {
-		ptr = DataArray(new DataType);
+		m_Ptr = DataArray(new DataType);
 	}
 
 	void resize(const int &cnt) {
-		ptr.get()->resize(cnt);
+		m_Ptr.get()->resize(cnt);
 	}
 
 	void append(const T &value) {
-		ptr.get()->push_back(value);
+		m_Ptr.get()->push_back(value);
 	}
 
 	void prepend(const T &value) {
-		ptr.get()->insert(0, value);
+		m_Ptr.get()->insert(0, value);
 	}
 
 	int getCount() const {
-		return ptr.get()->size();
+		return m_Ptr.get()->size();
 	}
 
 // wont work for AttrList<std::string>
-//	int getBytesCount() const {
-//		return getCount() * sizeof(T);
-//	}
+	int getBytesCount() const {
+		return getCount() * sizeof(T);
+	}
 
 	T* operator * () {
-		return &ptr.get()->at(0);
+		return &m_Ptr.get()->at(0);
 	}
 
 	const T* operator * () const {
-		return &ptr.get()->at(0);
+		return &m_Ptr.get()->at(0);
 	}
 
 	operator bool () const {
-		return ptr && ptr.get()->size();
+		return m_Ptr && m_Ptr.get()->size();
 	}
 
 	const bool empty() const {
-		return !ptr || (ptr.get()->size() == 0);
+		return !m_Ptr || (m_Ptr.get()->size() == 0);
 	}
 
 	const DataArray getData() const {
-		return ptr;
+		return m_Ptr;
+	}
+
+	DataArray ptr() {
+		return m_Ptr;
 	}
 
 private:
-	DataArray ptr;
+	DataArray m_Ptr;
 };
 
-typedef AttrList<int>         AttrListInt;
-typedef AttrList<float>       AttrListFloat;
-typedef AttrList<AttrColor>   AttrListColor;
-typedef AttrList<AttrVector>  AttrListVector;
-typedef AttrList<AttrVector2> AttrListVector2;
-typedef AttrList<AttrPlugin>  AttrListPlugin;
-typedef AttrList<std::string> AttrListString;
+typedef AttrListBase<int>         AttrListInt;
+typedef AttrListBase<float>       AttrListFloat;
+typedef AttrListBase<AttrColorBase>   AttrListColor;
+typedef AttrListBase<AttrVectorBase>  AttrListVector;
+typedef AttrListBase<AttrVector2Base> AttrListVector2;
+typedef AttrListBase<AttrPluginBase>  AttrListPlugin;
+typedef AttrListBase<std::string> AttrListString;
 
 
 inline ValueType AttrListInt::getType() const {
@@ -408,7 +433,7 @@ inline ValueType AttrListString::getType() const {
 }
 
 
-struct AttrMapChannels : public AttrBase {
+struct AttrMapChannelsBase : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeMapChannels;
@@ -425,7 +450,7 @@ struct AttrMapChannels : public AttrBase {
 };
 
 
-struct AttrInstancer : public AttrBase {
+struct AttrInstancerBase : public AttrBase {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeInstancer;
@@ -433,20 +458,20 @@ struct AttrInstancer : public AttrBase {
 
 	struct Item {
 		int            index;
-		AttrTransform  tm;
-		AttrTransform  vel;
-		AttrPlugin     node;
+		AttrTransformBase  tm;
+		AttrTransformBase  vel;
+		AttrPluginBase     node;
 	};
-	typedef AttrList<Item> Items;
+	typedef AttrListBase<Item> Items;
 
 	Items data;
 };
 
 struct AttrValue {
-	typedef AttrList<AttrValue> AttrListValue;
+	typedef AttrListBase<AttrValue> AttrListValue;
 
 	AttrValue():
-	    type(ValueTypeUnknown)
+		type(ValueTypeUnknown)
 	{}
 
 	AttrValue(const std::string &attrValue) {
@@ -459,38 +484,38 @@ struct AttrValue {
 		valString = attrValue;
 	}
 
-	AttrValue(const AttrPlugin attrValue) {
+	AttrValue(const AttrPluginBase attrValue) {
 		type = ValueTypePlugin;
 		valPlugin = attrValue;
 	}
 
-	AttrValue(const AttrPlugin attrValue, const std::string &output) {
+	AttrValue(const AttrPluginBase attrValue, const std::string &output) {
 		type = ValueTypePlugin;
 		valPlugin = attrValue;
 		valPluginOutput = output;
 	}
 
-	AttrValue(const AttrColor &c) {
+	AttrValue(const AttrColorBase &c) {
 		type = ValueTypeColor;
 		valColor = c;
 	}
 
-	AttrValue(const AttrAColor &ac) {
+	AttrValue(const AttrAColorBase &ac) {
 		type = ValueTypeAColor;
 		valAColor = ac;
 	}
 
-	AttrValue(const AttrVector &v) {
+	AttrValue(const AttrVectorBase &v) {
 		type = ValueTypeVector;
 		valVector = v;
 	}
 
-	AttrValue(const AttrMatrix &m) {
+	AttrValue(const AttrMatrixBase &m) {
 		type = ValueTypeMatrix;
 		valMatrix = m;
 	}
 
-	AttrValue(const AttrTransform &attrValue) {
+	AttrValue(const AttrTransformBase &attrValue) {
 		type = ValueTypeTransform;
 		valTransform = attrValue;
 	}
@@ -545,11 +570,11 @@ struct AttrValue {
 		valListString = attrValue;
 	}
 
-	AttrValue(const AttrMapChannels &attrValue) {
+	AttrValue(const AttrMapChannelsBase &attrValue) {
 		type = ValueTypeMapChannels;
 		valMapChannels = attrValue;
 	}
-	AttrValue(const AttrInstancer &attrValue) {
+	AttrValue(const AttrInstancerBase &attrValue) {
 		type = ValueTypeInstancer;
 		valInstancer = attrValue;
 	}
@@ -557,16 +582,16 @@ struct AttrValue {
 	// TODO: Replace with single storage with reinterpret_cast<>
 	int                 valInt;
 	float               valFloat;
-	AttrVector          valVector;
-	AttrColor           valColor;
-	AttrAColor          valAColor;
+	AttrVectorBase          valVector;
+	AttrColorBase           valColor;
+	AttrAColorBase          valAColor;
 
 	std::string         valString;
 
-	AttrMatrix          valMatrix;
-	AttrTransform       valTransform;
+	AttrMatrixBase          valMatrix;
+	AttrTransformBase       valTransform;
 
-	AttrPlugin          valPlugin;
+	AttrPluginBase          valPlugin;
 	std::string         valPluginOutput;
 
 	AttrListInt         valListInt;
@@ -577,8 +602,8 @@ struct AttrValue {
 	AttrListValue       valListValue;
 	AttrListString      valListString;
 
-	AttrMapChannels     valMapChannels;
-	AttrInstancer       valInstancer;
+	AttrMapChannelsBase     valMapChannels;
+	AttrInstancerBase       valInstancer;
 
 	ValueType           type;
 

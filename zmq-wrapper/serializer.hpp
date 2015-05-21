@@ -46,14 +46,20 @@ inline SerializerStream & operator<<(SerializerStream & stream, const std::strin
 	return stream;
 }
 
+template <>
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrSimpleType<std::string> & value) {
+	stream << value.m_Value;
+	return stream;
+}
+
 
 template <>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrPlugin & plugin) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrPluginBase & plugin) {
 	return stream << plugin.plugin;
 }
 
 template <typename Q>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<Q> & list) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrListBase<Q> & list) {
 	stream << list.getCount();
 	if (!list.empty()) {
 		for (auto & item : *(list.getData())) {
@@ -64,7 +70,7 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 }
 
 template <>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrMapChannels & map) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrMapChannelsBase & map) {
 	stream << static_cast<int>(map.data.size());
 	for (auto & pair : map.data) {
 		stream << pair.first << pair.second.vertices << pair.second.faces << pair.second.name;
@@ -74,12 +80,12 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 
 
 template <>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrInstancer::Item & instItem) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrInstancerBase::Item & instItem) {
 	return stream << instItem.index << instItem.tm << instItem.vel << instItem.node;
 }
 
 template <>
-inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrInstancer & inst) {
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrInstancerBase & inst) {
 	stream << inst.data.getCount();
 	if (!inst.data.empty()) {
 		for (auto & item : *(inst.data.getData())) {
