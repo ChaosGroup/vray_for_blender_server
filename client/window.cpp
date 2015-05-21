@@ -67,7 +67,7 @@ void MainWindow::send()
 		value = this->ui->horizontalSlider_2->value();
 	}
 
-	VRayBaseTypes::AttrTransform * transform = reinterpret_cast<VRayBaseTypes::AttrTransform *>(tr_data);
+	VRayBaseTypes::AttrTransformBase * transform = reinterpret_cast<VRayBaseTypes::AttrTransformBase *>(tr_data);
 	transform->offs.x = ((float)value - 50) / 50;
 
 	VRayMessage msg = VRayMessage::createMessage(pl_name, tr_name, *transform);
