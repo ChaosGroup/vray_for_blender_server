@@ -122,6 +122,59 @@ MainWindow::MainWindow(QWidget *parent) :
 						**message.getValue<VRayBaseTypes::AttrListVector>(),
 						message.getValue<VRayBaseTypes::AttrListVector>()->getBytesCount());
 					break;
+				case VRayBaseTypes::ValueType::ValueTypeListPlugin:
+				{
+					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
+					const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
+					VRay::ValueList pluginList(plist.getCount());
+					std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [](const VRayBaseTypes::AttrPlugin & plugin) {
+						return VRay::Value(plugin);
+					});
+					success = plugin.setValue(message.getProperty(), VRay::Value(pluginList));
+					break;
+				}
+				case VRayBaseTypes::ValueType::ValueTypeListString:
+				{
+					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
+					const VRayBaseTypes::AttrListString & slist = *message.getValue<VRayBaseTypes::AttrListString>();
+					VRay::ValueList stringList(slist.getCount());
+					std::transform(slist.getData()->begin(), slist.getData()->end(), stringList.begin(), [](const std::string & str) {
+						return VRay::Value(str);
+					});
+					success = plugin.setValue(message.getProperty(), VRay::Value(stringList));
+					break;
+				}
+				case VRayBaseTypes::ValueType::ValueTypeMapChannels:
+				{
+					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
+					VRay::ValueList map_channels;
+					const VRayBaseTypes::AttrMapChannels & channelMap = *message.getValue<VRayBaseTypes::AttrMapChannels>();
+
+					int i = 0;
+					for (const auto &mcIt : channelMap.data) {
+						const VRayBaseTypes::AttrMapChannels::AttrMapChannel &map_channel_data = mcIt.second;
+
+						VRay::ValueList map_channel;
+						map_channel.push_back(VRay::Value(i++));
+
+						// XXX: Craaaazy...
+						VRay::IntList faces;
+						faces.resize(map_channel_data.faces.getCount());
+						memcpy(&faces[0], *map_channel_data.faces, map_channel_data.faces.getBytesCount());
+
+						VRay::VectorList vertices;
+						vertices.resize(map_channel_data.vertices.getCount());
+						memcpy(&vertices[0], *map_channel_data.vertices, map_channel_data.vertices.getBytesCount());
+
+						map_channel.push_back(VRay::Value(vertices));
+						map_channel.push_back(VRay::Value(faces));
+
+						map_channels.push_back(VRay::Value(map_channel));
+					}
+
+					success = plugin.setValue(message.getProperty(), VRay::Value(map_channels));
+					break;
+				}
 				default:
 					std::cerr << "Missing case for " << message.getValueType() << std::endl;
 					success = false;
