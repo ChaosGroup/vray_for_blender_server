@@ -29,13 +29,13 @@ struct max_type_sizeof<T, Q> {
 
 // maximum possible size of a value in the message
 const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
-											VRayBaseTypes::AttrColorBase,
-											VRayBaseTypes::AttrAColorBase,
-											VRayBaseTypes::AttrVectorBase,
-											VRayBaseTypes::AttrVector2Base,
-											VRayBaseTypes::AttrMatrixBase,
-											VRayBaseTypes::AttrTransformBase,
-											VRayBaseTypes::AttrPluginBase,
+											VRayBaseTypes::AttrColor,
+											VRayBaseTypes::AttrAColor,
+											VRayBaseTypes::AttrVector,
+											VRayBaseTypes::AttrVector2,
+											VRayBaseTypes::AttrMatrix,
+											VRayBaseTypes::AttrTransform,
+											VRayBaseTypes::AttrPlugin,
 											VRayBaseTypes::AttrListInt,
 											VRayBaseTypes::AttrListFloat,
 											VRayBaseTypes::AttrListColor,
@@ -43,8 +43,8 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 											VRayBaseTypes::AttrListVector2,
 											VRayBaseTypes::AttrListPlugin,
 											VRayBaseTypes::AttrListString,
-											VRayBaseTypes::AttrMapChannelsBase,
-											VRayBaseTypes::AttrInstancerBase,
+											VRayBaseTypes::AttrMapChannels,
+											VRayBaseTypes::AttrInstancer,
 											VRayBaseTypes::AttrImage>::value;
 
 
@@ -208,25 +208,25 @@ public:
 
 		switch (valueType) {
 		case ValueType::ValueTypeColor:
-			getValue<AttrColorBase>()->~AttrColorBase();
+			getValue<AttrColor>()->~AttrColor();
 			break;
 		case ValueType::ValueTypeAColor:
-			getValue<AttrAColorBase>()->~AttrAColorBase();
+			getValue<AttrAColor>()->~AttrAColor();
 			break;
 		case ValueType::ValueTypeVector:
-			getValue<AttrVectorBase>()->~AttrVectorBase();
+			getValue<AttrVector>()->~AttrVector();
 			break;
 		case ValueType::ValueTypeVector2:
-			getValue<AttrVector2Base>()->~AttrVector2Base();
+			getValue<AttrVector2>()->~AttrVector2();
 			break;
 		case ValueType::ValueTypeMatrix:
-			getValue<AttrMatrixBase>()->~AttrMatrixBase();
+			getValue<AttrMatrix>()->~AttrMatrix();
 			break;
 		case ValueType::ValueTypeTransform:
-			getValue<AttrTransformBase>()->~AttrTransformBase();
+			getValue<AttrTransform>()->~AttrTransform();
 			break;
 		case ValueType::ValueTypePlugin:
-			getValue<AttrPluginBase>()->~AttrPluginBase();
+			getValue<AttrPlugin>()->~AttrPlugin();
 			break;
 		case ValueType::ValueTypeListInt:
 			getValue<AttrListInt>()->~AttrListInt();
@@ -250,10 +250,10 @@ public:
 			getValue<AttrListString>()->~AttrListString();
 			break;
 		case ValueType::ValueTypeMapChannels:
-			getValue<AttrMapChannelsBase>()->~AttrMapChannelsBase();
+			getValue<AttrMapChannels>()->~AttrMapChannels();
 			break;
 		case ValueType::ValueTypeInstancer:
-			getValue<AttrInstancerBase>()->~AttrInstancerBase();
+			getValue<AttrInstancer>()->~AttrInstancer();
 			break;
 		case ValueType::ValueTypeImage:
 			getValue<AttrImage>()->~AttrImage();
@@ -286,25 +286,25 @@ private:
 		stream >> valueType;
 		switch (valueType) {
 		case ValueType::ValueTypeColor:
-			stream >> *setValue<AttrColorBase>();
+			stream >> *setValue<AttrColor>();
 			break;
 		case ValueType::ValueTypeAColor:
-			stream >> *setValue<AttrAColorBase>();
+			stream >> *setValue<AttrAColor>();
 			break;
 		case ValueType::ValueTypeVector:
-			stream >> *setValue<AttrVectorBase>();
+			stream >> *setValue<AttrVector>();
 			break;
 		case ValueType::ValueTypeVector2:
-			stream >> *setValue<AttrVector2Base>();
+			stream >> *setValue<AttrVector2>();
 			break;
 		case ValueType::ValueTypeMatrix:
-			stream >> *setValue<AttrMatrixBase>();
+			stream >> *setValue<AttrMatrix>();
 			break;
 		case ValueType::ValueTypeTransform:
-			stream >> *setValue<AttrTransformBase>();
+			stream >> *setValue<AttrTransform>();
 			break;
 		case ValueType::ValueTypePlugin:
-			stream >> *setValue<AttrPluginBase>();
+			stream >> *setValue<AttrPlugin>();
 			break;
 		case ValueType::ValueTypeListInt:
 			stream >> *setValue<AttrListInt>();
@@ -328,10 +328,10 @@ private:
 			stream >> *setValue<AttrListString>();
 			break;
 		case ValueType::ValueTypeMapChannels:
-			stream >> *setValue<AttrMapChannelsBase>();
+			stream >> *setValue<AttrMapChannels>();
 			break;
 		case ValueType::ValueTypeInstancer:
-			stream >> *setValue<AttrInstancerBase>();
+			stream >> *setValue<AttrInstancer>();
 			break;
 		case ValueType::ValueTypeImage:
 			stream >> *setValue<AttrImage>();

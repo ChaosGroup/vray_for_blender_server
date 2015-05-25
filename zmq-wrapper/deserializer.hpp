@@ -80,12 +80,12 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 }
 
 template <>
-inline DeserializerStream & operator>> (DeserializerStream & stream, VRayBaseTypes::AttrPluginBase & plugin) {
+inline DeserializerStream & operator>> (DeserializerStream & stream, VRayBaseTypes::AttrPlugin & plugin) {
 	return stream >> plugin.plugin;
 }
 
 template <typename Q>
-inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrListBase<Q> & list) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrList<Q> & list) {
 	list.init();
 	int size;
 	stream >> size;
@@ -100,13 +100,13 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 }
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrMapChannelsBase & map) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrMapChannels & map) {
 	map.data.clear();
 	int size;
 	stream >> size;
 	for (int c = 0; c < size; ++c) {
 		std::string key;
-		VRayBaseTypes::AttrMapChannelsBase::AttrMapChannel channel;
+		VRayBaseTypes::AttrMapChannels::AttrMapChannel channel;
 		stream >> key >> channel.vertices >> channel.faces >> channel.name;
 		map.data.emplace(key, channel);
 	}
@@ -115,17 +115,17 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancerBase::Item & instItem) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancer::Item & instItem) {
 	return stream >> instItem.index >> instItem.tm >> instItem.vel >> instItem.node;
 }
 
 template <>
-inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancerBase & inst) {
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrInstancer & inst) {
 	int size;
 	stream >> size;
 	inst.data.init();
 	for (int c = 0; c < size; ++c) {
-		VRayBaseTypes::AttrInstancerBase::Item item;
+		VRayBaseTypes::AttrInstancer::Item item;
 		stream >> item;
 		inst.data.append(item);
 	}
