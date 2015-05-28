@@ -9,21 +9,12 @@
 void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
 	ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
 
-	//size_t size;
-	//std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
-	//int width, height;
-	//img->getSize(width, height);
-
-	//VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
-
 	size_t size;
-	VRay::AColor * data = img->getPixelData(size);
-	size *= sizeof(VRay::AColor);
-
+	std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
 	int width, height;
 	img->getSize(width, height);
 
-	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
 
 	server->send(msg);
 }
@@ -31,12 +22,14 @@ void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * ar
 void imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
 
+	VRay::VRayImage * img = renderer.getImage();
+
 	size_t size;
-	VRay::AColor * data = renderer.getImage()->getPixelData(size);
+	VRay::AColor * data = img->getPixelData(size);
 	size *= sizeof(VRay::AColor);
 
 	int width, height;
-	renderer.getImage()->getSize(width, height);
+	img->getSize(width, height);
 
 	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 
