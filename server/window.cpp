@@ -109,6 +109,12 @@ MainWindow::MainWindow(QWidget *parent) :
 						**message.getValue<VRayBaseTypes::AttrListInt>(),
 						message.getValue<VRayBaseTypes::AttrListInt>()->getBytesCount());
 					break;
+				case VRayBaseTypes::ValueType::ValueTypeListFloat:
+					std::cout << "Setting property ListInt for:" << message.getPlugin() << "\n";
+					success = plugin.setValue(message.getProperty(),
+						**message.getValue<VRayBaseTypes::AttrListFloat>(),
+						message.getValue<VRayBaseTypes::AttrListFloat>()->getBytesCount());
+					break;
 				case VRayBaseTypes::ValueType::ValueTypeListVector:
 					std::cout << "Setting property ListVector for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(),
@@ -166,6 +172,33 @@ MainWindow::MainWindow(QWidget *parent) :
 					}
 
 					success = plugin.setValue(message.getProperty(), VRay::Value(map_channels));
+					break;
+				}
+				case VRayBaseTypes::ValueType::ValueTypeInstancer:
+				{
+					std::cout << "Setting property Instancer for:" << message.getPlugin() << "\n";
+					const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
+					VRay::ValueList instancer;
+
+					for (int i = 0; i < inst.data.getCount(); ++i) {
+						const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
+
+						// XXX: Also pretty crazy...
+						VRay::ValueList instance;
+
+						const VRay::Transform * tm, * vel;
+						tm = reinterpret_cast<const VRay::Transform*>(&item.tm);
+						vel = reinterpret_cast<const VRay::Transform*>(&item.vel);
+
+						instance.push_back(VRay::Value(item.index));
+						instance.push_back(VRay::Value(*tm));
+						instance.push_back(VRay::Value(*vel));
+						instance.push_back(VRay::Value(item.node));
+
+						instancer.push_back(VRay::Value(instance));
+					}
+
+					success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
 					break;
 				}
 				default:
