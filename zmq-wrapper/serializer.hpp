@@ -55,7 +55,7 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 
 template <>
 inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrPlugin & plugin) {
-	return stream << plugin.plugin;
+	return stream << plugin.plugin << plugin.output;
 }
 
 template <typename Q>

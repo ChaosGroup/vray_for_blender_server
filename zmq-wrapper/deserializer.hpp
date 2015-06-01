@@ -81,7 +81,7 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 
 template <>
 inline DeserializerStream & operator>> (DeserializerStream & stream, VRayBaseTypes::AttrPlugin & plugin) {
-	return stream >> plugin.plugin;
+	return stream >> plugin.plugin >> plugin.output;
 }
 
 template <typename Q>
