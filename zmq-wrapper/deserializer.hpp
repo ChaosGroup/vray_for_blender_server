@@ -90,12 +90,36 @@ inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseType
 	int size;
 	stream >> size;
 
+	list.getData()->resize(size);
+	memcpy(list.getData()->data(), stream.getCurrent(), size * sizeof(Q));
+	stream.forward(size * sizeof(Q));
+
+	return stream;
+}
+
+template <>
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrList<VRayBaseTypes::AttrPlugin> & list) {
+	list.init();
+	int size;
+	stream >> size;
 	for (int c = 0; c < size; ++c) {
-		Q item;
+		VRayBaseTypes::AttrPlugin item;
 		stream >> item;
 		list.append(item);
 	}
+	return stream;
+}
 
+template <>
+inline DeserializerStream & operator>>(DeserializerStream & stream, VRayBaseTypes::AttrList<std::string> & list) {
+	list.init();
+	int size;
+	stream >> size;
+	for (int c = 0; c < size; ++c) {
+		std::string item;
+		stream >> item;
+		list.append(item);
+	}
 	return stream;
 }
 
