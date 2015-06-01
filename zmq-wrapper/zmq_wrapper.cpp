@@ -34,8 +34,8 @@ ZmqWrapper::ZmqWrapper() :
 			zmq::message_t incoming;
 
 			if (this->messageQue.size() && this->frontend->connected()) {
-				std::lock_guard<std::mutex> lock(this->messageMutex);
 				while (this->messageQue.size()) {
+					std::lock_guard<std::mutex> lock(this->messageMutex);
 					if (!this->frontend->send(this->messageQue.front().getMessage())) {
 						break;
 					}
