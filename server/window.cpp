@@ -42,25 +42,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true)), renderer(nullptr)
 {
-	VRay::RendererOptions options;
-	options.keepRTRunning = true;
-	renderer.reset(new VRay::VRayRenderer(options));
-
-	renderer->setOnDumpMessage([] (VRay::VRayRenderer &, const char * msg, int level, void *) {
-		if (level <= VRay::MessageError) {
-			std::cout << "Error: " << msg;
-		}
-	});
-
-	renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
-	renderer->showFrameBuffer(true);
-
-	renderer->setOnRTImageUpdated(imageUpdate, &server);
-	renderer->setOnImageReady(imageDone, &server);
-
 	ui->setupUi(this);
 
-	server.setCallback([this, &options] (VRayMessage & message, ZmqWrapper * server) {
+	server.setCallback([this] (VRayMessage & message, ZmqWrapper * server) {
 
 		if (message.getType() == VRayMessage::Type::ChangePlugin) {
 			if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
@@ -81,6 +65,17 @@ MainWindow::MainWindow(QWidget *parent) :
 				case VRayBaseTypes::ValueType::ValueTypeFloat:
 					success = plugin.setValue(message.getProperty(), *message.getValue<float>());
 					break;
+				case VRayBaseTypes::ValueType::ValueTypePlugin:
+				{
+					const VRayBaseTypes::AttrPlugin & attrPlugin = *message.getValue<VRayBaseTypes::AttrPlugin>();
+					std::string pluginData = attrPlugin.plugin;
+					if (!attrPlugin.output.empty()) {
+						pluginData.append("::");
+						pluginData.append(attrPlugin.output);
+					}
+					success = plugin.setValueAsString(message.getProperty(), pluginData);
+					break;
+				}
 				case VRayBaseTypes::ValueType::ValueTypeString:
 					if (message.getValueSetter() == VRayMessage::ValueSetter::AsString) {
 						success = plugin.setValueAsString(message.getProperty(), *message.getValue<std::string>());
@@ -206,6 +201,11 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 			}
 		} else if (message.getType() == VRayMessage::Type::ChangeRenderer) {
+
+			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
+				return;
+			}
+
 			bool completed = true;
 			switch (message.getRendererAction()) {
 			case VRayMessage::RendererAction::Pause:
@@ -222,11 +222,33 @@ MainWindow::MainWindow(QWidget *parent) :
 				break;
 			case VRayMessage::RendererAction::Free:
 				renderer->stop();
+
+				renderer->showFrameBuffer(false);
 				renderer.release();
 				break;
 			case VRayMessage::RendererAction::Init:
+			{
+				VRay::RendererOptions options;
+				options.keepRTRunning = true;
 				renderer.reset(new VRay::VRayRenderer(options));
+				if (!renderer) {
+					completed = false;
+				} else {
+					completed = renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
+					renderer->showFrameBuffer(true);
+
+					renderer->setOnRTImageUpdated(imageUpdate, server);
+					renderer->setOnImageReady(imageDone, server);
+
+					renderer->setOnDumpMessage([](VRay::VRayRenderer &, const char * msg, int level, void *) {
+						if (level <= VRay::MessageError) {
+							std::cout << "Error: " << msg;
+						}
+					});
+				}
+
 				break;
+			}
 			case VRayMessage::RendererAction::Resize:
 				int width, height;
 				message.getRendererSize(width, height);
