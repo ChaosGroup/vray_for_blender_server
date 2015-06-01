@@ -5,7 +5,7 @@
 
 ZmqWrapper::ZmqWrapper() :
 	context(new zmq::context_t(1)), frontend(nullptr),
-	isWorking(true), worker(nullptr), isInit(false) {
+	isWorking(true), worker(nullptr), isInit(false), flushOnExit(false) {
 
 	bool socketInit = false;
 	std::condition_variable threadReady;
@@ -50,6 +50,16 @@ ZmqWrapper::ZmqWrapper() :
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
+		if (this->flushOnExit && this->messageQue.size()) {
+			std::lock_guard<std::mutex> lock(this->messageMutex);
+			while (this->messageQue.size()) {
+				if (!this->frontend->send(this->messageQue.front().getMessage())) {
+					break;
+				}
+				this->messageQue.pop();
+			}
+		}
+
 		this->frontend->close();
 	});
 
@@ -73,6 +83,14 @@ ZmqWrapper::~ZmqWrapper() {
 		delete this->worker;
 		this->worker = nullptr;
 	}
+}
+
+void ZmqWrapper::setFlushOnExit(bool flag) {
+	flushOnExit = flag;
+}
+
+bool ZmqWrapper::getFlushOnexit() const {
+	return flushOnExit;
 }
 
 void ZmqWrapper::setCallback(ZmqWrapperCallback_t cb) {

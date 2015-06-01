@@ -31,6 +31,10 @@ public:
 
 	void setCallback(ZmqWrapperCallback_t cb);
 
+	// if set, all messages will be sent when dtor is called
+	void setFlushOnExit(bool flag);
+	bool getFlushOnexit() const;
+
 private:
 	ZmqWrapperCallback_t callback;
 	std::thread * worker;
@@ -41,7 +45,7 @@ private:
 	std::mutex messageMutex;
 
 protected:
-	bool isInit;
+	bool isInit, flushOnExit;
 	std::unique_ptr<zmq::socket_t> frontend;
 };
 
