@@ -71,59 +71,46 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 				bool success = true;
 
-				std::cout << "Property Name: " << message.getProperty() << "  ";
-
 				switch (message.getValueType()) {
 				case VRayBaseTypes::ValueType::ValueTypeTransform:
-					std::cout << "Setting property Transform for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(), *message.getValue<const VRay::Transform>());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeInt:
-					std::cout << "Setting property Int for:" << message.getPlugin() << " value:" << *message.getValue<int>() << "\n";
 					success = plugin.setValue(message.getProperty(), *message.getValue<int>());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeFloat:
-					std::cout << "Setting property Float for:" << message.getPlugin() << " value:" << *message.getValue<float>() << "\n";
 					success = plugin.setValue(message.getProperty(), *message.getValue<float>());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeString:
 					if (message.getValueSetter() == VRayMessage::ValueSetter::AsString) {
-						std::cout << "Setting property String (as String) for:" << message.getPlugin() << " value:" << *message.getValue<std::string>() << "\n";
 						success = plugin.setValueAsString(message.getProperty(), *message.getValue<std::string>());
 					} else {
-						std::cout << "Setting property String for:" << message.getPlugin() << " value:" << *message.getValue<std::string>() << "\n";
 						success = plugin.setValue(message.getProperty(), *message.getValue<std::string>());
 					}
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeColor:
-					std::cout << "Setting property Color for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Color>());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeAColor:
-					std::cout << "Setting property AColor for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(), *message.getValue<VRay::AColor>());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeListInt:
-					std::cout << "Setting property ListInt for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(),
 						**message.getValue<VRayBaseTypes::AttrListInt>(),
 						message.getValue<VRayBaseTypes::AttrListInt>()->getBytesCount());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeListFloat:
-					std::cout << "Setting property ListInt for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(),
 						**message.getValue<VRayBaseTypes::AttrListFloat>(),
 						message.getValue<VRayBaseTypes::AttrListFloat>()->getBytesCount());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeListVector:
-					std::cout << "Setting property ListVector for:" << message.getPlugin() << "\n";
 					success = plugin.setValue(message.getProperty(),
 						**message.getValue<VRayBaseTypes::AttrListVector>(),
 						message.getValue<VRayBaseTypes::AttrListVector>()->getBytesCount());
 					break;
 				case VRayBaseTypes::ValueType::ValueTypeListPlugin:
 				{
-					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
 					const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
 					VRay::ValueList pluginList(plist.getCount());
 					std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [](const VRayBaseTypes::AttrPlugin & plugin) {
@@ -134,7 +121,6 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 				case VRayBaseTypes::ValueType::ValueTypeListString:
 				{
-					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
 					const VRayBaseTypes::AttrListString & slist = *message.getValue<VRayBaseTypes::AttrListString>();
 					VRay::ValueList stringList(slist.getCount());
 					std::transform(slist.getData()->begin(), slist.getData()->end(), stringList.begin(), [](const std::string & str) {
@@ -145,7 +131,6 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 				case VRayBaseTypes::ValueType::ValueTypeMapChannels:
 				{
-					std::cout << "Setting property ListPlugin for:" << message.getPlugin() << "\n";
 					VRay::ValueList map_channels;
 					const VRayBaseTypes::AttrMapChannels & channelMap = *message.getValue<VRayBaseTypes::AttrMapChannels>();
 
@@ -176,7 +161,6 @@ MainWindow::MainWindow(QWidget *parent) :
 				}
 				case VRayBaseTypes::ValueType::ValueTypeInstancer:
 				{
-					std::cout << "Setting property Instancer for:" << message.getPlugin() << "\n";
 					const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
 					VRay::ValueList instancer;
 
@@ -212,8 +196,6 @@ MainWindow::MainWindow(QWidget *parent) :
 			} else if (message.getPluginAction() == VRayMessage::PluginAction::Create) {
 				if (!renderer->newPlugin(message.getPlugin(), message.getPluginType()) ){
 					std::cerr << "Failed to create plugin: " << message.getPlugin() << std::endl;
-				} else {
-					std::cout << "Plugin created " << message.getPlugin() << " " << message.getPluginType() << "\n";
 				}
 			} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
 				VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
@@ -227,56 +209,43 @@ MainWindow::MainWindow(QWidget *parent) :
 			bool completed = true;
 			switch (message.getRendererAction()) {
 			case VRayMessage::RendererAction::Pause:
-				std::cout << "Renderer paused\n";
 				completed = renderer->pause();
 				break;
 			case VRayMessage::RendererAction::Resume:
-				std::cout << "Renderer resumed\n";
 				completed = renderer->resume();
 				break;
 			case VRayMessage::RendererAction::Start:
-				std::cout << "Renderer started\n";
 				renderer->start();
 				break;
 			case VRayMessage::RendererAction::Stop:
-				std::cout << "Renderer stopped\n";
 				renderer->stop();
 				break;
 			case VRayMessage::RendererAction::Free:
-				std::cout << "Renderer freed\n";
 				renderer->stop();
 				renderer.release();
 				break;
 			case VRayMessage::RendererAction::Init:
-				std::cout << "Renderer initted\n";
 				renderer.reset(new VRay::VRayRenderer(options));
 				break;
 			case VRayMessage::RendererAction::Resize:
 				int width, height;
 				message.getRendererSize(width, height);
-
-				std::cout << "Renderer resized to " << width << " " << height << "\n";
 				completed = renderer->setWidth(width);
 				completed = completed && renderer->setHeight(height);
 				break;
 			case VRayMessage::RendererAction::AddHosts:
-				std::cout << "Renderer hosts added: " << message.getRendererArgument() << "\n";
 				completed = 0 == renderer->addHosts(message.getRendererArgument());
 				break;
 			case VRayMessage::RendererAction::RemoveHosts:
-				std::cout << "Renderer hosts removed: " << message.getRendererArgument() << "\n";
 				completed = 0 == renderer->removeHosts(message.getRendererArgument());
 				break;
 			case VRayMessage::RendererAction::LoadScene:
-				std::cout << "Renderer scene loaded: " << message.getRendererArgument() << "\n";
 				completed = 0 == renderer->load(message.getRendererArgument());
 				break;
 			case VRayMessage::RendererAction::AppendScene:
-				std::cout << "Renderer scene appended: " << message.getRendererArgument() << "\n";
 				completed = 0 == renderer->append(message.getRendererArgument());
 				break;
 			case VRayMessage::RendererAction::ExportScene:
-				std::cout << "Renderer scene exported: " << message.getRendererArgument() << "\n";
 				{
 					VRay::VRayExportSettings exportParams;
 					exportParams.useHexFormat = false;
