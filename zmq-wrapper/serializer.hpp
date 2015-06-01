@@ -9,9 +9,12 @@ class SerializerStream {
 public:
 
 	void write(const char * data, int size) {
-		for (int c = 0; c < size; ++c) {
-			stream.push_back(data[c]);
+		if (!size) {
+			return;
 		}
+		size_t prevSize = stream.size();
+		stream.resize(size + stream.size());
+		memcpy(&stream[prevSize], data, size);
 	}
 
 	int getSize() const {
@@ -61,6 +64,14 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 template <typename Q>
 inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<Q> & list) {
 	stream << list.getCount();
+	stream.write(reinterpret_cast<const char *>(list.getData()->data()), list.getCount() * sizeof(Q));
+	return stream;
+}
+
+// specialization for AttrListString and AttrListPlugin, as it is not continious block of memory
+template <>
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<VRayBaseTypes::AttrPlugin> & list) {
+	stream << list.getCount();
 	if (!list.empty()) {
 		for (auto & item : *(list.getData())) {
 			stream << item;
@@ -68,6 +79,19 @@ inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTy
 	}
 	return stream;
 }
+
+template <>
+inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrList<std::string> & list) {
+	stream << list.getCount();
+	if (!list.empty()) {
+		for (auto & item : *(list.getData())) {
+			stream << item;
+		}
+	}
+	return stream;
+}
+
+
 
 template <>
 inline SerializerStream & operator<<(SerializerStream & stream, const VRayBaseTypes::AttrMapChannels & map) {
