@@ -20,6 +20,7 @@ public:
 
 	void setListeningPort(int port);
 	bool start();
+	void setShowVFB(bool show);
 
 private:
 	ZmqServer server;
@@ -27,6 +28,7 @@ private:
 	std::unique_ptr<VRay::VRayInit> vray;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	int serverPort;
+	bool showVFB;
 };
 
 

@@ -13,18 +13,23 @@ int main(int argc, char *argv[])
 
 
 	QCommandLineParser parser;
+
 	QCommandLineOption portOption(QStringList() << "p" << "port", "Specify listening port", "port");
 	parser.addOption(portOption);
 
+	QCommandLineOption vfbOption(QStringList() << "vfb" << "display-vfb", "Option to display the VFB", "vfb");
+	parser.addOption(vfbOption);
+
+
 	parser.process(app);
 
-	if (!parser.isSet("p")) {
+	if (!parser.isSet(portOption)) {
 		std::cerr << "No port specified";
 		return 1;
 	}
 
 	bool ok;
-	int port = parser.value("p").toInt(&ok);
+	int port = parser.value(portOption).toInt(&ok);
 	if (!ok) {
 		std::cerr << "Failed to set port ";
 		return 1;
@@ -32,12 +37,16 @@ int main(int argc, char *argv[])
 
 	MainWindow w;
 	w.setListeningPort(port);
-	
+
+	if (parser.isSet(vfbOption)) {
+		w.setShowVFB(true);
+	}
+
 	if (!w.start()) {
 		return 1;
 	}
 
-	w.show();
+	//w.show();
 
 	return app.exec();
 }

@@ -40,7 +40,7 @@ void imageDone(VRay::VRayRenderer & renderer, void * arg) {
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
-	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true)), renderer(nullptr)
+	ui(new Ui::MainWindow), vray(new VRay::VRayInit(true)), renderer(nullptr), showVFB(false), serverPort(-1)
 {
 	ui->setupUi(this);
 
@@ -296,6 +296,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::setListeningPort(int port) {
 	this->serverPort = port;
+}
+
+void MainWindow::setShowVFB(bool show) {
+	this->showVFB = show;
 }
 
 bool MainWindow::start() {
