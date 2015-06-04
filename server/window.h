@@ -4,6 +4,7 @@
 #include <vraysdk.hpp>
 #include <QMainWindow>
 #include <memory>
+#include "renderer_controller.h"
 #include "../zmq-wrapper/zmq_wrapper.h"
 
 namespace Ui {
@@ -12,6 +13,8 @@ class MainWindow;
 
 class MainWindow : public QMainWindow
 {
+    friend class RendererController;
+
 	Q_OBJECT
 
 public:
@@ -29,6 +32,7 @@ private:
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	int serverPort;
 	bool showVFB;
+    RendererController controller;
 };
 
 
