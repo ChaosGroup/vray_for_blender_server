@@ -47,6 +47,11 @@ MainWindow::MainWindow(QWidget *parent) :
 	server.setCallback([this] (VRayMessage & message, ZmqWrapper * server) {
 
 		if (message.getType() == VRayMessage::Type::ChangePlugin) {
+			if (!renderer) {
+				std::cerr << "No renderer loaded!\n";
+				return;
+			}
+
 			if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 				VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
 				if (!plugin) {
