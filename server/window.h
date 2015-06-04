@@ -18,11 +18,15 @@ public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
 
+	void setListeningPort(int port);
+	bool start();
+
 private:
 	ZmqServer server;
 	Ui::MainWindow *ui;
 	std::unique_ptr<VRay::VRayInit> vray;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
+	int serverPort;
 };
 
 

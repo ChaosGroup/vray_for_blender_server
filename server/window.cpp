@@ -292,8 +292,20 @@ MainWindow::MainWindow(QWidget *parent) :
 			}
 		}
 	});
+}
 
-	server.bind("tcp://*:5555");
+void MainWindow::setListeningPort(int port) {
+	this->serverPort = port;
+}
+
+bool MainWindow::start() {
+	try {
+		server.bind((QString("tcp://*:") + QString::number(this->serverPort)).toStdString().c_str());
+	} catch (zmq::error_t & e) {
+		std::cerr << e.what();
+		return false;
+	}
+	return true;
 }
 
 MainWindow::~MainWindow()
