@@ -54,7 +54,8 @@ public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
 	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts,
-		RemoveHosts, LoadScene, AppendScene, ExportScene, SetRenderMode };
+        RemoveHosts, LoadScene, AppendScene, ExportScene, SetRenderMode, SetAnimationProperties,
+        SetCurrentTime, ClearFrameValues };
 
 	enum class ValueSetter { None, Default, AsString };
 
@@ -119,6 +120,10 @@ public:
 	ValueSetter getValueSetter() const {
 		return valueSetter;
 	}
+
+    double getRendererTime() const {
+        return rendererTime;
+    }
 
 	void getRendererSize(int & width, int & height) {
 		width = this->rendererWidth;
@@ -194,6 +199,12 @@ public:
 		}
 		return fromStream(strm);
 	}
+
+    static VRayMessage createMessage(const RendererAction & action, const double & value) {
+        SerializerStream strm;
+        strm << Type::ChangeRenderer << action << value;
+        return fromStream(strm);
+    }
 
 	static VRayMessage createMessage(const RendererAction & action, int width, int height) {
 		assert(action == RendererAction::Resize);
@@ -379,7 +390,9 @@ private:
 				rendererAction == RendererAction::LoadScene || rendererAction == RendererAction::AppendScene ||
 				rendererAction == RendererAction::ExportScene) {
 				stream >> rendererActionArgument;
-			}
+            } else if (rendererAction == RendererAction::SetCurrentTime || rendererAction == RendererAction::ClearFrameValues) {
+                stream >> rendererTime;
+            }
 		}
 	}
 
@@ -396,6 +409,7 @@ private:
 	PluginAction pluginAction;
 	RendererAction rendererAction;
 	ValueSetter valueSetter;
+    double rendererTime;
 
 	int rendererWidth, rendererHeight;
 	VRayBaseTypes::ValueType valueType;
