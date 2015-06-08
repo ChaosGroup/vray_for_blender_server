@@ -218,6 +218,12 @@ void RendererController::pluginMessage(VRayMessage & message, std::unique_ptr<VR
 void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * server, std::unique_ptr<VRay::VRayRenderer> & renderer) {
     bool completed = true;
     switch (message.getRendererAction()) {
+    case VRayMessage::RendererAction::SetCurrentTime:
+        renderer->setCurrentTime(message.getRendererTime());
+        break;
+    case VRayMessage::RendererAction::ClearFrameValues:
+        completed = renderer->clearAllPropertyValuesUpToTime(message.getRendererTime());
+        break;
     case VRayMessage::RendererAction::Pause:
         completed = renderer->pause();
         break;
