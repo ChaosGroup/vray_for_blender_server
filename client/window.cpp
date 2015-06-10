@@ -52,7 +52,7 @@ void MainWindow::connectServer() {
 	QString address("tcp://" + this->address);
 	client.connect(address.toStdString().c_str());
 
-	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::LoadScene, "D:/dev/cornellbox.vrscene"));
+	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::LoadScene, VRayBaseTypes::AttrSimpleType<std::string>("D:/dev/cornellbox.vrscene")));
 	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::Start));
 }
 
@@ -67,7 +67,7 @@ void MainWindow::send()
 		value = this->ui->horizontalSlider_2->value();
 	}
 
-	VRayBaseTypes::AttrTransformBase * transform = reinterpret_cast<VRayBaseTypes::AttrTransformBase *>(tr_data);
+	VRayBaseTypes::AttrTransform * transform = reinterpret_cast<VRayBaseTypes::AttrTransform *>(tr_data);
 	transform->offs.x = ((float)value - 50) / 50;
 
 	VRayMessage msg = VRayMessage::createMessage(pl_name, tr_name, *transform);
