@@ -1,6 +1,8 @@
 #include "renderer_controller.h"
 #include "window.h"
 
+using namespace VRayBaseTypes;
+
 namespace {
     void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
         ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
@@ -219,10 +221,10 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
     bool completed = true;
     switch (message.getRendererAction()) {
     case VRayMessage::RendererAction::SetCurrentTime:
-        renderer->setCurrentTime(message.getRendererTime());
+		//completed = renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
         break;
     case VRayMessage::RendererAction::ClearFrameValues:
-        completed = renderer->clearAllPropertyValuesUpToTime(message.getRendererTime());
+		//completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
         break;
     case VRayMessage::RendererAction::Pause:
         completed = renderer->pause();
@@ -272,16 +274,16 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
         completed = completed && renderer->setHeight(height);
         break;
     case VRayMessage::RendererAction::AddHosts:
-        completed = 0 == renderer->addHosts(message.getRendererArgument());
+		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
         break;
     case VRayMessage::RendererAction::RemoveHosts:
-        completed = 0 == renderer->removeHosts(message.getRendererArgument());
+		completed = 0 == renderer->removeHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
         break;
     case VRayMessage::RendererAction::LoadScene:
-        completed = 0 == renderer->load(message.getRendererArgument());
+		completed = 0 == renderer->load(message.getValue<AttrSimpleType<std::string>>()->m_Value);
         break;
     case VRayMessage::RendererAction::AppendScene:
-        completed = 0 == renderer->append(message.getRendererArgument());
+		completed = 0 == renderer->append(message.getValue<AttrSimpleType<std::string>>()->m_Value);
         break;
     case VRayMessage::RendererAction::ExportScene:
     {
@@ -289,7 +291,7 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
         exportParams.useHexFormat = false;
         exportParams.compressed = false;
 
-        completed = 0 == renderer->exportScene(message.getRendererArgument(), &exportParams);
+		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, &exportParams);
     }
         break;
     default:
@@ -298,7 +300,6 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
 
     if (!completed) {
         std::cerr << "Failed renderer action: " << static_cast<int>(message.getRendererAction())
-            << "\nerror:" << renderer->getLastError()
-            << "\narguments: [" << message.getRendererArgument() << "]" << std::endl;
+            << "\nerror:" << renderer->getLastError() << std::endl;
     }
 }

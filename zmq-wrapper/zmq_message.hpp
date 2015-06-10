@@ -45,7 +45,10 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 											VRayBaseTypes::AttrListString,
 											VRayBaseTypes::AttrMapChannels,
 											VRayBaseTypes::AttrInstancer,
-											VRayBaseTypes::AttrImage>::value;
+											VRayBaseTypes::AttrImage,
+											VRayBaseTypes::AttrSimpleType<int>,
+											VRayBaseTypes::AttrSimpleType<float>,
+											VRayBaseTypes::AttrSimpleType<std::string>>::value;
 
 
 
@@ -53,8 +56,9 @@ class VRayMessage {
 public:
 	enum class Type : int { None, SingleValue, ChangePlugin, ChangeRenderer };
 	enum class PluginAction { None, Create, Remove, Update };
-	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize, AddHosts,
-        RemoveHosts, LoadScene, AppendScene, ExportScene, SetRenderMode, SetAnimationProperties,
+	enum class RendererAction { None, Init, Free, Start, Stop, Pause, Resume, Resize,
+		_ArgumentRenderAction,
+		AddHosts, RemoveHosts, LoadScene, AppendScene, ExportScene, SetRenderMode, SetAnimationProperties,
         SetCurrentTime, ClearFrameValues };
 
 	enum class ValueSetter { None, Default, AsString };
@@ -73,7 +77,6 @@ public:
 		pluginAction(other.pluginAction), pluginName(std::move(other.pluginName)),
 		pluginProperty(std::move(other.pluginProperty)), rendererAction(other.rendererAction),
 		valueSetter(ValueSetter::None) {
-
 		this->message.move(&other.message);
 	}
 
@@ -82,7 +85,6 @@ public:
 		valueType(VRayBaseTypes::ValueType::ValueTypeUnknown),
 		pluginAction(PluginAction::None), rendererAction(RendererAction::None),
 		valueSetter(ValueSetter::None) {
-
 	}
 
 	zmq::message_t & getMessage() {
@@ -96,13 +98,9 @@ public:
 	const std::string & getPlugin() const {
 		return this->pluginName;
 	}
-	
+
 	const std::string & getPluginType() const {
 		return this->pluginType;
-	}
-
-	const std::string & getRendererArgument() const {
-		return rendererActionArgument;
 	}
 
 	Type getType() const {
@@ -121,10 +119,6 @@ public:
 		return valueSetter;
 	}
 
-    double getRendererTime() const {
-        return rendererTime;
-    }
-
 	void getRendererSize(int & width, int & height) {
 		width = this->rendererWidth;
 		height = this->rendererHeight;
@@ -141,7 +135,6 @@ public:
 
 	VRayMessage(const VRayMessage &) = delete;
 	VRayMessage & operator=(const VRayMessage &) = delete;
-
 
 
 
@@ -174,7 +167,7 @@ public:
 	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const std::string & value, bool stringValue) {
 		using namespace std;
 		SerializerStream strm;
-		strm << VRayMessage::Type::ChangePlugin << plugin << PluginAction::Update << property 
+		strm << VRayMessage::Type::ChangePlugin << plugin << PluginAction::Update << property
 		     << ValueSetter::AsString << VRayBaseTypes::ValueType::ValueTypeString << value;
 		return fromStream(strm);
 	}
@@ -188,26 +181,25 @@ public:
 	}
 
 	/// create message to control renderer
-	static VRayMessage createMessage(const RendererAction & action, const std::string & argument = "") {
-		assert(action != RendererAction::None && action != RendererAction::Resize && "Wrong RendererAction");
+
+	static VRayMessage createMessage(const RendererAction & action) {
+		assert(action < RendererAction::_ArgumentRenderAction && "Renderer action provided requires argument!");
 		SerializerStream strm;
 		strm << Type::ChangeRenderer << action;
-		if (action == RendererAction::AddHosts || action == RendererAction::RemoveHosts ||
-			action == RendererAction::LoadScene || action == RendererAction::AppendScene ||
-			action == RendererAction::ExportScene || action == RendererAction::SetRenderMode) {
-			strm << argument;
-		}
 		return fromStream(strm);
 	}
 
-    static VRayMessage createMessage(const RendererAction & action, const double & value) {
-        SerializerStream strm;
-        strm << Type::ChangeRenderer << action << value;
-        return fromStream(strm);
-    }
+	template <typename T>
+	static VRayMessage createMessage(const RendererAction & action, const VRayBaseTypes::AttrSimpleType<T> & value) {
+		assert(action > RendererAction::_ArgumentRenderAction && "Renderer action provided requires NO argument!");
+		SerializerStream strm;
+		strm << Type::ChangeRenderer << action << value.getType() << value;
+		return fromStream(strm);
+	}
+
 
 	static VRayMessage createMessage(const RendererAction & action, int width, int height) {
-		assert(action == RendererAction::Resize);
+		assert(action == RendererAction::Resize && "Resize renderer action required");
 		SerializerStream strm;
 		strm << Type::ChangeRenderer << RendererAction::Resize << width << height;
 		return fromStream(strm);
@@ -357,7 +349,6 @@ private:
 			stream >> *setValue<AttrSimpleType<std::string>>();
 			break;
 		default:
-			std::cerr << "Failed to parse value!\n";
 			assert(false && "Failed to parse value!\n");
 		}
 	}
@@ -369,7 +360,6 @@ private:
 		stream >> type;
 
 		if (type == Type::ChangePlugin) {
-
 			stream >> pluginName >> pluginAction;
 			if (pluginAction == PluginAction::Update) {
 				stream >> pluginProperty >> valueSetter;
@@ -381,17 +371,12 @@ private:
 			}
 		} else if (type == Type::SingleValue) {
 			readValue(stream);
-
 		} else if (type == Type::ChangeRenderer) {
 			stream >> rendererAction;
 			if (rendererAction == RendererAction::Resize) {
 				stream >> rendererWidth >> rendererHeight;
-			} else if (rendererAction == RendererAction::AddHosts || rendererAction == RendererAction::RemoveHosts ||
-				rendererAction == RendererAction::LoadScene || rendererAction == RendererAction::AppendScene ||
-				rendererAction == RendererAction::ExportScene) {
-				stream >> rendererActionArgument;
-            } else if (rendererAction == RendererAction::SetCurrentTime || rendererAction == RendererAction::ClearFrameValues) {
-                stream >> rendererTime;
+			} else if (rendererAction > RendererAction::_ArgumentRenderAction) {
+				readValue(stream);
             }
 		}
 	}
@@ -403,13 +388,12 @@ private:
 	uint8_t value_data[MAX_MESSAGE_SIZE];
 
 	zmq::message_t message;
-	std::string pluginName, pluginType, pluginProperty, rendererActionArgument;
+	std::string pluginName, pluginType, pluginProperty;
 
 	Type type;
 	PluginAction pluginAction;
 	RendererAction rendererAction;
 	ValueSetter valueSetter;
-    double rendererTime;
 
 	int rendererWidth, rendererHeight;
 	VRayBaseTypes::ValueType valueType;
