@@ -1,6 +1,7 @@
 #ifndef RENDERER_CONTROLLER_H
 #define RENDERER_CONTROLLER_H
 
+#include <memory>
 #include <vraysdk.hpp>
 #include "../zmq-wrapper/zmq_wrapper.h"
 
@@ -8,15 +9,22 @@ class MainWindow;
 
 class RendererController {
 public:
-    void setWindow(MainWindow * window);
+    
+	RendererController(const std::string & port, bool showVFB = false);
+	void setWindow(MainWindow * window);
+
 private:
 
     void dispatcher(VRayMessage & message, ZmqWrapper * server);
 
-    void pluginMessage(VRayMessage & message, std::unique_ptr<VRay::VRayRenderer> & renderer);
-    void rendererMessage(VRayMessage & message, ZmqWrapper * server, std::unique_ptr<VRay::VRayRenderer> & renderer);
+    void pluginMessage(VRayMessage & message);
+    void rendererMessage(VRayMessage & message, ZmqWrapper * server);
 private:
-    MainWindow * window;
+
+	ZmqServer server;
+	std::unique_ptr<VRay::VRayInit> vray;
+	std::unique_ptr<VRay::VRayRenderer> renderer;
+	bool showVFB;
 };
 
 

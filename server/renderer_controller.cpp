@@ -1,5 +1,4 @@
 #include "renderer_controller.h"
-#include "window.h"
 
 using namespace VRayBaseTypes;
 
@@ -35,33 +34,33 @@ namespace {
     }
 }
 
+RendererController::RendererController(const std::string & port, bool showVFB):
+	vray(new VRay::VRayInit(true)), renderer(nullptr), showVFB(showVFB) {
 
-void RendererController::setWindow(MainWindow * window) {
-    this->window = window;
-    this->window->server.setCallback(std::bind(&RendererController::dispatcher, this, std::placeholders::_1, std::placeholders::_2));
+	this->server.setCallback(std::bind(&RendererController::dispatcher, this, std::placeholders::_1, std::placeholders::_2));
+	this->server.bind((std::string("tcp://*:") + port).c_str());
 }
 
 void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) {
-    auto & renderer = this->window->renderer;
     switch (message.getType()) {
     case VRayMessage::Type::ChangePlugin:
         if (!renderer) {
             std::cerr << "No renderer loaded!\n";
             return;
         }
-        this->pluginMessage(message, renderer);
+        this->pluginMessage(message);
         break;
     case VRayMessage::Type::ChangeRenderer:
         if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
             std::cerr << "No renderer loaded!\n";
             return;
         }
-        this->rendererMessage(message, server, renderer);
+        this->rendererMessage(message, server);
         break;
     }
 }
 
-void RendererController::pluginMessage(VRayMessage & message, std::unique_ptr<VRay::VRayRenderer> & renderer) {
+void RendererController::pluginMessage(VRayMessage & message) {
     if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
         VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
         if (!plugin) {
@@ -217,7 +216,7 @@ void RendererController::pluginMessage(VRayMessage & message, std::unique_ptr<VR
     }
 }
 
-void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * server, std::unique_ptr<VRay::VRayRenderer> & renderer) {
+void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * server) {
     bool completed = true;
     switch (message.getRendererAction()) {
     case VRayMessage::RendererAction::SetCurrentTime:

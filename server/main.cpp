@@ -1,4 +1,5 @@
-#include "window.h"
+
+#include "renderer_controller.h"
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QSlider>
@@ -20,33 +21,16 @@ int main(int argc, char *argv[])
 	QCommandLineOption vfbOption(QStringList() << "vfb" << "display-vfb", "Option to display the VFB", "vfb");
 	parser.addOption(vfbOption);
 
-
 	parser.process(app);
 
 	if (!parser.isSet(portOption)) {
 		std::cerr << "No port specified";
 		return 1;
 	}
+	bool showVFB = parser.isSet(vfbOption);
 
-	bool ok;
-	int port = parser.value(portOption).toInt(&ok);
-	if (!ok) {
-		std::cerr << "Failed to set port ";
-		return 1;
-	}
+	RendererController ctrl(parser.value(portOption).toStdString(), showVFB);
 
-	MainWindow w;
-	w.setListeningPort(port);
-
-	if (parser.isSet(vfbOption)) {
-		w.setShowVFB(true);
-	}
-
-	if (!w.start()) {
-		return 1;
-	}
-
-	//w.show();
 
 	return app.exec();
 }
