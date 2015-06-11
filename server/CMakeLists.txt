@@ -29,4 +29,4 @@ add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
 link_with_vray_appsdk(${PROJECT_NAME})
 
-target_link_libraries(${PROJECT_NAME} zmq_wrapper Qt5::Gui Qt5::Core Qt5::Widgets)
+target_link_libraries(${PROJECT_NAME} zmq_wrapper)

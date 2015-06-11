@@ -1,36 +1,41 @@
-
 #include "renderer_controller.h"
-#include <QApplication>
-#include <QHBoxLayout>
-#include <QSlider>
-#include <QCommandLineParser>
-#include <QDebug>
+#include <string>
+
+struct ArgvSettings {
+	std::string port;
+	bool showVFB;
+};
+
+bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
+	for (int c = 1; c < argc; ++c) {
+		if (!strcmp(argv[c], "-p") && c + 1 < argc) {
+			settings.port = argv[++c];
+		} else if (!strcmp(argv[c], "-vfb")) {
+			settings.showVFB = true;
+		} else {
+			return false;
+		}
+	}
+	return settings.port != "";
+}
+
 
 int main(int argc, char *argv[])
 {
-	QApplication app(argc, argv);
-	QCoreApplication::setApplicationName("multiple-values-program");
-	QCoreApplication::setApplicationVersion("1.0");
-
-
-	QCommandLineParser parser;
-
-	QCommandLineOption portOption(QStringList() << "p" << "port", "Specify listening port", "port");
-	parser.addOption(portOption);
-
-	QCommandLineOption vfbOption(QStringList() << "vfb" << "display-vfb", "Option to display the VFB", "vfb");
-	parser.addOption(vfbOption);
-
-	parser.process(app);
-
-	if (!parser.isSet(portOption)) {
-		std::cerr << "No port specified";
-		return 1;
+	ArgvSettings settings;
+	if (!parseArgv(settings, argc, argv)) {
+		std::cerr << "Arguments:\n"
+			<< "-p <port-num>\tPort number to listen on\n"
+			<< "-vfb\tSet show VFB option\n";
+		return 0;
 	}
-	bool showVFB = parser.isSet(vfbOption);
-
-	RendererController ctrl(parser.value(portOption).toStdString(), showVFB);
 
 
-	return app.exec();
+	RendererController ctrl(settings.port, settings.showVFB);
+
+	while (1) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+
+	return 0;
 }
