@@ -190,10 +190,11 @@ public:
 	}
 
 	template <typename T>
-	static VRayMessage createMessage(const RendererAction & action, const VRayBaseTypes::AttrSimpleType<T> & value) {
+	static VRayMessage createMessage(const RendererAction & action, const T & value) {
 		assert(action > RendererAction::_ArgumentRenderAction && "Renderer action provided requires NO argument!");
 		SerializerStream strm;
-		strm << Type::ChangeRenderer << action << value.getType() << value;
+		VRayBaseTypes::AttrSimpleType<T> valWrapper(value);
+		strm << Type::ChangeRenderer << action << valWrapper.getType() << valWrapper;
 		return fromStream(strm);
 	}
 
