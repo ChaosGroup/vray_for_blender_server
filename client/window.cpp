@@ -52,7 +52,7 @@ void MainWindow::connectServer() {
 	QString address("tcp://" + this->address);
 	client.connect(address.toStdString().c_str());
 
-	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::LoadScene, VRayBaseTypes::AttrSimpleType<std::string>("D:/dev/cornellbox.vrscene")));
+	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::LoadScene, std::string("D:/dev/cornellbox.vrscene")));
 	client.send(VRayMessage::createMessage(VRayMessage::RendererAction::Start));
 }
 
