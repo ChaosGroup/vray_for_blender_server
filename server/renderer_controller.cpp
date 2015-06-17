@@ -34,11 +34,16 @@ namespace {
     }
 }
 
-RendererController::RendererController(const std::string & port, bool showVFB):
+RendererController::RendererController(const std::string & address, uint64_t rendererId):
 	vray(new VRay::VRayInit(true)), renderer(nullptr), showVFB(showVFB) {
 
+	this->server.setIdentity(rendererId);
 	this->server.setCallback(std::bind(&RendererController::dispatcher, this, std::placeholders::_1, std::placeholders::_2));
-	this->server.bind((std::string("tcp://*:") + port).c_str());
+	try {
+		this->server.connect(address.c_str());
+	} catch (zmq::error_t & e) {
+		std::cerr << e.what();
+	}
 }
 
 void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) {

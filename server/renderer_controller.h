@@ -4,14 +4,15 @@
 #include <memory>
 #include <vraysdk.hpp>
 #include "../zmq-wrapper/zmq_wrapper.h"
-
-class MainWindow;
+#include "zmq_server_client.h"
 
 class RendererController {
 public:
     
-	RendererController(const std::string & port, bool showVFB = false);
-	void setWindow(MainWindow * window);
+	RendererController(const std::string & port, uint64_t rendererId);
+
+	RendererController(const RendererController &) = delete;
+	RendererController & operator=(const RendererController &) = delete;
 
 private:
 
@@ -21,7 +22,7 @@ private:
     void rendererMessage(VRayMessage & message, ZmqWrapper * server);
 private:
 
-	ZmqServer server;
+	ZmqServerClient server;
 	std::unique_ptr<VRay::VRayInit> vray;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	bool showVFB;

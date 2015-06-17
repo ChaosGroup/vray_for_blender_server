@@ -1,4 +1,4 @@
-#include "renderer_controller.h"
+#include "zmq_proxy_server.h"
 #include <string>
 
 struct ArgvSettings {
@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-
-	RendererController ctrl(settings.port, settings.showVFB);
+	ZmqProxyServer server(settings.port);
+	server.start();
 
 	while (1) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -2,6 +2,7 @@
 #include "zmq.hpp"
 #include <chrono>
 #include <condition_variable>
+#include <random>
 
 ZmqWrapper::ZmqWrapper() :
 	context(new zmq::context_t(1)), frontend(nullptr),
@@ -13,7 +14,7 @@ ZmqWrapper::ZmqWrapper() :
 
 
 	this->worker = new std::thread([this, &threadReady, &socketInit, &threadMutex] {
-		{
+		try {
 			std::lock_guard<std::mutex> lock(threadMutex);
 
 			this->frontend = std::unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context), ZMQ_DEALER));
@@ -23,6 +24,9 @@ ZmqWrapper::ZmqWrapper() :
 			timeOut *= 10;
 			this->frontend->setsockopt(ZMQ_SNDTIMEO, &timeOut, sizeof(timeOut));
 			socketInit = true;
+		} catch (zmq::error_t & e) {
+			this->isWorking = false;
+			return;
 		}
 		threadReady.notify_all();
 
@@ -111,13 +115,12 @@ void ZmqWrapper::send(void * data, int size) {
 }
 
 void ZmqClient::connect(const char * addr) {
+	std::random_device device;
+	std::mt19937_64 generator(device());
+	uint64_t id = generator();
+
+	this->frontend->setsockopt(ZMQ_IDENTITY, &id, sizeof(id));
+
 	this->frontend->connect(addr);
-
-	this->isInit = true;
-}
-
-void ZmqServer::bind(const char * addr) {
-	this->frontend->bind(addr);
-
 	this->isInit = true;
 }

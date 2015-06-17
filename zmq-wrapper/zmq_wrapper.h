@@ -55,11 +55,4 @@ public:
 	void connect(const char * addr);
 };
 
-
-class ZmqServer: public ZmqWrapper {
-public:
-	void bind(const char * addr);
-};
-
-
 #endif // _ZMQ_WRAPPER_H_
