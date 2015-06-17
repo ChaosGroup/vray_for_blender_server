@@ -7,8 +7,6 @@
 
 #include "renderer_controller.h"
 
-static const uint64_t DISCONNECT_TIMEOUT = 5000;
-
 class ZmqProxyServer {
 public:
 	ZmqProxyServer(const std::string & port);
@@ -39,6 +37,8 @@ private:
 
 	std::unique_ptr<zmq::context_t> context;
 	std::unique_ptr<zmq::socket_t> routerSocket;
+
+	std::unique_ptr<VRay::VRayInit> vray;
 };
 
 

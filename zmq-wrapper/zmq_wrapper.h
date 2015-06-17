@@ -13,6 +13,8 @@
 #include "base_types.h"
 #include "zmq_message.hpp"
 
+static const uint64_t DISCONNECT_TIMEOUT = 5000;
+
 /**
  * Async wrapper for zmq::socket_t with callback on data received.
  */

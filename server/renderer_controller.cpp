@@ -35,7 +35,7 @@ namespace {
 }
 
 RendererController::RendererController(const std::string & address, uint64_t rendererId):
-	vray(new VRay::VRayInit(true)), renderer(nullptr), showVFB(showVFB) {
+	renderer(nullptr), showVFB(showVFB) {
 
 	this->server.setIdentity(rendererId);
 	this->server.setCallback(std::bind(&RendererController::dispatcher, this, std::placeholders::_1, std::placeholders::_2));
@@ -46,23 +46,40 @@ RendererController::RendererController(const std::string & address, uint64_t ren
 	}
 }
 
+RendererController::~RendererController() {
+	if (renderer) {
+		renderer->stop();
+	}
+}
+
 void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) {
-    switch (message.getType()) {
-    case VRayMessage::Type::ChangePlugin:
-        if (!renderer) {
-            std::cerr << "No renderer loaded!\n";
-            return;
-        }
-        this->pluginMessage(message);
-        break;
-    case VRayMessage::Type::ChangeRenderer:
-        if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
-            std::cerr << "No renderer loaded!\n";
-            return;
-        }
-        this->rendererMessage(message, server);
-        break;
-    }
+	try {
+		switch (message.getType()) {
+		case VRayMessage::Type::ChangePlugin:
+			if (!renderer) {
+				std::cerr << "No renderer loaded!\n";
+				return;
+			}
+			this->pluginMessage(message);
+			break;
+		case VRayMessage::Type::ChangeRenderer:
+			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
+				std::cerr << "No renderer loaded!\n";
+				return;
+			}
+			this->rendererMessage(message, server);
+			break;
+		}
+	} catch (zmq::error_t & e) {
+		auto x = e.what();
+		assert(false);
+	} catch (std::exception & e) {
+		auto x = e.what();
+		assert(false);
+	} catch (VRay::VRayException & e) {
+		auto x = e.what();
+		assert(false);
+	}
 }
 
 void RendererController::pluginMessage(VRayMessage & message) {

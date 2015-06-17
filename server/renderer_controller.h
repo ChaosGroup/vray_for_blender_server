@@ -10,6 +10,7 @@ class RendererController {
 public:
     
 	RendererController(const std::string & port, uint64_t rendererId);
+	~RendererController();
 
 	RendererController(const RendererController &) = delete;
 	RendererController & operator=(const RendererController &) = delete;
@@ -23,7 +24,6 @@ private:
 private:
 
 	ZmqServerClient server;
-	std::unique_ptr<VRay::VRayInit> vray;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	bool showVFB;
 };

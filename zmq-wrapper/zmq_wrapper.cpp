@@ -34,25 +34,49 @@ ZmqWrapper::ZmqWrapper() :
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
-		while (this->isWorking) {
-			zmq::message_t incoming;
+		auto lastActiveTime = std::chrono::high_resolution_clock::now();
+		try {
+			while (this->isWorking) {
+				zmq::message_t incoming;
 
-			if (this->messageQue.size() && this->frontend->connected()) {
-				while (this->messageQue.size()) {
-					std::lock_guard<std::mutex> lock(this->messageMutex);
-					if (!this->frontend->send(this->messageQue.front().getMessage())) {
-						break;
+				auto now = std::chrono::high_resolution_clock::now();
+
+				// send keepalive
+				if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastActiveTime).count() > DISCONNECT_TIMEOUT / 2) {
+					zmq::message_t keepAlive(1);
+					*reinterpret_cast<char *>(keepAlive.data()) = 1;
+					if (!this->frontend->send(keepAlive)) {
+						continue;
 					}
-					this->messageQue.pop();
 				}
-			}
 
-			if (this->frontend->recv(&incoming)) {
-				this->callback(VRayMessage(incoming), this);
-			}
+				if (this->messageQue.size() && this->frontend->connected()) {
+					while (this->messageQue.size()) {
+						std::lock_guard<std::mutex> lock(this->messageMutex);
+						if (!this->frontend->send(this->messageQue.front().getMessage())) {
+							break;
+						}
+						lastActiveTime = now;
+						this->messageQue.pop();
+					}
+				}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				if (this->frontend->recv(&incoming)) {
+					// if it's not user message - dont propagate
+					const char * data = reinterpret_cast<const char *>(incoming.data());
+					if (data[0] == 0) {
+						this->callback(VRayMessage(incoming), this);
+					}
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		} catch (zmq::error_t & e) {
+			auto x = e.what();
+			assert(false);
+			return;
 		}
+
 
 		if (this->flushOnExit && this->messageQue.size()) {
 			std::lock_guard<std::mutex> lock(this->messageMutex);

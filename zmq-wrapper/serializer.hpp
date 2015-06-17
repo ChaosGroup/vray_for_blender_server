@@ -8,6 +8,10 @@
 class SerializerStream {
 public:
 
+	SerializerStream(): stream(1) {
+		stream[0] = 0;
+	}
+
 	void write(const char * data, int size) {
 		if (!size) {
 			return;

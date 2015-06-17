@@ -5,7 +5,7 @@
 using namespace std;
 
 
-ZmqProxyServer::ZmqProxyServer(const string & port): port(port), isRunning(false), context(nullptr), routerSocket(nullptr), nextWorkerId(1) {
+ZmqProxyServer::ZmqProxyServer(const string & port): port(port), isRunning(false), context(nullptr), routerSocket(nullptr), nextWorkerId(1), vray(new VRay::VRayInit(true)) {
 
 }
 
@@ -36,8 +36,26 @@ void ZmqProxyServer::mainLoop() {
 	routerSocket->setsockopt(ZMQ_ROUTER_MANDATORY, &opt, sopt);
 	routerSocket->bind((string("tcp://*:") + port).c_str());
 
+	auto lastTimeoutCheck = high_resolution_clock::now();
+
 	while (isRunning) {
 		message_t identity;
+
+		auto now = high_resolution_clock::now();
+		if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT) {
+			lastTimeoutCheck = now;
+			cout << "Clients before check: " << workers.size() << endl;
+
+			for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
+				auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
+				if (inactiveTime > DISCONNECT_TIMEOUT) {
+					workerIter = workers.erase(workerIter);
+				} else {
+					++workerIter;
+				}
+			}
+			cout << "Clients after check: " << workers.size() << endl;
+		}
 
 		if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
 			continue;
@@ -48,6 +66,7 @@ void ZmqProxyServer::mainLoop() {
 		uint64_t receiverId = 0;
 		if (isClient(messageIdentity)) {
 			receiverId = clientToWorker[messageIdentity];
+			workers[receiverId].lastKeepAlive = now;
 		} else if (isWorker(messageIdentity)) {
 			receiverId = workerToClient[messageIdentity];
 		} else {

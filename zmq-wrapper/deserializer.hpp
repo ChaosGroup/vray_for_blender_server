@@ -8,6 +8,7 @@ public:
 	DeserializerStream() = delete;
 
 	DeserializerStream(const char * data, int size): first(data), last(data + size), current(data) {
+		forward(1);
 	}
 
 	bool hasMore() const {
