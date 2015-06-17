@@ -23,7 +23,6 @@ project(VRayServerZmq)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if(WIN32)
-	set(CMAKE_PREFIX_PATH "D:\\libs\\QT\\5.4\\msvc2013_64")
 	set(CMAKE_PREFIX_PATH "D:\\libs\\boost_1_58_0")
 endif()
 
@@ -32,13 +31,7 @@ set(Boost_USE_STATIC_RUNTIME    OFF)
 find_package(Boost 1.58.0)
 include_directories(${Boost_INCLUDE_DIR})
 
-
-set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5Widgets REQUIRED)
 
 if(WIN32)
 	set(ZMQ_ROOT "D:/libs/ZeroMQ 4.0.4")
@@ -56,5 +49,4 @@ else()
 endif()
 
 add_subdirectory(zmq-wrapper)
-add_subdirectory(client)
 add_subdirectory(server)
