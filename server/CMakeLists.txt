@@ -23,6 +23,9 @@ include(vfh_vrayappsdk)
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
+include_directories(../zmq-wrapper)
+include_directories(../zmq-wrapper/include)
+
 use_vray_appsdk()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
