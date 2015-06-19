@@ -34,6 +34,16 @@ namespace {
     }
 }
 
+void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
+	RendererController * rc = reinterpret_cast<RendererController*>(arg);
+	if (level <= VRay::MessageError) {
+		std::cout << "Error: " << msg;
+	}
+	if (level <= VRay::MessageWarning) {
+		rc->server.send(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
+	}
+}
+
 RendererController::RendererController(const std::string & address, uint64_t rendererId):
 	renderer(nullptr), showVFB(showVFB) {
 
@@ -279,11 +289,7 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
             renderer->setOnRTImageUpdated(imageUpdate, server);
             renderer->setOnImageReady(imageDone, server);
 
-            renderer->setOnDumpMessage([](VRay::VRayRenderer &, const char * msg, int level, void *) {
-                if (level <= VRay::MessageError) {
-                    std::cout << "Error: " << msg;
-                }
-            });
+            renderer->setOnDumpMessage(vrayMessageDumpHandler, this);
         }
 
         break;
