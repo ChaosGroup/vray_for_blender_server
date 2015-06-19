@@ -64,7 +64,9 @@ void ZmqProxyServer::mainLoop() {
 		const uint64_t & messageIdentity = *reinterpret_cast<uint64_t*>(identity.data());
 
 		uint64_t receiverId = 0;
-		if (isClient(messageIdentity)) {
+		bool isClientMessage = isClient(messageIdentity);
+
+		if (isClientMessage) {
 			receiverId = clientToWorker[messageIdentity];
 			workers[receiverId].lastKeepAlive = now;
 		} else if (isWorker(messageIdentity)) {
@@ -98,7 +100,9 @@ void ZmqProxyServer::mainLoop() {
 			routerSocket->send(receiverIdentity, ZMQ_SNDMORE);
 			routerSocket->send(payload);
 		} catch (error_t & e) {
-			auto x = e.what();
+			if (isClientMessage) {
+				workers.erase(workers.find(receiverId));
+			}
 			continue;
 		}
 	}
