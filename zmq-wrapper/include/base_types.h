@@ -37,6 +37,7 @@ enum ValueType {
 
 	ValueTypeInt,
 	ValueTypeFloat,
+	ValueTypeDouble,
 	ValueTypeColor,
 	ValueTypeAColor,
 	ValueTypeVector,
@@ -88,6 +89,10 @@ inline ValueType AttrSimpleType<int>::getType() const {
 
 inline ValueType AttrSimpleType<float>::getType() const {
 	return ValueType::ValueTypeFloat;
+}
+
+inline ValueType AttrSimpleType<double>::getType() const {
+	return ValueType::ValueTypeDouble;
 }
 
 inline ValueType AttrSimpleType<std::string>::getType() const {
@@ -320,6 +325,11 @@ struct AttrPlugin: public AttrBase {
 
 	operator bool () const {
 		return !plugin.empty();
+	}
+
+	AttrPlugin& operator=(const std::string &name) {
+		plugin = name;
+		return *this;
 	}
 
 	AttrPlugin & operator=(const AttrValue &);

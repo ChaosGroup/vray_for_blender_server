@@ -39,7 +39,7 @@ void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, v
 	if (level <= VRay::MessageError) {
 		std::cout << "Error: " << msg;
 	}
-	if (level <= VRay::MessageWarning) {
+	if (1) {
 		rc->server.send(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 	}
 }

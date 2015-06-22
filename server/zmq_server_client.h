@@ -1,7 +1,7 @@
 #ifndef _ZMQ_SERVER_H_
 #define _ZMQ_SERVER_H_
 
-#include "../zmq-wrapper/zmq_wrapper.h"
+#include "../zmq-wrapper/include/zmq_wrapper.h"
 
 class ZmqServerClient: public ZmqWrapper {
 public:

@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <vraysdk.hpp>
-#include "../zmq-wrapper/zmq_wrapper.h"
+#include "../zmq-wrapper/include/zmq_wrapper.h"
 #include "zmq_server_client.h"
 
 class RendererController {

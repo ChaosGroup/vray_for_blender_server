@@ -48,6 +48,7 @@ const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
 											VRayBaseTypes::AttrImage,
 											VRayBaseTypes::AttrSimpleType<int>,
 											VRayBaseTypes::AttrSimpleType<float>,
+											VRayBaseTypes::AttrSimpleType<double>,
 											VRayBaseTypes::AttrSimpleType<std::string>>::value;
 
 
@@ -345,6 +346,9 @@ private:
 			break;
 		case ValueType::ValueTypeFloat:
 			stream >> *setValue<AttrSimpleType<float>>();
+			break;
+		case ValueType::ValueTypeDouble:
+			stream >> *setValue<AttrSimpleType<double>>();
 			break;
 		case ValueType::ValueTypeString:
 			stream >> *setValue<AttrSimpleType<std::string>>();
