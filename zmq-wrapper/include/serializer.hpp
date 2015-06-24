@@ -40,11 +40,6 @@ inline SerializerStream & operator<<(SerializerStream & stream, const T & value)
 	return stream;
 }
 
-template <typename T>
-inline SerializerStream & operator<<(SerializerStream & stream, const T* & value) {
-	static_assert(false, "Dont serialize bare pointers");
-}
-
 template <>
 inline SerializerStream & operator<<(SerializerStream & stream, const std::string & value) {
 	int size = value.size();

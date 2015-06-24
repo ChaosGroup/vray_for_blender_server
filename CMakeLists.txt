@@ -28,7 +28,7 @@ endif()
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
-find_package(Boost 1.58.0)
+find_package(Boost)
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(extern/cppzmq)
 

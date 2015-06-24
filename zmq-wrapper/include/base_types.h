@@ -67,15 +67,9 @@ enum ValueType {
 	ValueTypeMapChannels,
 };
 
-struct AttrBase {
-	ValueType getType() const {
-		assert(false);
-		return ValueType::ValueTypeUnknown;
-	}
-};
 
 template <typename T>
-struct AttrSimpleType: public AttrBase {
+struct AttrSimpleType {
 	ValueType getType() const;
 	AttrSimpleType(): m_Value() {}
 	AttrSimpleType(const T & val): m_Value(val) {}
@@ -83,23 +77,27 @@ struct AttrSimpleType: public AttrBase {
 	T m_Value;
 };
 
+template <>
 inline ValueType AttrSimpleType<int>::getType() const {
 	return ValueType::ValueTypeInt;
 }
 
+template <>
 inline ValueType AttrSimpleType<float>::getType() const {
 	return ValueType::ValueTypeFloat;
 }
 
+template <>
 inline ValueType AttrSimpleType<double>::getType() const {
 	return ValueType::ValueTypeDouble;
 }
 
+template <>
 inline ValueType AttrSimpleType<std::string>::getType() const {
 	return ValueType::ValueTypeString;
 }
 
-struct AttrImage: public AttrBase {
+struct AttrImage {
 	ValueType getType() const {
 		return ValueType::ValueTypeImage;
 	}
@@ -133,7 +131,7 @@ struct AttrImage: public AttrBase {
 };
 
 
-struct AttrColor: public AttrBase {
+struct AttrColor {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeColor;
@@ -169,7 +167,7 @@ struct AttrColor: public AttrBase {
 };
 
 
-struct AttrAColor: public AttrBase {
+struct AttrAColor {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeAColor;
@@ -189,7 +187,7 @@ struct AttrAColor: public AttrBase {
 };
 
 
-struct AttrVector: public AttrBase {
+struct AttrVector {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeVector;
@@ -247,7 +245,7 @@ struct AttrVector: public AttrBase {
 };
 
 
-struct AttrVector2: public AttrBase {
+struct AttrVector2 {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeVector2;
@@ -268,7 +266,7 @@ struct AttrVector2: public AttrBase {
 };
 
 
-struct AttrMatrix: public AttrBase {
+struct AttrMatrix {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeMatrix;
@@ -294,7 +292,7 @@ struct AttrMatrix: public AttrBase {
 };
 
 
-struct AttrTransform: public AttrBase {
+struct AttrTransform {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeTransform;
@@ -312,7 +310,7 @@ struct AttrTransform: public AttrBase {
 };
 
 struct AttrValue;
-struct AttrPlugin: public AttrBase {
+struct AttrPlugin {
 
 	ValueType getType() const {
 		return ValueType::ValueTypePlugin;
@@ -340,7 +338,7 @@ struct AttrPlugin: public AttrBase {
 
 
 template <typename T>
-struct AttrList: public AttrBase {
+struct AttrList {
 	typedef std::vector<T>              DataType;
 	typedef boost::shared_ptr<DataType> DataArray;
 
@@ -417,36 +415,43 @@ typedef AttrList<AttrPlugin>  AttrListPlugin;
 typedef AttrList<std::string> AttrListString;
 
 
+template <>
 inline ValueType AttrListInt::getType() const {
 	return ValueType::ValueTypeListInt;
 }
 
+template <>
 inline ValueType AttrListFloat::getType() const {
 	return ValueType::ValueTypeListFloat;
 }
 
+template <>
 inline ValueType AttrListColor::getType() const {
 	return ValueType::ValueTypeListColor;
 }
 
+template <>
 inline ValueType AttrListVector::getType() const {
 	return ValueType::ValueTypeListVector;
 }
 
+template <>
 inline ValueType AttrListVector2::getType() const {
 	return ValueType::ValueTypeListVector2;
 }
 
+template <>
 inline ValueType AttrListPlugin::getType() const {
 	return ValueType::ValueTypeListPlugin;
 }
 
+template <>
 inline ValueType AttrListString::getType() const {
 	return ValueType::ValueTypeListString;
 }
 
 
-struct AttrMapChannels: public AttrBase {
+struct AttrMapChannels {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeMapChannels;
@@ -463,7 +468,7 @@ struct AttrMapChannels: public AttrBase {
 };
 
 
-struct AttrInstancer: public AttrBase {
+struct AttrInstancer {
 
 	ValueType getType() const {
 		return ValueType::ValueTypeInstancer;

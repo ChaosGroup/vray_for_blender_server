@@ -28,8 +28,7 @@ struct max_type_sizeof<T, Q> {
 
 
 // maximum possible size of a value in the message
-const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrBase,
-											VRayBaseTypes::AttrColor,
+const int MAX_MESSAGE_SIZE = max_type_sizeof<VRayBaseTypes::AttrColor,
 											VRayBaseTypes::AttrAColor,
 											VRayBaseTypes::AttrVector,
 											VRayBaseTypes::AttrVector2,
@@ -164,7 +163,6 @@ public:
 		return fromStream(strm);
 	}
 
-	template <>
 	static VRayMessage createMessage(const std::string & plugin, const std::string & property, const std::string & value, bool stringValue) {
 		using namespace std;
 		SerializerStream strm;

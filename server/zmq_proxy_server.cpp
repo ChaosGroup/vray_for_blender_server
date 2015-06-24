@@ -1,12 +1,15 @@
 #include "zmq_proxy_server.h"
 #include <chrono>
 #include <random>
+#include <exception>
 
 using namespace std;
 
 
 ZmqProxyServer::ZmqProxyServer(const string & port): port(port), isRunning(false), context(nullptr), routerSocket(nullptr), nextWorkerId(1), vray(new VRay::VRayInit(true)) {
-
+	if (!vray) {
+		throw logic_error("Failed to instantiate vray!");
+	}
 }
 
 ZmqProxyServer::~ZmqProxyServer() {
@@ -99,7 +102,7 @@ void ZmqProxyServer::mainLoop() {
 		try {
 			routerSocket->send(receiverIdentity, ZMQ_SNDMORE);
 			routerSocket->send(payload);
-		} catch (error_t & e) {
+		} catch (zmq::error_t & e) {
 			if (isClientMessage) {
 				workers.erase(workers.find(receiverId));
 			}

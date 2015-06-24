@@ -29,7 +29,7 @@ public:
 	void send(void *data, int size);
 
 	/// send steals the message contents and is ZmqWrapper's resposibility
-	void send(VRayMessage & message);
+	void send(VRayMessage && message);
 
 	void setCallback(ZmqWrapperCallback_t cb);
 

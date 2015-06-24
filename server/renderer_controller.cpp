@@ -13,7 +13,7 @@ namespace {
 
         VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
 
-        server->send(msg);
+        server->send(std::move(msg));
     }
 
     void imageDone(VRay::VRayRenderer & renderer, void * arg) {
@@ -30,7 +30,7 @@ namespace {
 
         VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 
-        server->send(msg);
+        server->send(std::move(msg));
     }
 }
 
@@ -81,13 +81,13 @@ void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) 
 			break;
 		}
 	} catch (zmq::error_t & e) {
-		auto x = e.what();
+		std::cerr << e.what() << std::endl;
 		assert(false);
 	} catch (std::exception & e) {
-		auto x = e.what();
+		std::cerr << e.what() << std::endl;
 		assert(false);
 	} catch (VRay::VRayException & e) {
-		auto x = e.what();
+		std::cerr << e.what() << std::endl;
 		assert(false);
 	}
 }

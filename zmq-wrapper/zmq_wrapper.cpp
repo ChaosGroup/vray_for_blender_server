@@ -65,7 +65,8 @@ ZmqWrapper::ZmqWrapper() :
 					// if it's not user message - dont propagate
 					const char * data = reinterpret_cast<const char *>(incoming.data());
 					if (data[0] == 0) {
-						this->callback(VRayMessage(incoming), this);
+						VRayMessage msg(incoming);
+						this->callback(msg, this);
 					}
 				}
 
@@ -125,7 +126,7 @@ void ZmqWrapper::setCallback(ZmqWrapperCallback_t cb) {
 	this->callback = cb;
 }
 
-void ZmqWrapper::send(VRayMessage &message) {
+void ZmqWrapper::send(VRayMessage && message) {
 	std::lock_guard<std::mutex> lock(this->messageMutex);
 	this->messageQue.push(std::move(message));
 }

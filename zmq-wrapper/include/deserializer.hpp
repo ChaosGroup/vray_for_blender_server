@@ -57,11 +57,6 @@ DeserializerStream & operator>>(DeserializerStream & stream, T & value) {
 	return stream;
 }
 
-template <typename T>
-DeserializerStream & operator>>(DeserializerStream & stream, T* & value) {
-	static_assert(false, "Dont deserialize to bare pointers");
-}
-
 template <>
 inline DeserializerStream & operator>>(DeserializerStream & stream, std::string & value) {
 	int size;
