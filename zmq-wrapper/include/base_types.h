@@ -19,7 +19,7 @@
 #ifndef VRAY_FOR_BLENDER_BASE_TYPES_H
 #define VRAY_FOR_BLENDER_BASE_TYPES_H
 
-
+#include <string.h>
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
@@ -122,7 +122,7 @@ struct AttrImage {
 		this->imageType = type;
 		this->data.reset(new char[size]);
 		this->size = size;
-		memcpy(this->data.get(), data, size);
+		::memcpy(this->data.get(), data, size);
 	}
 
 	std::unique_ptr<char[]> data;
