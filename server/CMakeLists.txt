@@ -23,13 +23,10 @@ include(vfh_vrayappsdk)
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
-include_directories(../zmq-wrapper)
-include_directories(../zmq-wrapper/include)
-
 use_vray_appsdk()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
 link_with_vray_appsdk(${PROJECT_NAME})
 
-target_link_libraries(${PROJECT_NAME} zmq_wrapper)
+target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB})

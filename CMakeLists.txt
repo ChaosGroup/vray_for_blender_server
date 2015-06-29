@@ -28,10 +28,10 @@ endif()
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
+
 find_package(Boost)
 include_directories(${Boost_INCLUDE_DIR})
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(WIN32)
 	set(ZMQ_ROOT "D:/libs/ZeroMQ 4.0.4")
@@ -48,5 +48,9 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
-add_subdirectory(zmq-wrapper)
+add_subdirectory(extern/vray-zmq-wrapper)
+
+include_directories(extern/vray-zmq-wrapper/include)
+include_directories(extern/vray-zmq-wrapper/extern/cppzmq)
+
 add_subdirectory(server)
