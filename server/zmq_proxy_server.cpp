@@ -76,9 +76,9 @@ void ZmqProxyServer::mainLoop() {
 			const uint64_t & messageIdentity = *reinterpret_cast<uint64_t*>(identity.data());
 
 			uint64_t receiverId = 0;
-			bool isClientMessage = isClient(messageIdentity);
+			bool isMessageForClient = isClient(messageIdentity);
 
-			if (isClientMessage) {
+			if (isMessageForClient) {
 				receiverId = clientToWorker[messageIdentity];
 				workers[receiverId].lastKeepAlive = now;
 			} else if (isWorker(messageIdentity)) {
@@ -92,7 +92,7 @@ void ZmqProxyServer::mainLoop() {
 
 				WorkerWrapper wrapper = {
 					shared_ptr<RendererController>(new RendererController("tcp://localhost:" + port, workerId)),
-					high_resolution_clock::now()
+					now
 				};
 
 				workers.emplace(make_pair(workerId, wrapper));
@@ -107,17 +107,14 @@ void ZmqProxyServer::mainLoop() {
 			message_t payload;
 			routerSocket->recv(&payload);
 
-
 			try {
 				routerSocket->send(receiverIdentity, ZMQ_SNDMORE);
 				routerSocket->send(payload);
 			} catch (zmq::error_t & e) {
-				if (isClientMessage) {
+				if (isMessageForClient) {
+					// if we can't route message to client - he disconnected - we can safely stop it's renderer
 					workers.erase(workers.find(receiverId));
-				} else {
-					throw;
 				}
-				continue;
 			}
 		}
 	} catch (error_t & e) {

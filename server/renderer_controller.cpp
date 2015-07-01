@@ -79,6 +79,9 @@ void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) 
 			}
 			this->rendererMessage(message, server);
 			break;
+		default:
+			std::cerr << "Unknown message type\n";
+			return;
 		}
 	} catch (zmq::error_t & e) {
 		std::cerr << e.what() << std::endl;
