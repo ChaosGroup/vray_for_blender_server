@@ -252,7 +252,7 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
     bool completed = true;
     switch (message.getRendererAction()) {
     case VRayMessage::RendererAction::SetCurrentTime:
-		//completed = renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
+		//renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
         break;
     case VRayMessage::RendererAction::ClearFrameValues:
 		//completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);

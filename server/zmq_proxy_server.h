@@ -14,6 +14,8 @@ public:
 	void start();
 	void stop();
 
+    bool good() const { return isOk; }
+
 private:
 	uint64_t getFreeWorkerId();
 	
@@ -22,7 +24,7 @@ private:
 
 	void mainLoop();
 private:
-	bool isRunning;
+	bool isRunning, isOk;
 	std::thread workerThread;
 	std::string port;
 
