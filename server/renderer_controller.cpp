@@ -158,7 +158,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
             const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
             VRay::ValueList pluginList(plist.getCount());
             std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [](const VRayBaseTypes::AttrPlugin & plugin) {
-                return VRay::Value(plugin);
+                return VRay::Value(plugin.plugin);
             });
             success = plugin.setValue(message.getProperty(), VRay::Value(pluginList));
             break;
