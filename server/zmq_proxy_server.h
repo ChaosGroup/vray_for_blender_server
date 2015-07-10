@@ -14,7 +14,7 @@ public:
 	void start();
 	void stop();
 
-    bool good() const { return isOk; }
+	bool good() const { return isOk; }
 
 private:
 	uint64_t getFreeWorkerId();

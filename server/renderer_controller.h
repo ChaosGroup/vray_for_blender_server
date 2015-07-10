@@ -18,10 +18,10 @@ public:
 
 private:
 
-    void dispatcher(VRayMessage & message, ZmqWrapper * server);
+	void dispatcher(VRayMessage & message, ZmqWrapper * server);
 
-    void pluginMessage(VRayMessage & message);
-    void rendererMessage(VRayMessage & message, ZmqWrapper * server);
+	void pluginMessage(VRayMessage & message);
+	void rendererMessage(VRayMessage & message, ZmqWrapper * server);
 private:
 
 	ZmqServerClient server;
