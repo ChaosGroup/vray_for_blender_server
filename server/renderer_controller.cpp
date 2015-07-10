@@ -125,6 +125,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
             success = plugin.setValueAsString(message.getProperty(), pluginData);
             break;
         }
+        case VRayBaseTypes::ValueType::ValueTypeVector:
+            success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Vector>());
+            break;
         case VRayBaseTypes::ValueType::ValueTypeString:
             if (message.getValueSetter() == VRayMessage::ValueSetter::AsString) {
                 success = plugin.setValueAsString(message.getProperty(), *message.getValue<std::string>());
