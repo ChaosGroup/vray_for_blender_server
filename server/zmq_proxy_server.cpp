@@ -114,7 +114,10 @@ void ZmqProxyServer::mainLoop() {
 			} catch (zmq::error_t & e) {
 				if (isMessageForClient) {
 					// if we can't route message to client - he disconnected - we can safely stop it's renderer
-					workers.erase(workers.find(receiverId));
+					auto worker = workers.find(receiverId);
+					if (worker != workers.end()) {
+						workers.erase(worker);
+					}
 				}
 			}
 		}
