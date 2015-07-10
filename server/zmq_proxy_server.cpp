@@ -70,6 +70,7 @@ void ZmqProxyServer::mainLoop() {
 			}
 
 			if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
+				this_thread::sleep_for(milliseconds(1));
 				continue;
 			}
 
