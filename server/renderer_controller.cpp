@@ -188,14 +188,11 @@ void RendererController::pluginMessage(VRayMessage & message) {
                 VRay::ValueList map_channel;
                 map_channel.push_back(VRay::Value(i++));
 
-                // XXX: Craaaazy...
-                VRay::IntList faces;
-                faces.resize(map_channel_data.faces.getCount());
-                memcpy(&faces[0], *map_channel_data.faces, map_channel_data.faces.getBytesCount());
+                // VRay::IntList should be binary the same as VRayBaseTypes::AttrListInt
+                const VRay::IntList & faces = reinterpret_cast<const VRay::IntList &>(*map_channel_data.faces.getData());
 
-                VRay::VectorList vertices;
-                vertices.resize(map_channel_data.vertices.getCount());
-                memcpy(&vertices[0], *map_channel_data.vertices, map_channel_data.vertices.getBytesCount());
+                // VRay::VectorList should be binary the same as VRayBaseTypes::AttrListVector
+                const VRay::VectorList & vertices = reinterpret_cast<const VRay::VectorList &>(*map_channel_data.vertices.getData());
 
                 map_channel.push_back(VRay::Value(vertices));
                 map_channel.push_back(VRay::Value(faces));
