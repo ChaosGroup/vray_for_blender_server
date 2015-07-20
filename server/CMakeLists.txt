@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-project(qt_server)
+project(ZmqServer)
 
 include(vfh_vrayappsdk)
 
