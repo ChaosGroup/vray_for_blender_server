@@ -9,7 +9,7 @@
 
 class ZmqProxyServer {
 public:
-	ZmqProxyServer(const std::string & port);
+	ZmqProxyServer(const std::string & port, bool showVFB = false);
 	~ZmqProxyServer();
 	void start();
 	void stop();
@@ -24,7 +24,7 @@ private:
 
 	void mainLoop();
 private:
-	bool isRunning, isOk;
+	bool isRunning, isOk, showVFB;
 	std::thread workerThread;
 	std::string port;
 

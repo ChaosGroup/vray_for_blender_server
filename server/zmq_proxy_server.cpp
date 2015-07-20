@@ -6,9 +6,9 @@
 using namespace std;
 
 
-ZmqProxyServer::ZmqProxyServer(const string & port)
+ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
 	: port(port), isRunning(false), context(nullptr), routerSocket(nullptr),
-	nextWorkerId(1), vray(new VRay::VRayInit(true)), isOk(true) {
+	nextWorkerId(1), vray(new VRay::VRayInit(true)), isOk(true), showVFB(showVFB) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
@@ -92,7 +92,7 @@ void ZmqProxyServer::mainLoop() {
 				workerToClient[workerId] = clientId;
 
 				WorkerWrapper wrapper = {
-					shared_ptr<RendererController>(new RendererController("tcp://localhost:" + port, workerId)),
+					shared_ptr<RendererController>(new RendererController("tcp://localhost:" + port, workerId, showVFB)),
 					now
 				};
 

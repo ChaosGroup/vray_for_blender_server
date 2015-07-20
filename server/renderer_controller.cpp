@@ -44,7 +44,7 @@ void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, v
 	}
 }
 
-RendererController::RendererController(const std::string & address, uint64_t rendererId):
+RendererController::RendererController(const std::string & address, uint64_t rendererId, bool showVFB):
 	renderer(nullptr), showVFB(showVFB) {
 
 	this->server.setIdentity(rendererId);
@@ -287,7 +287,7 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
 			completed = false;
 		} else {
 			completed = renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
-			renderer->showFrameBuffer(true);
+			renderer->showFrameBuffer(showVFB);
 
 			renderer->setOnRTImageUpdated(imageUpdate, server);
 			renderer->setOnImageReady(imageDone, server);

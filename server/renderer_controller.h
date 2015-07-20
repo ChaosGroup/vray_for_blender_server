@@ -10,7 +10,7 @@ class RendererController {
 public:
 	friend void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
 
-	RendererController(const std::string & port, uint64_t rendererId);
+	RendererController(const std::string & port, uint64_t rendererId, bool showVFB);
 	~RendererController();
 
 	RendererController(const RendererController &) = delete;

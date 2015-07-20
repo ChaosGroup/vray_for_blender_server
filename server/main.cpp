@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	try {
-		ZmqProxyServer server(settings.port);
+		ZmqProxyServer server(settings.port, settings.showVFB);
 		server.start();
 
 		while (server.good()) {
