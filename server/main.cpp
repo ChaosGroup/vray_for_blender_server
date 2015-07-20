@@ -21,7 +21,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 
 
 int main(int argc, char *argv[]) {
-	ArgvSettings settings;
+	ArgvSettings settings = {"", false};
 	if (!parseArgv(settings, argc, argv)) {
 		std::cerr << "Arguments:\n"
 			<< "-p <port-num>\tPort number to listen on\n"
