@@ -30,6 +30,28 @@ void ZmqProxyServer::stop() {
 	}
 }
 
+#ifdef VRAY_ZMQ_SINGLE_MODE
+
+void ZmqProxyServer::mainLoop() {
+	try {
+		uint64_t dummyId = 1;
+
+		WorkerWrapper wrapper = {
+			shared_ptr<RendererController>(new RendererController("tcp://*:" + port, dummyId, showVFB)),
+			std::chrono::high_resolution_clock::now()
+		};
+
+		workers.emplace(make_pair(dummyId, wrapper));
+	} catch (zmq::error_t & e) {
+		std::cerr << e.what() << std::endl;
+		isOk = isRunning = false;
+		return;
+	}
+
+	isOk = isRunning = true;
+}
+
+#else // VRAY_ZMQ_SINGLE_MODE
 void ZmqProxyServer::mainLoop() {
 	using namespace zmq;
 	using namespace std::chrono;
@@ -127,6 +149,7 @@ void ZmqProxyServer::mainLoop() {
 		isOk = isRunning = false;
 	}
 }
+#endif // VRAY_ZMQ_SINGLE_MODE
 
 
 uint64_t ZmqProxyServer::getFreeWorkerId() {
