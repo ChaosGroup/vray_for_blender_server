@@ -52,8 +52,8 @@ void ZmqProxyServer::mainLoop() {
 	try {
 		while (isRunning) {
 			message_t identity;
-
 			auto now = high_resolution_clock::now();
+#ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT) {
 				lastTimeoutCheck = now;
 				cout << "Clients before check: " << workers.size() << endl;
@@ -69,6 +69,7 @@ void ZmqProxyServer::mainLoop() {
 				cout << "Clients after check: " << workers.size() << endl;
 			}
 
+#endif // VRAY_ZMQ_PING
 			if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
 				this_thread::sleep_for(milliseconds(1));
 				continue;
