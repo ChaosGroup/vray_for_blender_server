@@ -8,23 +8,26 @@
 
 class RendererController {
 public:
-	friend void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
+	typedef std::function<void(VRayMessage && msg)> send_fn_t;
 
-	RendererController(const std::string & port, uint64_t rendererId, bool showVFB);
+	RendererController(send_fn_t sendFn, bool showVFB);
 	~RendererController();
 
 	RendererController(const RendererController &) = delete;
 	RendererController & operator=(const RendererController &) = delete;
 
+	void handle(VRayMessage & message);
 private:
+	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg);
+	void imageDone(VRay::VRayRenderer & renderer, void * arg);
+	void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
 
-	void dispatcher(VRayMessage & message, ZmqWrapper * server);
 
 	void pluginMessage(VRayMessage & message);
-	void rendererMessage(VRayMessage & message, ZmqWrapper * server);
+	void rendererMessage(VRayMessage & message);
 private:
 
-	ZmqServerClient server;
+	send_fn_t sendFn;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	bool showVFB;
 };

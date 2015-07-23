@@ -2,58 +2,9 @@
 
 using namespace VRayBaseTypes;
 
-namespace {
-	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
-		ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
 
-		size_t size;
-		std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
-		int width, height;
-		img->getSize(width, height);
-
-		VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
-
-		server->send(std::move(msg));
-	}
-
-	void imageDone(VRay::VRayRenderer & renderer, void * arg) {
-		ZmqWrapper * server = reinterpret_cast<ZmqWrapper*>(arg);
-
-		VRay::VRayImage * img = renderer.getImage();
-
-		size_t size;
-		VRay::AColor * data = img->getPixelData(size);
-		size *= sizeof(VRay::AColor);
-
-		int width, height;
-		img->getSize(width, height);
-
-		VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
-
-		server->send(std::move(msg));
-	}
-}
-
-void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
-	RendererController * rc = reinterpret_cast<RendererController*>(arg);
-	if (level <= VRay::MessageError) {
-		std::cout << "Error: " << msg;
-	}
-	if (1) {
-		rc->server.send(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
-	}
-}
-
-RendererController::RendererController(const std::string & address, uint64_t rendererId, bool showVFB):
-	renderer(nullptr), showVFB(showVFB) {
-
-	this->server.setIdentity(rendererId);
-	this->server.setCallback(std::bind(&RendererController::dispatcher, this, std::placeholders::_1, std::placeholders::_2));
-	try {
-		this->server.connect(address.c_str());
-	} catch (zmq::error_t & e) {
-		std::cerr << e.what();
-	}
+RendererController::RendererController(send_fn_t fn, bool showVFB):
+	renderer(nullptr), showVFB(showVFB), sendFn(fn) {
 }
 
 RendererController::~RendererController() {
@@ -62,7 +13,7 @@ RendererController::~RendererController() {
 	}
 }
 
-void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) {
+void RendererController::handle(VRayMessage & message) {
 	try {
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
@@ -77,7 +28,7 @@ void RendererController::dispatcher(VRayMessage & message, ZmqWrapper * server) 
 				std::cerr << "No renderer loaded!\n";
 				return;
 			}
-			this->rendererMessage(message, server);
+			this->rendererMessage(message);
 			break;
 		default:
 			std::cerr << "Unknown message type\n";
@@ -251,7 +202,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	}
 }
 
-void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * server) {
+void RendererController::rendererMessage(VRayMessage & message) {
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentTime:
@@ -289,10 +240,10 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
 			completed = renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			renderer->showFrameBuffer(showVFB);
 
-			renderer->setOnRTImageUpdated(imageUpdate, server);
-			renderer->setOnImageReady(imageDone, server);
+			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
+			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
 
-			renderer->setOnDumpMessage(vrayMessageDumpHandler, this);
+			renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 		}
 
 		break;
@@ -332,4 +283,44 @@ void RendererController::rendererMessage(VRayMessage & message, ZmqWrapper * ser
 		std::cerr << "Failed renderer action: " << static_cast<int>(message.getRendererAction())
 			<< "\nerror:" << renderer->getLastError() << std::endl;
 	}
+}
+
+
+void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
+	(void)arg;
+
+	size_t size;
+	std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
+	int width, height;
+	img->getSize(width, height);
+
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+
+	sendFn(std::move(msg));
+}
+
+
+void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
+	(void)arg;
+
+	VRay::VRayImage * img = renderer.getImage();
+
+	size_t size;
+	VRay::AColor * data = img->getPixelData(size);
+	size *= sizeof(VRay::AColor);
+
+	int width, height;
+	img->getSize(width, height);
+
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+	sendFn(std::move(msg));
+}
+
+
+void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
+	RendererController * rc = reinterpret_cast<RendererController*>(arg);
+	if (level <= VRay::MessageError) {
+		std::cout << "Error: " << msg;
+	}
+	sendFn(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 }

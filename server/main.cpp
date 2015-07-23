@@ -31,11 +31,7 @@ int main(int argc, char *argv[]) {
 
 	try {
 		ZmqProxyServer server(settings.port, settings.showVFB);
-		server.start();
-
-		while (server.good()) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
+		server.run();
 	} catch (std::exception & e) {
 		std::cerr << e.what() << std::endl;
 	} catch (VRay::VRayException & e) {

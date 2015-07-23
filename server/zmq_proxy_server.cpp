@@ -7,32 +7,17 @@ using namespace std;
 
 
 ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
-	: port(port), isRunning(false), context(nullptr), routerSocket(nullptr),
-	nextWorkerId(1), vray(new VRay::VRayInit(true)), isOk(true), showVFB(showVFB) {
+	: port(port), context(nullptr), routerSocket(nullptr),
+	vray(new VRay::VRayInit(true)), showVFB(showVFB) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
 }
 
-ZmqProxyServer::~ZmqProxyServer() {
-	stop();
-}
-
-void ZmqProxyServer::start() {
-	isRunning = true;
-	workerThread = thread(&ZmqProxyServer::mainLoop, this);
-}
-
-void ZmqProxyServer::stop() {
-	isRunning = false;
-	if (workerThread.joinable()) {
-		workerThread.join();
-	}
-}
 
 #ifdef VRAY_ZMQ_SINGLE_MODE
-
-void ZmqProxyServer::mainLoop() {
+#if 0
+void ZmqProxyServer::run() {
 	try {
 		uint64_t dummyId = 1;
 
@@ -50,31 +35,32 @@ void ZmqProxyServer::mainLoop() {
 
 	isOk = isRunning = true;
 }
-
+#endif
 #else // VRAY_ZMQ_SINGLE_MODE
-void ZmqProxyServer::mainLoop() {
+void ZmqProxyServer::run() {
 	using namespace zmq;
 	using namespace std::chrono;
+
+
+	queue<pair<uint64_t, VRayMessage>> sendQ;
+	mutex sendQMutex;
 
 	try {
 		context = unique_ptr<context_t>(new context_t(1));
 		routerSocket = unique_ptr<socket_t>(new socket_t(*context, ZMQ_ROUTER));
 
-		int opt = 1, sopt = sizeof(int);
-		routerSocket->setsockopt(ZMQ_ROUTER_MANDATORY, &opt, sopt);
 		routerSocket->bind((string("tcp://*:") + port).c_str());
 	} catch (error_t & e) {
 		std::cerr << e.what() << std::endl;
-		isOk = isRunning = false;
 		return;
 	}
 	
 	auto lastTimeoutCheck = high_resolution_clock::now();
 
 	try {
-		while (isRunning) {
-			message_t identity;
+		while (true) {
 			auto now = high_resolution_clock::now();
+
 #ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT) {
 				lastTimeoutCheck = now;
@@ -90,80 +76,71 @@ void ZmqProxyServer::mainLoop() {
 				}
 				cout << "Clients after check: " << workers.size() << endl;
 			}
-
 #endif // VRAY_ZMQ_PING
+
+			if (sendQ.size()) {
+				unique_lock<mutex> l(sendQMutex);
+				int maxSend = 10;
+				while (sendQ.size() && --maxSend) {
+					auto & p = sendQ.front();
+
+					message_t id(sizeof(uint64_t));
+					memcpy(id.data(), &p.first, sizeof(uint64_t));
+					routerSocket->send(id, ZMQ_SNDMORE);
+					routerSocket->send("", 0, ZMQ_SNDMORE);
+					routerSocket->send(p.second.getMessage());
+
+					sendQ.pop();
+				}
+			}
+
+			message_t identity;
 			if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
-				this_thread::sleep_for(milliseconds(1));
 				continue;
 			}
 
-			const uint64_t & messageIdentity = *reinterpret_cast<uint64_t*>(identity.data());
-
-			uint64_t receiverId = 0;
-			bool isMessageForClient = isClient(messageIdentity);
-
-			if (isMessageForClient) {
-				receiverId = clientToWorker[messageIdentity];
-				workers[receiverId].lastKeepAlive = now;
-			} else if (isWorker(messageIdentity)) {
-				receiverId = workerToClient[messageIdentity];
-			} else {
-				uint64_t workerId = getFreeWorkerId();
-				const uint64_t & clientId = messageIdentity;
-
-				clientToWorker[clientId] = workerId;
-				workerToClient[workerId] = clientId;
-
-				WorkerWrapper wrapper = {
-					shared_ptr<RendererController>(new RendererController("tcp://localhost:" + port, workerId, showVFB)),
-					now
-				};
-
-				workers.emplace(make_pair(workerId, wrapper));
-				this_thread::sleep_for(milliseconds(100));
-
-				receiverId = workerId;
-			}
-
-			message_t receiverIdentity(sizeof(receiverId));
-			*reinterpret_cast<uint64_t*>(receiverIdentity.data()) = receiverId;
-
-			message_t payload;
+			message_t e, payload;
+			routerSocket->recv(&e);
 			routerSocket->recv(&payload);
 
-			try {
-				routerSocket->send(receiverIdentity, ZMQ_SNDMORE);
-				routerSocket->send(payload);
-			} catch (zmq::error_t & e) {
-				if (isMessageForClient) {
-					// if we can't route message to client - he disconnected - we can safely stop it's renderer
-					auto worker = workers.find(receiverId);
-					if (worker != workers.end()) {
-						workers.erase(worker);
-					}
-				}
+			assert(!e.size() && "No empty frame!");
+			assert(payload.size() && "Unexpected empty frame");
+
+			const uint64_t messageIdentity = *reinterpret_cast<uint64_t*>(identity.data());
+
+			uint64_t receiverId = 0;
+
+			auto worker = workers.find(messageIdentity);
+
+			// add worker for new client
+			if (worker == workers.end()) {
+				auto sendFn = [&sendQ, &sendQMutex, messageIdentity](VRayMessage && msg) {
+					unique_lock<mutex> l(sendQMutex);
+					sendQ.emplace(make_pair(messageIdentity, move(msg)));
+				};
+
+				WorkerWrapper wrapper = {
+					shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
+					now, messageIdentity
+				};
+
+				auto res = workers.emplace(make_pair(messageIdentity, wrapper));
+				assert(res.second && "Failed to add worker!");
+				worker = res.first;
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
+
+			if (payload.size() > 1) {
+				worker->second.worker->handle(VRayMessage(payload));
+			}
+			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
 	} catch (error_t & e) {
 		std::cerr << e.what() << std::endl;
-		isOk = isRunning = false;
 	}
+
+	workers.clear();
+	routerSocket.release();
+	context.release();
 }
 #endif // VRAY_ZMQ_SINGLE_MODE
-
-
-uint64_t ZmqProxyServer::getFreeWorkerId() {
-	uint64_t id;
-	do {
-		id = ++nextWorkerId;
-	} while (isWorker(id) || isClient(id));
-	return id;
-}
-
-bool ZmqProxyServer::isWorker(uint64_t id) const {
-	return workerToClient.find(id) != workerToClient.end();
-}
-
-bool ZmqProxyServer::isClient(uint64_t id) const {
-	return clientToWorker.find(id) != clientToWorker.end();
-}
