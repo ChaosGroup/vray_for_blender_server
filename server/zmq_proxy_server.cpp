@@ -62,7 +62,7 @@ void ZmqProxyServer::run() {
 			auto now = high_resolution_clock::now();
 
 #ifdef VRAY_ZMQ_PING
-			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT) {
+			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
 				lastTimeoutCheck = now;
 				cout << "Clients before check: " << workers.size() << endl;
 
