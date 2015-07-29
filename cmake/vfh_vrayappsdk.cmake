@@ -28,10 +28,15 @@ macro(use_vray_appsdk)
 		message(FATAL_ERROR "V-Ray AppSDK root (\"${APPSDK_ROOT}\") doesn't exist!")
 	endif()
 
-	message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
+	find_library(VRAY_APPSDK_LIB
+		NAMES VRaySDKLibrary
+		PATHS ${APPSDK_ROOT}/bin
+	)
 
-	if(NOT EXISTS ${APPSDK_ROOT}/cpp/include)
-		message(FATAL_ERROR "V-Ray AppSDK is not found under \"${APPSDK_ROOT}\"!")
+	if(NOT VRAY_APPSDK_LIB)
+		message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/bin)")
+	else()
+		message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
 	endif()
 
 	include_directories(${APPSDK_ROOT}/cpp/include)
