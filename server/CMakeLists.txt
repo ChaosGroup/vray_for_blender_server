@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-project(ZmqServer)
+project(VrayZmqServer)
 
 include(vfh_vrayappsdk)
 
@@ -40,3 +40,16 @@ if(UNIX)
 endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})
+
+if(WIN32)
+	install(TARGETS ${PROJECT_NAME} RUNTIME
+					DESTINATION "C:/Program Files/ChaosGroup/V-Ray/VRayZmqServer/")
+elseif(UNIX)
+	if(APPLE)
+		install(TARGETS ${PROJECT_NAME}
+					DESTINATION "/Applications/ChaosGroup/V-Ray/VRayZmqServer/")
+	else()
+		install(TARGETS ${PROJECT_NAME}
+					DESTINATION "/usr/ChaosGroup/V-Ray/VRayZmqServer/")
+	endif()
+endif()
