@@ -52,7 +52,7 @@ void ZmqProxyServer::run() {
 
 		routerSocket->bind((string("tcp://*:") + port).c_str());
 	} catch (zmq::error_t & e) {
-		std::cerr << e.what() << std::endl;
+		puts(e.what());
 		return;
 	}
 	
@@ -65,7 +65,7 @@ void ZmqProxyServer::run() {
 #ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
 				lastTimeoutCheck = now;
-				cout << "Clients before check: " << workers.size() << endl;
+				printf("Clients before check: %d\n", static_cast<int>(workers.size()));
 
 				for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 					auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
@@ -75,7 +75,7 @@ void ZmqProxyServer::run() {
 						++workerIter;
 					}
 				}
-				cout << "Clients after check: " << workers.size() << endl;
+				printf("Clients after check: %d\n", static_cast<int>(workers.size()));
 			}
 #endif // VRAY_ZMQ_PING
 
@@ -138,7 +138,7 @@ void ZmqProxyServer::run() {
 			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
 	} catch (zmq::error_t & e) {
-		std::cerr << e.what() << std::endl;
+		puts(e.what());
 	}
 
 	workers.clear();

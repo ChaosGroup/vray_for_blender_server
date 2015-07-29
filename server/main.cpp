@@ -24,9 +24,9 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 int main(int argc, char *argv[]) {
 	ArgvSettings settings = {"", false};
 	if (!parseArgv(settings, argc, argv)) {
-		std::cerr << "Arguments:\n"
-			<< "-p <port-num>\tPort number to listen on\n"
-			<< "-vfb\tSet show VFB option\n";
+		puts("Arguments:");
+		puts("-p <port-num>\tPort number to listen on");
+		puts("-vfb\tSet show VFB option");
 		return 0;
 	}
 
@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
 		ZmqProxyServer server(settings.port, settings.showVFB);
 		server.run();
 	} catch (std::exception & e) {
-		std::cerr << e.what() << std::endl;
+		puts(e.what());
 	} catch (VRay::VRayException & e) {
-		std::cerr << e.what() << std::endl;
+		puts(e.what());
 	}
 
 	return 0;

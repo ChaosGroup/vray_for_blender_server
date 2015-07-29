@@ -2,6 +2,7 @@
 #define _ZMQ_SERVER_H_
 
 #include "zmq_wrapper.h"
+#include <cstdio>
 
 class ZmqServerClient: public ZmqWrapper {
 public:

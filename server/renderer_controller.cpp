@@ -20,31 +20,28 @@ void RendererController::handle(VRayMessage & message) {
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
 			if (!renderer) {
-				std::cerr << "No renderer loaded!\n";
+				puts("No renderer loaded!");
 				return;
 			}
 			this->pluginMessage(message);
 			break;
 		case VRayMessage::Type::ChangeRenderer:
 			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
-				std::cerr << "No renderer loaded!\n";
+				puts("No renderer loaded!");
 				return;
 			}
 			this->rendererMessage(message);
 			break;
 		default:
-			std::cerr << "Unknown message type\n";
+			puts("Unknown message type");
 			return;
 		}
-	} catch (zmq::error_t & e) {
-		std::cerr << e.what() << std::endl;
-		assert(false);
 	} catch (std::exception & e) {
-		std::cerr << e.what() << std::endl;
-		assert(false);
+		puts(e.what());
+		assert(false && "std::exception in RendererController::handle.");
 	} catch (VRay::VRayException & e) {
-		std::cerr << e.what() << std::endl;
-		assert(false);
+		puts(e.what());
+		assert(false && "VRay::VRayException in RendererController::handle.");
 	}
 }
 
@@ -52,7 +49,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
 		if (!plugin) {
-			std::cerr << "Failed to load plugin: " << message.getPlugin() << std::endl;
+			printf("Failed to load plugin: %s\n", message.getPlugin().c_str());
 			return;
 		}
 		bool success = true;
@@ -183,23 +180,23 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			break;
 		}
 		default:
-			std::cerr << "Missing case for " << message.getValueType() << std::endl;
+			printf("Missing case for %s\n", message.getValueType());
 			success = false;
 		}
 
 		if (!success) {
-			std::cerr << "Failed to set property: " << message.getProperty() << " for: " << message.getPlugin() << std::endl;
+			printf("Failed to set property: %s for: %s\n", message.getProperty().c_str(), message.getPlugin().c_str());
 		}
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Create) {
 		if (!renderer->newPlugin(message.getPlugin(), message.getPluginType())) {
-			std::cerr << "Failed to create plugin: " << message.getPlugin() << std::endl;
+			printf("Failed to create plugin: %s\n", message.getPlugin().c_str());
 		}
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
-		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
+		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin().c_str());
 		if (plugin) {
 			renderer->removePlugin(plugin);
 		} else {
-			std::cerr << "Failed to remove plugin: " << message.getPlugin() << std::endl;
+			printf("Failed to remove plugin: %s\n", message.getPlugin().c_str());
 		}
 	}
 }
@@ -278,12 +275,13 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	}
 		break;
 	default:
-		std::cerr << "Invalid renderer action: " << static_cast<int>(message.getRendererAction()) << std::endl;
+		printf("Invalid renderer action: %d\n", static_cast<int>(message.getRendererAction()));
 	}
 
 	if (!completed) {
-		std::cerr << "Failed renderer action: " << static_cast<int>(message.getRendererAction())
-			<< "\nerror:" << renderer->getLastError() << std::endl;
+		printf("Failed renderer action: %d\nerror: %s\n",
+			static_cast<int>(message.getRendererAction()),
+			renderer->getLastError().toString().c_str());
 	}
 }
 
@@ -322,7 +320,7 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
 	RendererController * rc = reinterpret_cast<RendererController*>(arg);
 	if (level <= VRay::MessageError) {
-		std::cout << "Error: " << msg;
+		printf("Renderer error dump: %s\n", msg);
 	}
 	sendFn(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 }
