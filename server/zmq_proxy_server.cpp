@@ -50,7 +50,7 @@ void ZmqProxyServer::run() {
 		routerSocket = unique_ptr<socket_t>(new socket_t(*context, ZMQ_ROUTER));
 
 		routerSocket->bind((string("tcp://*:") + port).c_str());
-	} catch (error_t & e) {
+	} catch (zmq::error_t & e) {
 		std::cerr << e.what() << std::endl;
 		return;
 	}
@@ -131,11 +131,12 @@ void ZmqProxyServer::run() {
 			}
 
 			if (payload.size() > 1) {
-				worker->second.worker->handle(VRayMessage(payload));
+				VRayMessage pl(payload);
+				worker->second.worker->handle(pl);
 			}
 			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
-	} catch (error_t & e) {
+	} catch (zmq::error_t & e) {
 		std::cerr << e.what() << std::endl;
 	}
 
