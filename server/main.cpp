@@ -1,6 +1,5 @@
 #include "zmq_proxy_server.h"
 #include <string>
-#include <iostream>
 
 struct ArgvSettings {
 	std::string port;

@@ -1,6 +1,4 @@
 #include "renderer_controller.h"
-#include <iostream>
-
 
 using namespace VRayBaseTypes;
 
