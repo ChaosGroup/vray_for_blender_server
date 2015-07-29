@@ -29,12 +29,14 @@ add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
 link_with_vray_appsdk(${PROJECT_NAME})
 
+set(SYSTEM_LIBS "")
 if(UNIX)
 	if(APPLE)
 	else()
 		set(SYSTEM_LIBS
 			pthread
 		)
-		target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})
 	endif()
 endif()
+
+target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})

@@ -34,7 +34,7 @@ include_directories(${Boost_INCLUDE_DIR})
 
 
 if(WIN32)
-	set(ZMQ_ROOT "D:/libs/ZeroMQ 4.0.4")
+	set(ZMQ_ROOT "" CACHE PATH "ZMQ lib location")
 	set(ZMQ_LIB  zmq-v120-mt-gd-4_0_4)
 
 	include_directories(${ZMQ_ROOT}/include)
