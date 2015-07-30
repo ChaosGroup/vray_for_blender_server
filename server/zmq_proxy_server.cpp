@@ -81,7 +81,7 @@ void ZmqProxyServer::run() {
 #endif // VRAY_ZMQ_PING
 
 			if (sendQ.size()) {
-				unique_lock<mutex> l(sendQMutex);
+				lock_guard<mutex> l(sendQMutex);
 				int maxSend = 10;
 				while (sendQ.size() && --maxSend) {
 					auto & p = sendQ.front();
@@ -117,7 +117,7 @@ void ZmqProxyServer::run() {
 			// add worker for new client
 			if (worker == workers.end()) {
 				auto sendFn = [&sendQ, &sendQMutex, messageIdentity](VRayMessage && msg) {
-					unique_lock<mutex> l(sendQMutex);
+					lock_guard<mutex> l(sendQMutex);
 					sendQ.emplace(make_pair(messageIdentity, move(msg)));
 				};
 
