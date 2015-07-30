@@ -1,5 +1,6 @@
 #include "zmq_proxy_server.h"
 #include "utils/logger.h"
+#include "utils/version.h"
 #include <string>
 
 struct ArgvSettings {
@@ -18,6 +19,19 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 		}
 	}
 	return settings.port != "";
+}
+
+void printInfo() {
+	puts("VrayZmqServer");
+	printf("Version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
+	puts("");
+}
+
+void printHelp() {
+	printInfo();
+	puts("Arguments:");
+	puts("-p <port-num>\tPort number to listen on");
+	puts("-vfb\tSet show VFB option");
 }
 
 
@@ -39,14 +53,14 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
-
 	ArgvSettings settings = {"", false};
 	if (!parseArgv(settings, argc, argv)) {
-		puts("Arguments:");
-		puts("-p <port-num>\tPort number to listen on");
-		puts("-vfb\tSet show VFB option");
+		printHelp();
 		return 0;
 	}
+
+	printInfo();
+	printf("Starting VrayZmqServer on all interfaces with port %s, showing VFB: %s\n\n", settings.port, (settings.showVFB ? "true" : "false"));
 
 	try {
 		ZmqProxyServer server(settings.port, settings.showVFB);
