@@ -1,4 +1,5 @@
 #include "renderer_controller.h"
+#include "utils/logger.h"
 
 using namespace VRayBaseTypes;
 
@@ -18,27 +19,27 @@ void RendererController::handle(VRayMessage & message) {
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
 			if (!renderer) {
-				puts("No renderer loaded!");
+				Logger::getInstance().log(Logger::Warning, "Can't change plugin - no renderer loaded!");
 				return;
 			}
 			this->pluginMessage(message);
 			break;
 		case VRayMessage::Type::ChangeRenderer:
 			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
-				puts("No renderer loaded!");
+				Logger::getInstance().log(Logger::Warning, "Can.t change renderer - no renderer loaded!");
 				return;
 			}
 			this->rendererMessage(message);
 			break;
 		default:
-			puts("Unknown message type");
+			Logger::getInstance().log(Logger::Error, "Unknown message type");
 			return;
 		}
 	} catch (std::exception & e) {
-		puts(e.what());
+		Logger::getInstance().log(Logger::Error, e.what());
 		assert(false && "std::exception in RendererController::handle.");
 	} catch (VRay::VRayException & e) {
-		puts(e.what());
+		Logger::getInstance().log(Logger::Error, e.what());
 		assert(false && "VRay::VRayException in RendererController::handle.");
 	}
 }
@@ -47,7 +48,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
 		if (!plugin) {
-			printf("Failed to load plugin: %s\n", message.getPlugin().c_str());
+			Logger::getInstance().log(Logger::Warning, "Failed to load plugin: ", message.getPlugin());
 			return;
 		}
 		bool success = true;
@@ -55,12 +56,21 @@ void RendererController::pluginMessage(VRayMessage & message) {
 		switch (message.getValueType()) {
 		case VRayBaseTypes::ValueType::ValueTypeTransform:
 			success = plugin.setValue(message.getProperty(), *message.getValue<const VRay::Transform>());
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<const VRay::Transform>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeInt:
 			success = plugin.setValue(message.getProperty(), *message.getValue<int>());
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<int>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeFloat:
 			success = plugin.setValue(message.getProperty(), *message.getValue<float>());
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<float>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypePlugin:
 		{
@@ -71,10 +81,18 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				pluginData.append(attrPlugin.output);
 			}
 			success = plugin.setValueAsString(message.getProperty(), pluginData);
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				pluginData, "\nSuccess:", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeVector:
 			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Vector>());
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<VRay::Vector>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeString:
 			if (message.getValueSetter() == VRayMessage::ValueSetter::AsString) {
@@ -82,27 +100,48 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			} else {
 				success = plugin.setValue(message.getProperty(), *message.getValue<std::string>());
 			}
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<std::string>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeColor:
 			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Color>());
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<VRay::Color>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeAColor:
 			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::AColor>());
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+				*message.getValue<VRay::AColor>(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListInt:
 			success = plugin.setValue(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListInt>(),
 				message.getValue<VRayBaseTypes::AttrListInt>()->getBytesCount());
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				message.getValue<VRayBaseTypes::AttrListInt>()->getCount(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListFloat:
 			success = plugin.setValue(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListFloat>(),
 				message.getValue<VRayBaseTypes::AttrListFloat>()->getBytesCount());
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				message.getValue<VRayBaseTypes::AttrListFloat>()->getCount(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListVector:
 			success = plugin.setValue(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListVector>(),
 				message.getValue<VRayBaseTypes::AttrListVector>()->getBytesCount());
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				message.getValue<VRayBaseTypes::AttrListVector>()->getCount(), "\nSuccess:", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListPlugin:
 		{
@@ -112,6 +151,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				return VRay::Value(plugin.plugin);
 			});
 			success = plugin.setValue(message.getProperty(), VRay::Value(pluginList));
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				plist.getCount(), "\nSuccess:", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeListString:
@@ -122,6 +164,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				return VRay::Value(str);
 			});
 			success = plugin.setValue(message.getProperty(), VRay::Value(stringList));
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				slist.getCount(), "\nSuccess:", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:
@@ -149,6 +195,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			}
 
 			success = plugin.setValue(message.getProperty(), VRay::Value(map_channels));
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				channelMap.data.size(), "\nSuccess:", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeInstancer:
@@ -175,26 +225,33 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			}
 
 			success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
+
+			Logger::log(Logger::Info,
+				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+				inst.data.getCount(), "\nSuccess:", success);
 			break;
 		}
 		default:
-			printf("Missing case for %s\n", message.getValueType());
+			Logger::getInstance().log(Logger::Warning, "Missing case for", message.getValueType());
 			success = false;
 		}
 
 		if (!success) {
-			printf("Failed to set property: %s for: %s\n", message.getProperty().c_str(), message.getPlugin().c_str());
+			Logger::log(Logger::Warning, "Failed to set property:", message.getProperty(), "for:", message.getPlugin());
 		}
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Create) {
 		if (!renderer->newPlugin(message.getPlugin(), message.getPluginType())) {
-			printf("Failed to create plugin: %s\n", message.getPlugin().c_str());
+			Logger::log(Logger::Warning, "Failed to create plugin:", message.getPlugin());
+		} else {
+			Logger::log(Logger::Info, "Created plugin", message.getPlugin(), "with type:", message.getPluginType());
 		}
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin().c_str());
 		if (plugin) {
 			renderer->removePlugin(plugin);
+			Logger::log(Logger::Info, "Removed plugin", message.getPlugin());
 		} else {
-			printf("Failed to remove plugin: %s\n", message.getPlugin().c_str());
+			Logger::log(Logger::Warning, "Failed to remove plugin:", message.getPlugin());
 		}
 	}
 }
@@ -204,23 +261,30 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentTime:
 		//renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::setCurrentTime", message.getValue<AttrSimpleType<float>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::ClearFrameValues:
 		//completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::clearAllPropertyValuesUpToTime", message.getValue<AttrSimpleType<float>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::Pause:
 		completed = renderer->pause();
+		Logger::log(Logger::Info, "Renderer::pause");
 		break;
 	case VRayMessage::RendererAction::Resume:
 		completed = renderer->resume();
+		Logger::log(Logger::Info, "Renderer::resume");
 		break;
 	case VRayMessage::RendererAction::Start:
 		renderer->start();
+		Logger::log(Logger::Info, "Renderer::start");
 		break;
 	case VRayMessage::RendererAction::Stop:
+		Logger::log(Logger::Info, "Renderer::stop");
 		renderer->stop();
 		break;
 	case VRayMessage::RendererAction::Free:
+		Logger::log(Logger::Info, "Renderer::free");
 		renderer->stop();
 
 		renderer->showFrameBuffer(false);
@@ -228,6 +292,8 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		break;
 	case VRayMessage::RendererAction::Init:
 	{
+		Logger::log(Logger::Info, "Renderer::init");
+
 		VRay::RendererOptions options;
 		options.keepRTRunning = true;
 		renderer.reset(new VRay::VRayRenderer(options));
@@ -250,18 +316,24 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		message.getRendererSize(width, height);
 		completed = renderer->setWidth(width);
 		completed = completed && renderer->setHeight(height);
+
+		Logger::log(Logger::Info, "Renderer::resize", width, "x", height);
 		break;
 	case VRayMessage::RendererAction::AddHosts:
 		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::addHosts", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::RemoveHosts:
 		completed = 0 == renderer->removeHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::removeHosts", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::LoadScene:
 		completed = 0 == renderer->load(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::load", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::AppendScene:
 		completed = 0 == renderer->append(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		Logger::log(Logger::Info, "Renderer::append", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::ExportScene:
 	{
@@ -270,16 +342,18 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		exportParams.compressed = false;
 
 		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, &exportParams);
+
+		Logger::log(Logger::Info, "Renderer::exportScene", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 	}
 		break;
 	default:
-		printf("Invalid renderer action: %d\n", static_cast<int>(message.getRendererAction()));
+		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
 
 	if (!completed) {
-		printf("Failed renderer action: %d\nerror: %s\n",
-			static_cast<int>(message.getRendererAction()),
-			renderer->getLastError().toString().c_str());
+		Logger::log(Logger::Warning,
+			"Failed renderer action:", static_cast<int>(message.getRendererAction()),
+			"\nerror:", renderer->getLastError());
 	}
 }
 
@@ -293,8 +367,11 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 	img->getSize(width, height);
 
 	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+	size_t imageSize = msg.getMessage().size();
 
 	sendFn(std::move(msg));
+
+	Logger::log(Logger::Info, "Renderer::OnRTImageUpdated size:", imageSize);
 }
 
 
@@ -312,13 +389,17 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 
 	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 	sendFn(std::move(msg));
+	Logger::log(Logger::Info, "Renderer::OnImageReady");
 }
 
 
 void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
 	RendererController * rc = reinterpret_cast<RendererController*>(arg);
-	if (level <= VRay::MessageError) {
-		printf("Renderer error dump: %s\n", msg);
-	}
+
+	Logger::Level logLvl = level <= VRay::MessageError ? Logger::Warning :
+	                       level <= VRay::MessageWarning ? Logger::Debug :
+	                       Logger::Info;
+	Logger::log(logLvl, "VRAY:", msg);
+
 	sendFn(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 }

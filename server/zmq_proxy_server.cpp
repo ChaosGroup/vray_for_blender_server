@@ -1,4 +1,5 @@
 #include "zmq_proxy_server.h"
+#include "utils/logger.h"
 #include <chrono>
 #include <random>
 #include <exception>
@@ -49,9 +50,11 @@ void ZmqProxyServer::run() {
 		context = unique_ptr<context_t>(new context_t(1));
 		routerSocket = unique_ptr<socket_t>(new socket_t(*context, ZMQ_ROUTER));
 
+		Logger::log(Logger::Debug, "Binding to tcp://*:", port);
+
 		routerSocket->bind((string("tcp://*:") + port).c_str());
 	} catch (zmq::error_t & e) {
-		puts(e.what());
+		Logger::log(Logger::Error, "ZMQ exception during init:", e.what());
 		return;
 	}
 	
@@ -64,17 +67,16 @@ void ZmqProxyServer::run() {
 #ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
 				lastTimeoutCheck = now;
-				printf("Clients before check: %d\n", static_cast<int>(workers.size()));
 
 				for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 					auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
 					if (inactiveTime > DISCONNECT_TIMEOUT) {
+						Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
 						workerIter = workers.erase(workerIter);
 					} else {
 						++workerIter;
 					}
 				}
-				printf("Clients after check: %d\n", static_cast<int>(workers.size()));
 			}
 #endif // VRAY_ZMQ_PING
 
@@ -127,6 +129,7 @@ void ZmqProxyServer::run() {
 				auto res = workers.emplace(make_pair(messageIdentity, wrapper));
 				assert(res.second && "Failed to add worker!");
 				worker = res.first;
+				Logger::log(Logger::Debug, "New client (", messageIdentity, ") connected - spawning renderer.");
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 
@@ -137,8 +140,10 @@ void ZmqProxyServer::run() {
 			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
 	} catch (zmq::error_t & e) {
-		puts(e.what());
+		Logger::log(Logger::Error, "Zmq exception in server: ", e.what());
 	}
+
+	Logger::log(Logger::Debug, "Server stopping all renderers.");
 
 	workers.clear();
 	routerSocket.release();

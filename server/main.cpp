@@ -1,4 +1,5 @@
 #include "zmq_proxy_server.h"
+#include "utils/logger.h"
 #include <string>
 
 struct ArgvSettings {
@@ -21,6 +22,24 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 
 
 int main(int argc, char *argv[]) {
+	Logger::getInstance().setCallback([](Logger::Level lvl, const std::string & msg) {
+		switch (lvl) {
+		case Logger::Debug:
+			printf("DEBUG: %s\n", msg.c_str());
+			break;
+		case Logger::Warning:
+			printf("WARNING: %s\n", msg.c_str());
+			break;
+		case Logger::Error:
+			printf("ERROR: %s\n", msg.c_str());
+			break;
+		case Logger::Info:
+			//printf("INFO: %s\n", msg.c_str());
+			break;
+		}
+	});
+
+
 	ArgvSettings settings = {"", false};
 	if (!parseArgv(settings, argc, argv)) {
 		puts("Arguments:");
@@ -33,9 +52,9 @@ int main(int argc, char *argv[]) {
 		ZmqProxyServer server(settings.port, settings.showVFB);
 		server.run();
 	} catch (std::exception & e) {
-		puts(e.what());
+		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {
-		puts(e.what());
+		Logger::getInstance().log(Logger::Error, e.what());
 	}
 
 	return 0;

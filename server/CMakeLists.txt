@@ -20,8 +20,8 @@ project(VrayZmqServer)
 
 include(vfh_vrayappsdk)
 
-file(GLOB SOURCES "*.cpp")
-file(GLOB HEADERS "*.h")
+file(GLOB_RECURSE SOURCES "*.cpp")
+file(GLOB_RECURSE HEADERS "*.h")
 
 use_vray_appsdk()
 
