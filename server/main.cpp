@@ -22,7 +22,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 }
 
 void printInfo() {
-	puts("VrayZmqServer");
+	puts("VRayZmqServer");
 	printf("Version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
 	puts("");
 }
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	printInfo();
-	printf("Starting VrayZmqServer on all interfaces with port %s, showing VFB: %s\n\n", settings.port, (settings.showVFB ? "true" : "false"));
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s\n\n", settings.port, (settings.showVFB ? "true" : "false"));
 
 	try {
 		ZmqProxyServer server(settings.port, settings.showVFB);

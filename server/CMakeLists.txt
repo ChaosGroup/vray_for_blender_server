@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-project(VrayZmqServer)
+project(VRayZmqServer)
 
 include(vfh_vrayappsdk)
 
