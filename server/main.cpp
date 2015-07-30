@@ -60,7 +60,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	printInfo();
-	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s\n\n", settings.port, (settings.showVFB ? "true" : "false"));
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s\n\n",
+		settings.port.c_str(), (settings.showVFB ? "true" : "false"));
 
 	try {
 		ZmqProxyServer server(settings.port, settings.showVFB);

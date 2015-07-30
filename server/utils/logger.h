@@ -2,7 +2,7 @@
 #define LOGGER_H
 
 #include <functional>
-#include <strstream>
+#include <sstream>
 #include <string>
 
 class Logger {
