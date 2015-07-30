@@ -77,6 +77,8 @@ void ZmqProxyServer::run() {
 						++workerIter;
 					}
 				}
+
+				Logger::log(Logger::Debug, "Active renderers:", workers.size());
 			}
 #endif // VRAY_ZMQ_PING
 
