@@ -8,7 +8,7 @@
 class Logger {
 public:
 	enum Level {
-		Info, Debug, Warning, Error
+		Info, Debug, Warning, Error, None
 	};
 
 	typedef std::function<void(Level, const std::string &)> StringCb;

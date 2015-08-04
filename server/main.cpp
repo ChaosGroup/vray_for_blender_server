@@ -6,6 +6,7 @@
 struct ArgvSettings {
 	std::string port;
 	bool showVFB;
+	Logger::Level logLevel;
 };
 
 bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
@@ -14,6 +15,12 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			settings.port = argv[++c];
 		} else if (!strcmp(argv[c], "-vfb")) {
 			settings.showVFB = true;
+		} else if (!strcmp(argv[c], "-log") && c + 1 < argc) {
+			std::stringstream strm(argv[++c]);
+			int lvl;
+			if (strm >> lvl) {
+				settings.logLevel = static_cast<Logger::Level>(lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl);
+			}
 		} else {
 			return false;
 		}
@@ -31,33 +38,36 @@ void printHelp() {
 	printInfo();
 	puts("Arguments:");
 	puts("-p <port-num>\tPort number to listen on");
-	puts("-vfb\tSet show VFB option");
+	puts("-vfb\t\tSet show VFB option");
+	puts("-log <level>\t1-4, 4 beeing the most verbose");
 }
 
 
 int main(int argc, char *argv[]) {
-	Logger::getInstance().setCallback([](Logger::Level lvl, const std::string & msg) {
-		switch (lvl) {
-		case Logger::Debug:
-			printf("DEBUG: %s\n", msg.c_str());
-			break;
-		case Logger::Warning:
-			printf("WARNING: %s\n", msg.c_str());
-			break;
-		case Logger::Error:
-			printf("ERROR: %s\n", msg.c_str());
-			break;
-		case Logger::Info:
-			//printf("INFO: %s\n", msg.c_str());
-			break;
-		}
-	});
-
-	ArgvSettings settings = {"", false};
+	ArgvSettings settings = {"", false, Logger::Warning};
 	if (!parseArgv(settings, argc, argv)) {
 		printHelp();
 		return 0;
 	}
+
+	Logger::getInstance().setCallback([&settings](Logger::Level lvl, const std::string & msg) {
+		if (lvl >= settings.logLevel) {
+			switch (lvl) {
+			case Logger::Debug:
+				printf("DEBUG: %s\n", msg.c_str());
+				break;
+			case Logger::Warning:
+				printf("WARNING: %s\n", msg.c_str());
+				break;
+			case Logger::Error:
+				printf("ERROR: %s\n", msg.c_str());
+				break;
+			case Logger::Info:
+				printf("INFO: %s\n", msg.c_str());
+				break;
+			}
+		}
+	});
 
 	printInfo();
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s\n\n",
