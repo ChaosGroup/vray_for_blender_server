@@ -26,7 +26,7 @@ void RendererController::handle(VRayMessage & message) {
 			break;
 		case VRayMessage::Type::ChangeRenderer:
 			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
-				Logger::getInstance().log(Logger::Warning, "Can.t change renderer - no renderer loaded!");
+				Logger::getInstance().log(Logger::Warning, "Can't change renderer - no renderer loaded!");
 				return;
 			}
 			this->rendererMessage(message);
