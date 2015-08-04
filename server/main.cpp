@@ -19,7 +19,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			std::stringstream strm(argv[++c]);
 			int lvl;
 			if (strm >> lvl) {
-				settings.logLevel = static_cast<Logger::Level>(lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl);
+				settings.logLevel = static_cast<Logger::Level>( (lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl) - 1);
 			}
 		} else {
 			return false;
@@ -39,7 +39,7 @@ void printHelp() {
 	puts("Arguments:");
 	puts("-p <port-num>\tPort number to listen on");
 	puts("-vfb\t\tSet show VFB option");
-	puts("-log <level>\t1-4, 4 beeing the most verbose");
+	puts("-log <level>\t1-4, 1 beeing the most verbose");
 }
 
 
