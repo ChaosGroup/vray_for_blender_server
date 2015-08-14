@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include "renderer_controller.h"
 #include "utils/logger.h"
 
@@ -207,6 +208,8 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			VRay::ValueList instancer;
 			instancer.push_back(VRay::Value(inst.frameNumber));
 
+			std::unordered_map<std::string, VRay::Plugin> instanceReferences;
+
 			for (int i = 0; i < inst.data.getCount(); ++i) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
 
@@ -220,7 +223,13 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				instance.push_back(VRay::Value(item.index));
 				instance.push_back(VRay::Value(*tm));
 				instance.push_back(VRay::Value(*vel));
-				instance.push_back(VRay::Value(item.node));
+
+				if (instanceReferences.find(item.node.plugin) == instanceReferences.end()) {
+					instanceReferences[item.node.plugin] = renderer->getPlugin(item.node.plugin);
+				}
+
+				instance.push_back(VRay::Value(renderer->getPlugin(item.node.plugin)));
+
 
 				instancer.push_back(VRay::Value(instance));
 			}
