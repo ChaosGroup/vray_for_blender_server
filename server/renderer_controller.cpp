@@ -205,6 +205,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 		{
 			const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
 			VRay::ValueList instancer;
+			instancer.push_back(VRay::Value(inst.frameNumber));
 
 			for (int i = 0; i < inst.data.getCount(); ++i) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
