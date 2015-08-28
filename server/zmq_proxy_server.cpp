@@ -38,13 +38,34 @@ void ZmqProxyServer::run() {
 }
 #endif
 #else // VRAY_ZMQ_SINGLE_MODE
+void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que, mutex &mtx) {
+	while (true) {
+		if (!que.empty()) {
+			unique_lock<mutex> lock(mtx);
+			auto item = move(que.front());
+			que.pop();
+
+			// explicitly unlock at this point to allow main thread to use the Q sooner
+			lock.unlock();
+
+			auto worker = this->workers.find(item.first);
+			if (worker != this->workers.end()) {
+				worker->second.worker->handle(VRayMessage(item.second));
+			}
+		}
+	}
+}
+
 void ZmqProxyServer::run() {
 	using namespace zmq;
 	using namespace std::chrono;
 
 
 	queue<pair<uint64_t, VRayMessage>> sendQ;
-	mutex sendQMutex;
+	queue<pair<uint64_t, message_t>> dispatcherQ;
+	mutex sendQMutex, dispatchQMutex;
+
+	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this, ref(dispatcherQ), ref(dispatchQMutex));
 
 	try {
 		context = unique_ptr<context_t>(new context_t(1));
@@ -149,8 +170,8 @@ void ZmqProxyServer::run() {
 			}
 
 			if (payload.size() > 1) {
-				VRayMessage pl(payload);
-				worker->second.worker->handle(pl);
+				lock_guard<mutex> l(dispatchQMutex);
+				dispatcherQ.push(make_pair(messageIdentity, move(payload)));
 			}
 			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}

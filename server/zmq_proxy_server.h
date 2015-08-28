@@ -12,6 +12,10 @@ public:
 	ZmqProxyServer(const std::string & port, bool showVFB = false);
 
 	void run();
+private:
+#ifndef VRAY_ZMQ_SINGLE_MODE
+	void dispatcherThread(std::queue<std::pair<uint64_t, zmq::message_t>> &que, std::mutex &mtx);
+#endif
 
 private:
 	bool showVFB;
