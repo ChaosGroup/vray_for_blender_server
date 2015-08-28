@@ -42,6 +42,9 @@ void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que
 	while (true) {
 		if (!que.empty()) {
 			unique_lock<mutex> lock(mtx);
+			if (que.empty()) {
+				continue;
+			}
 			auto item = move(que.front());
 			que.pop();
 
