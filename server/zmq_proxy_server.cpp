@@ -67,10 +67,12 @@ void ZmqProxyServer::run() {
 			auto now = high_resolution_clock::now();
 
 			auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
-			if (dataReportDiff > 1000 && dataTransfered > 0) {
+			if (dataReportDiff > 1000) {
 				lastDataCheck = now;
-				Logger::log(Logger::Info, "Data transfered ", dataTransfered / 1024., "for", dataReportDiff, "ms");
-				dataTransfered = 0;
+				if (dataTransfered > 0) {
+					Logger::log(Logger::Info, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
+					dataTransfered = 0;
+				}
 			}
 
 #ifdef VRAY_ZMQ_PING
