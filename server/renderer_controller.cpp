@@ -205,7 +205,8 @@ void RendererController::pluginMessage(VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeInstancer:
 		{
 			const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
-			VRay::ValueList instancer;
+			VRay::ValueList instancer(0);
+			instancer.reserve(inst.data.getCount() + 1);
 			instancer.push_back(VRay::Value(inst.frameNumber));
 
 			std::unordered_map<std::string, VRay::Plugin> instanceReferences;
@@ -228,13 +229,22 @@ void RendererController::pluginMessage(VRayMessage & message) {
 					instanceReferences[item.node.plugin] = renderer->getPlugin(item.node.plugin);
 				}
 
-				instance.push_back(VRay::Value(renderer->getPlugin(item.node.plugin)));
+				auto & plugin = instanceReferences[item.node.plugin];
 
+				if (!plugin) {
+					Logger::log(Logger::Warning, "Instancer referencing not existing plugin", item.node.plugin);
+					break;
+				}
+				instance.push_back(VRay::Value(plugin));
 
 				instancer.push_back(VRay::Value(instance));
 			}
 
-			success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
+			if (instancer.size() == inst.data.getCount() + 1) {
+				success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
+			} else {
+				success = false;
+			}
 
 			Logger::log(Logger::Info,
 				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
