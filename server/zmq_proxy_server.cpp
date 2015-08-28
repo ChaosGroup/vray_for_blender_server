@@ -59,10 +59,19 @@ void ZmqProxyServer::run() {
 	}
 	
 	auto lastTimeoutCheck = high_resolution_clock::now();
+	auto lastDataCheck = high_resolution_clock::now();
 
 	try {
+		uint64_t dataTransfered = 0;
 		while (true) {
 			auto now = high_resolution_clock::now();
+
+			auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
+			if (dataReportDiff > 1000 && dataTransfered > 0) {
+				lastDataCheck = now;
+				Logger::log(Logger::Info, "Data transfered ", dataTransfered / 1024., "for", dataReportDiff, "ms");
+				dataTransfered = 0;
+			}
 
 #ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
@@ -87,6 +96,7 @@ void ZmqProxyServer::run() {
 				int maxSend = 10;
 				while (sendQ.size() && --maxSend) {
 					auto & p = sendQ.front();
+					dataTransfered += p.second.getMessage().size();
 
 					message_t id(sizeof(uint64_t));
 					memcpy(id.data(), &p.first, sizeof(uint64_t));
@@ -106,6 +116,7 @@ void ZmqProxyServer::run() {
 			message_t e, payload;
 			routerSocket->recv(&e);
 			routerSocket->recv(&payload);
+			dataTransfered += payload.size();
 
 			assert(!e.size() && "No empty frame!");
 			assert(payload.size() && "Unexpected empty frame");
