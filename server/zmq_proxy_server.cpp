@@ -55,6 +55,8 @@ void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que
 			if (worker != this->workers.end()) {
 				worker->second.worker->handle(VRayMessage(item.second));
 			}
+		} else {
+			this_thread::sleep_for(chrono::milliseconds(1));
 		}
 	}
 }
