@@ -19,7 +19,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			std::stringstream strm(argv[++c]);
 			int lvl;
 			if (strm >> lvl) {
-				settings.logLevel = static_cast<Logger::Level>( (lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl) - 1);
+				settings.logLevel = static_cast<Logger::Level>( (lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl) );
 			}
 		} else {
 			return false;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	Logger::getInstance().setCallback([&settings](Logger::Level lvl, const std::string & msg) {
-		if (lvl >= settings.logLevel) {
+		if (lvl >= settings.logLevel - 1) {
 			switch (lvl) {
 			case Logger::Debug:
 				printf("DEBUG: %s\n", msg.c_str());
@@ -70,8 +70,8 @@ int main(int argc, char *argv[]) {
 	});
 
 	printInfo();
-	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s\n\n",
-		settings.port.c_str(), (settings.showVFB ? "true" : "false"));
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\n",
+		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel);
 
 	try {
 		ZmqProxyServer server(settings.port, settings.showVFB);
