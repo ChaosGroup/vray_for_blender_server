@@ -90,10 +90,12 @@ void ZmqProxyServer::run() {
 	try {
 		uint64_t dataTransfered = 0;
 		while (true) {
+			bool didWork = false;
 			auto now = high_resolution_clock::now();
 
 			auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
 			if (dataReportDiff > 1000) {
+				didWork = true;
 				lastDataCheck = now;
 				if (dataTransfered > 0) {
 					Logger::log(Logger::Info, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
@@ -104,7 +106,7 @@ void ZmqProxyServer::run() {
 #ifdef VRAY_ZMQ_PING
 			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
 				lastTimeoutCheck = now;
-
+				didWork = true;
 				for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 					auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
 					if (inactiveTime > DISCONNECT_TIMEOUT) {
@@ -120,6 +122,7 @@ void ZmqProxyServer::run() {
 #endif // VRAY_ZMQ_PING
 
 			if (sendQ.size()) {
+				didWork = true;
 				lock_guard<mutex> l(sendQMutex);
 				int maxSend = 10;
 				while (sendQ.size() && --maxSend) {
@@ -138,6 +141,9 @@ void ZmqProxyServer::run() {
 
 			message_t identity;
 			if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
+				if (!didWork) {
+					this_thread::sleep_for(chrono::milliseconds(1));
+				}
 				continue;
 			}
 
