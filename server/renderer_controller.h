@@ -30,6 +30,8 @@ private:
 	send_fn_t sendFn;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	bool showVFB;
+	VRayMessage::RendererType type;
+	int currentFrame;
 };
 
 

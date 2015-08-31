@@ -6,7 +6,11 @@ using namespace VRayBaseTypes;
 
 
 RendererController::RendererController(send_fn_t fn, bool showVFB):
-	renderer(nullptr), showVFB(showVFB), sendFn(fn) {
+	renderer(nullptr),
+	showVFB(showVFB),
+	sendFn(fn),
+	currentFrame(0),
+	type(VRayMessage::RendererType::None) {
 }
 
 RendererController::~RendererController() {
@@ -315,7 +319,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::init");
 
 		VRay::RendererOptions options;
-		options.keepRTRunning = true;
+		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		renderer.reset(new VRay::VRayRenderer(options));
 		if (!renderer) {
 			completed = false;
@@ -410,6 +414,10 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 	sendFn(std::move(msg));
 	Logger::log(Logger::Info, "Renderer::OnImageReady");
+
+	if (type == VRayMessage::RendererType::Animation) {
+		sendFn(VRayMessage::createMessage(VRayMessage::RendererAction::FrameRendered, currentFrame++));
+	}
 }
 
 
