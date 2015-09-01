@@ -29,13 +29,24 @@ void RendererController::handle(VRayMessage & message) {
 			}
 			this->pluginMessage(message);
 			break;
-		case VRayMessage::Type::ChangeRenderer:
-			if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
+		case VRayMessage::Type::ChangeRenderer: {
+			auto actionType = message.getRendererAction();
+			if (actionType == VRayMessage::RendererAction::SetRendererType) {
+				if (renderer) {
+					Logger::log(Logger::Error, "Can't set renderer type after init!");
+				} else {
+					type = message.getRendererType();
+				}
+				return;
+			}
+
+			if (!renderer && actionType != VRayMessage::RendererAction::Init) {
 				Logger::getInstance().log(Logger::Warning, "Can't change renderer - no renderer loaded!");
 				return;
 			}
 			this->rendererMessage(message);
 			break;
+		}
 		default:
 			Logger::getInstance().log(Logger::Error, "Unknown message type");
 			return;
@@ -327,8 +338,10 @@ void RendererController::rendererMessage(VRayMessage & message) {
 			completed = renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
 			renderer->showFrameBuffer(showVFB);
 
-			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
-			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
+			if (type == VRayMessage::RendererType::RT) {
+				renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
+				renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
+			}
 
 			renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 		}
