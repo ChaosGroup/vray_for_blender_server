@@ -20,6 +20,7 @@ private:
 private:
 	bool showVFB;
 	std::string port;
+	uint64_t appsdkWorkTimeMs;
 
 	struct WorkerWrapper {
 		std::shared_ptr<RendererController> worker;
