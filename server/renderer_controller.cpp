@@ -296,8 +296,9 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentTime:
+		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
 		renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
-		Logger::log(Logger::Info, "Renderer::setCurrentTime", message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::Debug, "Renderer::setCurrentTime", message.getValue<AttrSimpleType<float>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::ClearFrameValues:
 		completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
