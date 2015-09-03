@@ -31,7 +31,7 @@ private:
 	std::unique_ptr<VRay::VRayRenderer> renderer;
 	bool showVFB;
 	VRayMessage::RendererType type;
-	int currentFrame;
+	float currentFrame;
 };
 
 

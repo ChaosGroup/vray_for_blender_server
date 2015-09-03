@@ -36,6 +36,7 @@ void RendererController::handle(VRayMessage & message) {
 					Logger::log(Logger::Error, "Can't set renderer type after init!");
 				} else {
 					type = message.getRendererType();
+					Logger::log(Logger::Debug, "Setting type to", static_cast<int>(type));
 				}
 				return;
 			}
@@ -331,17 +332,18 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 		VRay::RendererOptions options;
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
+		options.noDR = true;
 		renderer.reset(new VRay::VRayRenderer(options));
 		if (!renderer) {
 			completed = false;
 		} else {
-			completed = renderer->setRenderMode(VRay::RendererOptions::RENDER_MODE_RT_CPU);
+			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
+			completed = renderer->setRenderMode(mode);
 			renderer->showFrameBuffer(showVFB);
 
-			if (type == VRayMessage::RendererType::RT) {
-				renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
-				renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
-			}
+
+			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
+			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
 
 			renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 		}
@@ -398,6 +400,10 @@ void RendererController::rendererMessage(VRayMessage & message) {
 void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
 	(void)arg;
 
+	if (type != VRayMessage::RendererType::RT) {
+		return;
+	}
+
 	size_t size;
 	std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
 	int width, height;
@@ -415,21 +421,29 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	(void)arg;
 
-	VRay::VRayImage * img = renderer.getImage();
-
-	size_t size;
-	VRay::AColor * data = img->getPixelData(size);
-	size *= sizeof(VRay::AColor);
-
-	int width, height;
-	img->getSize(width, height);
-
-	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
-	sendFn(std::move(msg));
-	Logger::log(Logger::Info, "Renderer::OnImageReady");
-
 	if (type == VRayMessage::RendererType::Animation) {
-		sendFn(VRayMessage::createMessage(VRayMessage::RendererAction::FrameRendered, currentFrame++));
+		auto frame = this->currentFrame;
+		auto fn = this->sendFn;
+		auto x = std::thread([fn, frame]() {
+			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			fn(VRayMessage::createMessage(VRayMessage::RendererAction::FrameRendered, frame));
+		});
+		x.detach();
+		Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
+	} else {
+		VRay::VRayImage * img = renderer.getImage();
+
+		size_t size;
+		VRay::AColor * data = img->getPixelData(size);
+		size *= sizeof(VRay::AColor);
+
+		int width, height;
+		img->getSize(width, height);
+
+		VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+		sendFn(std::move(msg));
+		Logger::log(Logger::Info, "Renderer::OnImageReady");
+
 	}
 }
 
