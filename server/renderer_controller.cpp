@@ -318,9 +318,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 		if (type == VRayMessage::RendererType::Animation) {
 			renderer->waitForImageReady();
-			VRayMessage::RendererStatus status = renderer->isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
-			sendFn(VRayMessage::createMessage(status, this->currentFrame));
-			Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
+			imageDone(*renderer, nullptr);
 		}
 
 		break;
@@ -441,7 +439,14 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 
 	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 	sendFn(std::move(msg));
-	Logger::log(Logger::Info, "Renderer::OnImageReady");
+
+	if (type == VRayMessage::RendererType::Animation) {
+		VRayMessage::RendererStatus status = renderer.isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
+		sendFn(VRayMessage::createMessage(status, this->currentFrame));
+		Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
+	} else {
+		Logger::log(Logger::Info, "Renderer::OnImageReady");
+	}
 }
 
 
