@@ -315,6 +315,14 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	case VRayMessage::RendererAction::Start:
 		renderer->start();
 		Logger::log(Logger::Info, "Renderer::start");
+
+		if (type == VRayMessage::RendererType::Animation) {
+			renderer->waitForImageReady();
+			VRayMessage::RendererStatus status = renderer->isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
+			sendFn(VRayMessage::createMessage(status, this->currentFrame));
+			Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
+		}
+
 		break;
 	case VRayMessage::RendererAction::Stop:
 		Logger::log(Logger::Info, "Renderer::stop");
@@ -422,30 +430,18 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	(void)arg;
 
-	if (type == VRayMessage::RendererType::Animation) {
-		auto frame = this->currentFrame;
-		auto fn = this->sendFn;
-		auto x = std::thread([fn, frame]() {
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-			fn(VRayMessage::createMessage(VRayMessage::RendererAction::FrameRendered, frame));
-		});
-		x.detach();
-		Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
-	} else {
-		VRay::VRayImage * img = renderer.getImage();
+	VRay::VRayImage * img = renderer.getImage();
 
-		size_t size;
-		VRay::AColor * data = img->getPixelData(size);
-		size *= sizeof(VRay::AColor);
+	size_t size;
+	VRay::AColor * data = img->getPixelData(size);
+	size *= sizeof(VRay::AColor);
 
-		int width, height;
-		img->getSize(width, height);
+	int width, height;
+	img->getSize(width, height);
 
-		VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
-		sendFn(std::move(msg));
-		Logger::log(Logger::Info, "Renderer::OnImageReady");
-
-	}
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+	sendFn(std::move(msg));
+	Logger::log(Logger::Info, "Renderer::OnImageReady");
 }
 
 
