@@ -407,10 +407,6 @@ void RendererController::rendererMessage(VRayMessage & message) {
 void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
 	(void)arg;
 
-	if (type != VRayMessage::RendererType::RT) {
-		return;
-	}
-
 	size_t size;
 	std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
 	int width, height;
