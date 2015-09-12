@@ -9,7 +9,7 @@ using namespace std;
 
 ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
 	: port(port), context(nullptr), routerSocket(nullptr),
-	vray(new VRay::VRayInit(true)), showVFB(showVFB), appsdkWorkTimeMs(0) {
+	vray(new VRay::VRayInit(true)), showVFB(showVFB) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
@@ -55,7 +55,7 @@ void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que
 			if (worker != this->workers.end()) {
 				auto beforeCall = chrono::high_resolution_clock::now();
 				worker->second.worker->handle(VRayMessage(item.second));
-				appsdkWorkTimeMs += chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
+				worker->second.appsdkWorkTimeMs += chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
 			}
 		} else {
 			this_thread::sleep_for(chrono::milliseconds(1));
@@ -100,8 +100,12 @@ void ZmqProxyServer::run() {
 				didWork = true;
 				lastDataCheck = now;
 				if (dataTransfered / 1024 > 1) {
-					Logger::log(Logger::Debug, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms, Appsdk wait time:", appsdkWorkTimeMs, "ms");
+					Logger::log(Logger::Debug, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
 					dataTransfered = 0;
+				}
+
+				for (const auto & worker : workers) {
+					Logger::log(Logger::Debug, "Worker (", worker.second.id, ") appsdk time:", worker.second.appsdkWorkTimeMs, "ms");
 				}
 			}
 
@@ -172,7 +176,7 @@ void ZmqProxyServer::run() {
 
 				WorkerWrapper wrapper = {
 					shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
-					now, messageIdentity
+					now, messageIdentity, 0
 				};
 
 				auto res = workers.emplace(make_pair(messageIdentity, wrapper));

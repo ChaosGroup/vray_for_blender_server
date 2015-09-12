@@ -20,12 +20,12 @@ private:
 private:
 	bool showVFB;
 	std::string port;
-	uint64_t appsdkWorkTimeMs;
 
 	struct WorkerWrapper {
 		std::shared_ptr<RendererController> worker;
 		std::chrono::time_point<std::chrono::high_resolution_clock> lastKeepAlive;
 		uint64_t id;
+		uint64_t appsdkWorkTimeMs;
 	};
 	std::unordered_map<uint64_t, WorkerWrapper> workers;
 
