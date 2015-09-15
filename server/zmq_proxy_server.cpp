@@ -16,29 +16,6 @@ ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
 	}
 }
 
-
-#ifdef VRAY_ZMQ_SINGLE_MODE
-#if 0
-void ZmqProxyServer::run() {
-	try {
-		uint64_t dummyId = 1;
-
-		WorkerWrapper wrapper = {
-			shared_ptr<RendererController>(new RendererController("tcp://*:" + port, dummyId, showVFB)),
-			std::chrono::high_resolution_clock::now()
-		};
-
-		workers.emplace(make_pair(dummyId, wrapper));
-	} catch (zmq::error_t & e) {
-		std::cerr << e.what() << std::endl;
-		isOk = isRunning = false;
-		return;
-	}
-
-	isOk = isRunning = true;
-}
-#endif
-#else // VRAY_ZMQ_SINGLE_MODE
 void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que, mutex &mtx) {
 	while (true) {
 		if (!que.empty()) {
@@ -234,4 +211,3 @@ void ZmqProxyServer::run() {
 	routerSocket.release();
 	context.release();
 }
-#endif // VRAY_ZMQ_SINGLE_MODE

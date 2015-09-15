@@ -13,9 +13,7 @@ public:
 
 	void run();
 private:
-#ifndef VRAY_ZMQ_SINGLE_MODE
 	typedef std::chrono::high_resolution_clock::time_point time_point;
-
 
 	void dispatcherThread(std::queue<std::pair<uint64_t, zmq::message_t>> &que, std::mutex &mtx);
 
@@ -28,8 +26,6 @@ private:
 #ifdef VRAY_ZMQ_PING
 	bool checkForTimeout(time_point now);
 #endif // VRAY_ZMQ_PING
-
-#endif
 
 private:
 	bool showVFB;
