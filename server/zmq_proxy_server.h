@@ -8,12 +8,22 @@
 #include "renderer_controller.h"
 
 class ZmqProxyServer {
+	typedef std::chrono::high_resolution_clock::time_point time_point;
+
+	// Wrapper struct for the renderer object
+	struct WorkerWrapper {
+		std::shared_ptr<RendererController> worker;
+		std::chrono::time_point<std::chrono::high_resolution_clock> lastKeepAlive;
+		uint64_t id;
+		uint64_t appsdkWorkTimeMs;
+	};
+
 public:
 	ZmqProxyServer(const std::string & port, bool showVFB = false);
 
 	void run();
+
 private:
-	typedef std::chrono::high_resolution_clock::time_point time_point;
 
 	void dispatcherThread(std::queue<std::pair<uint64_t, zmq::message_t>> &que, std::mutex &mtx);
 
@@ -21,8 +31,6 @@ private:
 	uint64_t sendOutMessages();
 	bool initZmq();
 	bool reportStats(time_point now);
-
-
 #ifdef VRAY_ZMQ_PING
 	bool checkForTimeout(time_point now);
 #endif // VRAY_ZMQ_PING
@@ -31,12 +39,7 @@ private:
 	bool showVFB;
 	std::string port;
 
-	struct WorkerWrapper {
-		std::shared_ptr<RendererController> worker;
-		std::chrono::time_point<std::chrono::high_resolution_clock> lastKeepAlive;
-		uint64_t id;
-		uint64_t appsdkWorkTimeMs;
-	};
+	// active workers
 	std::unordered_map<uint64_t, WorkerWrapper> workers;
 
 	std::unique_ptr<zmq::context_t> context;
@@ -44,14 +47,15 @@ private:
 
 	std::unique_ptr<VRay::VRayInit> vray;
 
+	// message queue for sending
 	std::queue<std::pair<uint64_t, VRayMessage>> sendQ;
+	// message queue for receieveing messages
 	std::queue<std::pair<uint64_t, zmq::message_t>> dispatcherQ;
 	std::mutex sendQMutex, dispatchQMutex;
+
+
 	time_point lastDataCheck, lastTimeoutCheck;
 	uint64_t dataTransfered;
 };
-
-
-
 
 #endif // _ZMQ_PROXY_SERVER_H_
