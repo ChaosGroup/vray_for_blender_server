@@ -5,11 +5,12 @@
 #include <exception>
 
 using namespace std;
-
+using namespace std::chrono;
+using namespace zmq;
 
 ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
 	: port(port), context(nullptr), routerSocket(nullptr),
-	vray(new VRay::VRayInit(true)), showVFB(showVFB) {
+	vray(new VRay::VRayInit(true)), showVFB(showVFB), dataTransfered(0) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
@@ -63,17 +64,70 @@ void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que
 	}
 }
 
-void ZmqProxyServer::run() {
-	using namespace zmq;
-	using namespace std::chrono;
+void ZmqProxyServer::addWorker(uint64_t clientId, time_point now) {
+	auto sendFn = [this, clientId](VRayMessage && msg) {
+		lock_guard<mutex> l(this->sendQMutex);
+		this->sendQ.emplace(make_pair(clientId, move(msg)));
+	};
 
+	WorkerWrapper wrapper = {
+		shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
+		now, clientId, 0
+	};
 
-	queue<pair<uint64_t, VRayMessage>> sendQ;
-	queue<pair<uint64_t, message_t>> dispatcherQ;
-	mutex sendQMutex, dispatchQMutex;
+	auto res = workers.emplace(make_pair(clientId, wrapper));
+	assert(res.second && "Failed to add worker!");
+	Logger::log(Logger::Debug, "New client (", clientId, ") connected - spawning renderer.");
+}
 
-	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this, ref(dispatcherQ), ref(dispatchQMutex));
+uint64_t ZmqProxyServer::sendOutMessages() {
+	if (sendQ.empty()) {
+		return 0;
+	}
 
+	uint64_t transferred = 0;
+
+	lock_guard<mutex> l(sendQMutex);
+	int maxSend = 10;
+	while (sendQ.size() && --maxSend) {
+		auto & p = sendQ.front();
+		transferred += p.second.getMessage().size();
+
+		message_t id(sizeof(uint64_t));
+		memcpy(id.data(), &p.first, sizeof(uint64_t));
+		routerSocket->send(id, ZMQ_SNDMORE);
+		routerSocket->send("", 0, ZMQ_SNDMORE);
+		routerSocket->send(p.second.getMessage());
+
+		sendQ.pop();
+	}
+
+	return transferred;
+}
+
+#ifdef VRAY_ZMQ_PING
+bool ZmqProxyServer::checkForTimeout(time_point now) {
+	if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() <= DISCONNECT_TIMEOUT || workers.empty()) {
+		return false;
+	}
+
+	lastTimeoutCheck = now;
+	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
+		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
+		if (inactiveTime > DISCONNECT_TIMEOUT) {
+			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
+			workerIter = workers.erase(workerIter);
+		} else {
+			++workerIter;
+		}
+	}
+
+	Logger::log(Logger::Debug, "Active renderers:", workers.size());
+	return true;
+}
+#endif // VRAY_ZMQ_PING
+
+bool ZmqProxyServer::initZmq() {
 	try {
 		context = unique_ptr<context_t>(new context_t(1));
 		routerSocket = unique_ptr<socket_t>(new socket_t(*context, ZMQ_ROUTER));
@@ -83,66 +137,53 @@ void ZmqProxyServer::run() {
 		routerSocket->bind((string("tcp://*:") + port).c_str());
 	} catch (zmq::error_t & e) {
 		Logger::log(Logger::Error, "ZMQ exception during init:", e.what());
+		return false;
+	}
+	return true;
+}
+
+bool ZmqProxyServer::reportStats(time_point now) {
+	auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
+	if (dataReportDiff <= 1000) {
+		return false;
+	}
+	lastDataCheck = now;
+	if (dataTransfered / 1024 > 1) {
+		Logger::log(Logger::Debug, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
+		dataTransfered = 0;
+	}
+
+	for (const auto & worker : workers) {
+		Logger::log(Logger::Debug, "Client (", worker.second.id, ") appsdk time:", worker.second.appsdkWorkTimeMs, "ms");
+	}
+
+	return true;
+}
+
+void ZmqProxyServer::run() {
+	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this, ref(dispatcherQ), ref(dispatchQMutex));
+
+	if (!initZmq()) {
 		return;
 	}
-	
-	auto lastTimeoutCheck = high_resolution_clock::now();
-	auto lastDataCheck = high_resolution_clock::now();
+
+	lastTimeoutCheck = high_resolution_clock::now();
+	lastDataCheck = high_resolution_clock::now();
 
 	try {
-		uint64_t dataTransfered = 0;
 		while (true) {
 			bool didWork = false;
 			auto now = high_resolution_clock::now();
 
-			auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
-			if (dataReportDiff > 1000) {
-				didWork = true;
-				lastDataCheck = now;
-				if (dataTransfered / 1024 > 1) {
-					Logger::log(Logger::Debug, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
-					dataTransfered = 0;
-				}
-
-				for (const auto & worker : workers) {
-					Logger::log(Logger::Debug, "Worker (", worker.second.id, ") appsdk time:", worker.second.appsdkWorkTimeMs, "ms");
-				}
-			}
+			didWork = didWork || reportStats(now);
 
 #ifdef VRAY_ZMQ_PING
-			if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() > DISCONNECT_TIMEOUT && workers.size()) {
-				lastTimeoutCheck = now;
-				didWork = true;
-				for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
-					auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
-					if (inactiveTime > DISCONNECT_TIMEOUT) {
-						Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
-						workerIter = workers.erase(workerIter);
-					} else {
-						++workerIter;
-					}
-				}
-
-				Logger::log(Logger::Debug, "Active renderers:", workers.size());
-			}
+			didWork = didWork || checkForTimeout(now);
 #endif // VRAY_ZMQ_PING
 
-			if (sendQ.size()) {
+			if (auto transfer = sendOutMessages()) {
 				didWork = true;
-				lock_guard<mutex> l(sendQMutex);
-				int maxSend = 10;
-				while (sendQ.size() && --maxSend) {
-					auto & p = sendQ.front();
-					dataTransfered += p.second.getMessage().size();
-
-					message_t id(sizeof(uint64_t));
-					memcpy(id.data(), &p.first, sizeof(uint64_t));
-					routerSocket->send(id, ZMQ_SNDMORE);
-					routerSocket->send("", 0, ZMQ_SNDMORE);
-					routerSocket->send(p.second.getMessage());
-
-					sendQ.pop();
-				}
+				dataTransfered += transfer;
 			}
 
 			message_t identity;
@@ -169,20 +210,11 @@ void ZmqProxyServer::run() {
 
 			// add worker for new client
 			if (worker == workers.end()) {
-				auto sendFn = [&sendQ, &sendQMutex, messageIdentity](VRayMessage && msg) {
-					lock_guard<mutex> l(sendQMutex);
-					sendQ.emplace(make_pair(messageIdentity, move(msg)));
-				};
-
-				WorkerWrapper wrapper = {
-					shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
-					now, messageIdentity, 0
-				};
-
-				auto res = workers.emplace(make_pair(messageIdentity, wrapper));
-				assert(res.second && "Failed to add worker!");
-				worker = res.first;
-				Logger::log(Logger::Debug, "New client (", messageIdentity, ") connected - spawning renderer.");
+				addWorker(messageIdentity, now);
+				worker = workers.find(messageIdentity);
+				if (worker == workers.end()) {
+					Logger::log(Logger::Error, "Failed to create worker for client (", messageIdentity, ")");
+				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 
