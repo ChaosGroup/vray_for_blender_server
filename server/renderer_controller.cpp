@@ -97,11 +97,17 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				pluginData.append("::");
 				pluginData.append(attrPlugin.output);
 			}
-			success = plugin.setValueAsString(message.getProperty(), pluginData);
 
-			Logger::log(Logger::Info,
-				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
-				pluginData, "\nSuccess:", success);
+			if (!renderer->getPlugin(pluginData)) {
+				Logger::log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
+			} else {
+				success = plugin.setValueAsString(message.getProperty(), pluginData);
+
+				Logger::log(Logger::Info,
+					"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+					pluginData, "\nSuccess:", success);
+			}
+
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeVector:
