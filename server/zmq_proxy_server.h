@@ -13,7 +13,7 @@ class ZmqProxyServer {
 	// Wrapper struct for the renderer object
 	struct WorkerWrapper {
 		std::shared_ptr<RendererController> worker;
-		std::chrono::time_point<std::chrono::high_resolution_clock> lastKeepAlive;
+		time_point lastKeepAlive;
 		uint64_t id;
 		uint64_t appsdkWorkTimeMs;
 	};
