@@ -254,7 +254,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				auto & plugin = instanceReferences[item.node.plugin];
 
 				if (!plugin) {
-					Logger::log(Logger::Warning, "Instancer referencing not existing plugin", item.node.plugin);
+					Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
 					break;
 				}
 				instance.push_back(VRay::Value(plugin));
