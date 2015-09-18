@@ -264,13 +264,11 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 			if (instancer.size() == inst.data.getCount() + 1) {
 				success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
-			} else {
-				success = false;
+				Logger::log(Logger::Info,
+					"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
+					inst.data.getCount(), "\nSuccess:", success);
 			}
 
-			Logger::log(Logger::Info,
-				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
-				inst.data.getCount(), "\nSuccess:", success);
 			break;
 		}
 		default:
