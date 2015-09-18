@@ -98,7 +98,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				pluginData.append(attrPlugin.output);
 			}
 
-			if (!renderer->getPlugin(pluginData)) {
+			if (!renderer->getPlugin(attrPlugin.plugin)) {
 				Logger::log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
 			} else {
 				success = plugin.setValueAsString(message.getProperty(), pluginData);
