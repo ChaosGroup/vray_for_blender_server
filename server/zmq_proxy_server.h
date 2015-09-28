@@ -25,7 +25,7 @@ public:
 
 private:
 
-	void dispatcherThread(std::queue<std::pair<uint64_t, zmq::message_t>> &que, std::mutex &mtx);
+	void dispatcherThread();
 
 	void addWorker(uint64_t clientId, time_point now);
 	uint64_t sendOutMessages();
@@ -41,6 +41,7 @@ private:
 
 	// active workers
 	std::unordered_map<uint64_t, WorkerWrapper> workers;
+	std::mutex workersMutex;
 
 	std::unique_ptr<zmq::context_t> context;
 	std::unique_ptr<zmq::socket_t> routerSocket;

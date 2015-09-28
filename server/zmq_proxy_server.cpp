@@ -16,21 +16,23 @@ ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
 	}
 }
 
-void ZmqProxyServer::dispatcherThread(queue<pair<uint64_t, zmq::message_t>> &que, mutex &mtx) {
+void ZmqProxyServer::dispatcherThread() {
 	while (true) {
-		if (!que.empty()) {
-			unique_lock<mutex> lock(mtx);
-			if (que.empty()) {
+		if (!dispatcherQ.empty()) {
+			unique_lock<mutex> lock(dispatchQMutex);
+			if (dispatcherQ.empty()) {
 				continue;
 			}
-			auto item = move(que.front());
-			que.pop();
+			auto item = move(dispatcherQ.front());
+			dispatcherQ.pop();
 
 			// explicitly unlock at this point to allow main thread to use the Q sooner
 			lock.unlock();
 
+			lock_guard<mutex> workerLock(workersMutex);
 			auto worker = this->workers.find(item.first);
 			if (worker != this->workers.end()) {
+
 				auto beforeCall = chrono::high_resolution_clock::now();
 				worker->second.worker->handle(VRayMessage(item.second));
 				worker->second.appsdkWorkTimeMs += chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
@@ -93,7 +95,28 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
 		if (inactiveTime > DISCONNECT_TIMEOUT) {
 			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
-			workerIter = workers.erase(workerIter);
+
+			// filter messages intended for the selected client
+			{
+				lock_guard<mutex> qLock(dispatchQMutex);
+
+				int size = dispatcherQ.size();
+				for (int c = size; c < size; c++) {
+					auto item = move(dispatcherQ.front());
+					dispatcherQ.pop();
+
+					if (dispatcherQ.front().first != workerIter->first) {
+						dispatcherQ.emplace(move(item));
+					} else {
+						--size;
+					}
+				}
+			}
+
+			{
+				lock_guard<mutex> workerLock(workersMutex);
+				workerIter = workers.erase(workerIter);
+			}
 		} else {
 			++workerIter;
 		}
@@ -138,7 +161,7 @@ bool ZmqProxyServer::reportStats(time_point now) {
 }
 
 void ZmqProxyServer::run() {
-	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this, ref(dispatcherQ), ref(dispatchQMutex));
+	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this);
 
 	if (!initZmq()) {
 		return;
