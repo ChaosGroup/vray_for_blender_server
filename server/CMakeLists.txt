@@ -43,7 +43,7 @@ target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS}
 
 if(WIN32)
 	install(TARGETS ${PROJECT_NAME} RUNTIME
-					DESTINATION "C:/Program Files/ChaosGroup/V-Ray/VRayZmqServer/")
+					DESTINATION "C:/Program Files/Chaos Group/V-Ray/VRayZmqServer/")
 elseif(UNIX)
 	if(APPLE)
 		install(TARGETS ${PROJECT_NAME}
