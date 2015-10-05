@@ -369,6 +369,10 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 		Logger::log(Logger::Info, "Renderer::resize", width, "x", height);
 		break;
+	case VRayMessage::RendererAction::Commit:
+		completed = renderer->commit();
+		Logger::log(Logger::Info, "Renderer::commit");
+		break;
 	case VRayMessage::RendererAction::AddHosts:
 		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		Logger::log(Logger::Info, "Renderer::addHosts", message.getValue<AttrSimpleType<std::string>>()->m_Value);
