@@ -162,6 +162,11 @@ bool ZmqProxyServer::reportStats(time_point now) {
 
 void ZmqProxyServer::run() {
 	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this);
+	auto stopDispatcher = [](thread *th) {
+		th->detach();
+	};
+
+	unique_ptr<thread, decltype(stopDispatcher)> wrapper(&dispacther, stopDispatcher);
 
 	if (!initZmq()) {
 		return;
