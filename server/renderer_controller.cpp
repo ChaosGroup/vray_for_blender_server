@@ -361,6 +361,11 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 		break;
 	}
+	case VRayMessage::RendererAction::SetRenderMode:
+		completed = renderer->setRenderMode(static_cast<VRay::RendererOptions::RenderMode>(message.getValue<AttrSimpleType<int>>()->m_Value));
+		Logger::log(Logger::Info, "Renderer::setRenderMode", message.getValue<AttrSimpleType<int>>()->m_Value);
+
+		break;
 	case VRayMessage::RendererAction::Resize:
 		int width, height;
 		message.getRendererSize(width, height);
