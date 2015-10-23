@@ -404,7 +404,33 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 		Logger::log(Logger::Info, "Renderer::exportScene", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 	}
+	case VRayMessage::RendererAction::GetImage:
+	{
+		auto channelType = static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->m_Value);
+		auto element = renderer->getRenderElements().getByType(channelType);
+
+		if (element) {
+			VRay::RenderElement::PixelFormat pixelFormat = element.getDefaultPixelFormat();
+
+			if (pixelFormat != VRay::RenderElement::PixelFormat::PF_RGBA_FLOAT) {
+				Logger::log(Logger::Error, "Unsupported pixel format!", pixelFormat);
+			} else {
+				Logger::log(Logger::Error, "Render channel:", channelType, "Pixel format:", pixelFormat);
+
+				VRay::VRayImage *img = element.getImage();
+
+				int width, height;
+				img->getSize(width, height);
+				size_t size;
+				VRay::AColor *data = img->getPixelData(size);
+				size *= sizeof(VRay::AColor);
+
+				auto msg = VRayMessage::createMessage(static_cast<int>(channelType), VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+				sendFn(std::move(msg));
+			}
+		}
 		break;
+	}
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
@@ -425,7 +451,7 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 	int width, height;
 	img->getSize(width, height);
 
-	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+	VRayMessage msg = VRayMessage::createMessage(static_cast<int>(RenderChannelTypeNone), VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
 	size_t imageSize = msg.getMessage().size();
 
 	sendFn(std::move(msg));
@@ -446,7 +472,7 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	int width, height;
 	img->getSize(width, height);
 
-	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+	VRayMessage msg = VRayMessage::createMessage(static_cast<int>(RenderChannelTypeNone), VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 	sendFn(std::move(msg));
 
 	if (type == VRayMessage::RendererType::Animation) {
