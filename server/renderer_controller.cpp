@@ -425,7 +425,13 @@ void RendererController::rendererMessage(VRayMessage & message) {
 				VRay::AColor *data = img->getPixelData(size);
 				size *= sizeof(VRay::AColor);
 
-				auto msg = VRayMessage::createMessage(static_cast<int>(channelType), VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+				auto msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(
+					data, size,
+					VRayBaseTypes::AttrImage::ImageType::RGBA_REAL,
+					width, height,
+					static_cast<VRayBaseTypes::RenderChannelType>(channelType)
+				));
+
 				sendFn(std::move(msg));
 			}
 		}
@@ -451,7 +457,7 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 	int width, height;
 	img->getSize(width, height);
 
-	VRayMessage msg = VRayMessage::createMessage(static_cast<int>(RenderChannelTypeNone), VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
 	size_t imageSize = msg.getMessage().size();
 
 	sendFn(std::move(msg));
@@ -472,7 +478,7 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	int width, height;
 	img->getSize(width, height);
 
-	VRayMessage msg = VRayMessage::createMessage(static_cast<int>(RenderChannelTypeNone), VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+	VRayMessage msg = VRayMessage::createMessage(VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
 	sendFn(std::move(msg));
 
 	if (type == VRayMessage::RendererType::Animation) {
