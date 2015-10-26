@@ -2,6 +2,7 @@
 #define RENDERER_CONTROLLER_H
 
 #include <memory>
+#include <unordered_set>
 #include <vraysdk.hpp>
 #include "zmq_wrapper.h"
 #include "zmq_server_client.h"
@@ -29,6 +30,7 @@ private:
 
 	send_fn_t sendFn;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
+	std::unordered_set<VRay::RenderElement::Type> elementsToSend;
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
