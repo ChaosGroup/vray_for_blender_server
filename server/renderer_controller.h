@@ -23,6 +23,7 @@ private:
 	void imageDone(VRay::VRayRenderer & renderer, void * arg);
 	void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
 
+	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType);
 
 	void pluginMessage(VRayMessage & message);
 	void rendererMessage(VRayMessage & message);

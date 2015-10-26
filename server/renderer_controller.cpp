@@ -419,38 +419,64 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	}
 }
 
-
-void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
-	(void)arg;
-
-	size_t size;
-	int width, height;
+void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType) {
 	AttrImageSet set;
 
 	for (const auto &type : elementsToSend) {
+		char id[255];
+		sprintf(id, "%d", static_cast<int>(type));
+
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{
-			std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
-			img->getSize(width, height);
-			set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height));
+			size_t size;
+			int width, height;
+			AttrImage attrImage;
+			if (fullImageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
+				VRay::AColor * data = img->getPixelData(size);
+				size *= sizeof(VRay::AColor);
+				img->getSize(width, height);
+				img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
+				attrImage = AttrImage(data, size, fullImageType, width, height);
+			} else if (fullImageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
+				img->getSize(width, height);
+				img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
+				attrImage = AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height);
+			}
+			set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), std::move(attrImage));
 			break;
 		}
 		case VRay::RenderElement::Type::VFB_ZDEPTH:
 		case VRay::RenderElement::Type::VFB_REALCOLOR:
 		case VRay::RenderElement::Type::VFB_NORMAL:
 		case VRay::RenderElement::Type::VFB_RENDERID:
-		{
-			auto element = renderer.getRenderElements().getByType(type);
+		try {
+			auto element = renderer->getRenderElements().getByType(type);
 			if (element) {
 				VRay::RenderElement::PixelFormat pixelFormat = element.getDefaultPixelFormat();
 
-				if (pixelFormat != VRay::RenderElement::PixelFormat::PF_RGBA_FLOAT) {
+				VRayBaseTypes::AttrImage::ImageType imgType = VRayBaseTypes::AttrImage::ImageType::NONE;
+				switch (pixelFormat) {
+				case VRay::RenderElement::PF_BW_FLOAT:
+					imgType = VRayBaseTypes::AttrImage::ImageType::BW_REAL;
+					break;
+				case VRay::RenderElement::PF_RGB_FLOAT:
+					imgType = VRayBaseTypes::AttrImage::ImageType::RGB_REAL;
+					break;
+				case VRay::RenderElement::PF_RGBA_FLOAT:
+					imgType = VRayBaseTypes::AttrImage::ImageType::RGBA_REAL;
+					break;
+				}
+
+
+				if (imgType == VRayBaseTypes::AttrImage::ImageType::NONE) {
 					Logger::log(Logger::Error, "Unsupported pixel format!", pixelFormat);
 				} else {
 					Logger::log(Logger::Error, "Render channel:", type, "Pixel format:", pixelFormat);
-
 					VRay::VRayImage *img = element.getImage();
+
+					img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
 
 					int width, height;
 					img->getSize(width, height);
@@ -458,10 +484,12 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 					VRay::AColor *data = img->getPixelData(size);
 					size *= sizeof(VRay::AColor);
 
-					set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
+					set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(data, size, imgType, width, height));
 				}
 			}
 			break;
+		} catch (VRay::VRayException &e) {
+			Logger::log(Logger::Error, e.what());
 		}
 		default:
 			Logger::log(Logger::Warning, "Element requested, but not found", static_cast<int>(type));
@@ -472,23 +500,17 @@ void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayIm
 }
 
 
+void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
+	(void)arg;
+	sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG);
+}
+
+
 void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	(void)arg;
 
 	VRay::VRayImage * img = renderer.getImage();
-
-	size_t size;
-	VRay::AColor * data = img->getPixelData(size);
-	size *= sizeof(VRay::AColor);
-
-	int width, height;
-	img->getSize(width, height);
-
-	AttrImageSet set;
-
-	set.images.emplace(VRayBaseTypes::RenderChannelType::RenderChannelTypeNone, VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height));
-
-	sendFn(VRayMessage::createMessage(std::move(set)));
+	sendImages(img, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL);
 
 	VRayMessage::RendererStatus status = renderer.isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
 	sendFn(VRayMessage::createMessage(status, this->currentFrame));
