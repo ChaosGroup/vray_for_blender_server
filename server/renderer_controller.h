@@ -21,6 +21,8 @@ public:
 private:
 	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg);
 	void imageDone(VRay::VRayRenderer & renderer, void * arg);
+	void bucketReady(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg);
+
 	void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
 
 	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType);

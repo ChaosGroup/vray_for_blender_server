@@ -355,6 +355,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
 			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
+			renderer->setOnBucketReady<RendererController, &RendererController::bucketReady>(*this);
 
 			renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 		}
@@ -423,9 +424,6 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 	AttrImageSet set;
 
 	for (const auto &type : elementsToSend) {
-		char id[255];
-		sprintf(id, "%d", static_cast<int>(type));
-
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{
@@ -436,12 +434,10 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 				VRay::AColor * data = img->getPixelData(size);
 				size *= sizeof(VRay::AColor);
 				img->getSize(width, height);
-				img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
 				attrImage = AttrImage(data, size, fullImageType, width, height);
 			} else if (fullImageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
 				img->getSize(width, height);
-				img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
 				attrImage = AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height);
 			}
 			set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), std::move(attrImage));
@@ -475,8 +471,6 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 				} else {
 					Logger::log(Logger::Error, "Render channel:", type, "Pixel format:", pixelFormat);
 					VRay::VRayImage *img = element.getImage();
-
-					img->saveToJpegFile("D:/sc/" + std::string(id) + ".jpg");
 
 					int width, height;
 					img->getSize(width, height);
@@ -520,6 +514,23 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	} else {
 		Logger::log(Logger::Info, "Renderer::OnImageReady");
 	}
+}
+
+void RendererController::bucketReady(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg) {
+	(void)arg;
+
+	AttrImageSet set;
+
+	int width, height;
+	size_t size;
+	img->getSize(width, height);
+	const VRay::AColor * data = img->getPixelData(size);
+	size *= sizeof(VRay::AColor);
+	set.images.emplace(VRayBaseTypes::RenderChannelType::RenderChannelTypeNone, VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height, x, y));
+
+	sendFn(VRayMessage::createMessage(std::move(set)));
+
+	Logger::log(Logger::Error, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 }
 
 
