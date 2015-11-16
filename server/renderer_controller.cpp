@@ -406,9 +406,11 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::exportScene", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	}
-	case VRayMessage::RendererAction::GetImage:
+	case VRayMessage::RendererAction::GetImage: {
+		std::lock_guard<std::mutex> l(callbackMutex);
 		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->m_Value));
 		break;
+	}
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
@@ -420,10 +422,16 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	}
 }
 
-void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType) {
-	AttrImageSet set;
+void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType) {
+	AttrImageSet set(sourceType);
 
-	for (const auto &type : elementsToSend) {
+	decltype(elementsToSend) elems;
+	{
+		std::lock_guard<std::mutex> l(callbackMutex);
+		elems = elementsToSend;
+	}
+
+	for (const auto &type : elems) {
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{
@@ -496,7 +504,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 
 void RendererController::imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg) {
 	(void)arg;
-	sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG);
+	sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG, VRayBaseTypes::ImageSourceType::RtImageUpdate);
 }
 
 
@@ -504,7 +512,7 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 	(void)arg;
 
 	VRay::VRayImage * img = renderer.getImage();
-	sendImages(img, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL);
+	sendImages(img, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, VRayBaseTypes::ImageSourceType::ImageReady);
 
 	VRayMessage::RendererStatus status = renderer.isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
 	sendFn(VRayMessage::createMessage(status, this->currentFrame));
@@ -519,7 +527,7 @@ void RendererController::imageDone(VRay::VRayRenderer & renderer, void * arg) {
 void RendererController::bucketReady(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg) {
 	(void)arg;
 
-	AttrImageSet set;
+	AttrImageSet set(VRayBaseTypes::ImageSourceType::BucketImageReady);
 
 	int width, height;
 	size_t size;
@@ -530,7 +538,7 @@ void RendererController::bucketReady(VRay::VRayRenderer & renderer, int x, int y
 
 	sendFn(VRayMessage::createMessage(std::move(set)));
 
-	Logger::log(Logger::Error, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
+	Logger::log(Logger::Debug, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 }
 
 

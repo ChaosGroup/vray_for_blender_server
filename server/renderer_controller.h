@@ -25,7 +25,7 @@ private:
 
 	void vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg);
 
-	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType);
+	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType);
 
 	void pluginMessage(VRayMessage & message);
 	void rendererMessage(VRayMessage & message);
@@ -37,6 +37,8 @@ private:
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
+
+	std::mutex callbackMutex;
 };
 
 
