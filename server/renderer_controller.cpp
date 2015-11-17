@@ -63,7 +63,7 @@ void RendererController::handle(VRayMessage & message) {
 
 void RendererController::pluginMessage(VRayMessage & message) {
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
-		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
+		VRay::Plugin plugin = renderer->getOrCreatePlugin(message.getPlugin(), message.getPluginType());
 		if (!plugin) {
 			Logger::getInstance().log(Logger::Warning, "Failed to load plugin: ", message.getPlugin());
 			return;
@@ -334,7 +334,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::free");
 		renderer->stop();
 
-		renderer->showFrameBuffer(false);
+		renderer->vfb.show(false);
 		renderer.release();
 		break;
 	case VRayMessage::RendererAction::Init:
@@ -350,7 +350,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			renderer->showFrameBuffer(showVFB);
+			renderer->vfb.show(showVFB);
 
 
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
