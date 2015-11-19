@@ -281,7 +281,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			Logger::log(Logger::Warning, "Failed to set property:", message.getProperty(), "for:", message.getPlugin());
 		}
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Create) {
-		if (!renderer->newPlugin(message.getPlugin(), message.getPluginType())) {
+		if (!renderer->getOrCreatePlugin(message.getPlugin(), message.getPluginType())) {
 			Logger::log(Logger::Warning, "Failed to create plugin:", message.getPlugin());
 		} else {
 			Logger::log(Logger::Info, "Created plugin", message.getPlugin(), "with type:", message.getPluginType());
