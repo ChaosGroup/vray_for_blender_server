@@ -16,6 +16,7 @@ RendererController::RendererController(send_fn_t fn, bool showVFB):
 RendererController::~RendererController() {
 	if (renderer) {
 		renderer->stop();
+		renderer.release();
 	}
 }
 
@@ -406,11 +407,9 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::exportScene", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
 	}
-	case VRayMessage::RendererAction::GetImage: {
-		std::lock_guard<std::mutex> l(callbackMutex);
+	case VRayMessage::RendererAction::GetImage:
 		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->m_Value));
 		break;
-	}
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
@@ -425,13 +424,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType) {
 	AttrImageSet set(sourceType);
 
-	decltype(elementsToSend) elems;
-	{
-		std::lock_guard<std::mutex> l(callbackMutex);
-		elems = elementsToSend;
-	}
-
-	for (const auto &type : elems) {
+	for (const auto &type : elementsToSend) {
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{

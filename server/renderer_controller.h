@@ -37,8 +37,6 @@ private:
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
-
-	std::mutex callbackMutex;
 };
 
 
