@@ -15,6 +15,12 @@ RendererController::RendererController(send_fn_t fn, bool showVFB):
 
 RendererController::~RendererController() {
 	if (renderer) {
+		renderer->setOnRTImageUpdated(nullptr);
+		renderer->setOnImageReady(nullptr);
+		renderer->setOnBucketReady(nullptr);
+		renderer->setOnDumpMessage(nullptr);
+		renderer->vfb.show(false);
+
 		renderer->stop();
 		renderer.release();
 	}
@@ -335,7 +341,12 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::free");
 		renderer->stop();
 
+		renderer->setOnRTImageUpdated(nullptr);
+		renderer->setOnImageReady(nullptr);
+		renderer->setOnBucketReady(nullptr);
+		renderer->setOnDumpMessage(nullptr);
 		renderer->vfb.show(false);
+
 		renderer.release();
 		break;
 	case VRayMessage::RendererAction::Init:
