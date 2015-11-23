@@ -37,6 +37,9 @@ private:
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
+
+	/// Should protect all callbacks in order to assure they are executing with valid renderer
+	std::mutex rendererMtx;
 };
 
 
