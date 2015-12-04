@@ -27,7 +27,7 @@ use_vray_appsdk()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
-link_with_vray_appsdk(${PROJECT_NAME})
+#link_with_vray_appsdk(${PROJECT_NAME})
 
 set(SYSTEM_LIBS "")
 if(UNIX)
@@ -41,15 +41,32 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})
 
+
+if(WIN32)
+	set(INSTALL_PREFIX "C:/Program Files/Chaos Group/")
+elseif(UNIX)
+	if(APPLE)
+		set(INSTALL_PREFIX "/Applications/ChaosGroup/")
+	else()
+		set(INSTALL_PREFIX "/usr/ChaosGroup/")
+	endif()
+endif()
+
+if(CMAKE_INSTALL_PREFIX)
+	set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+endif()
+
+
+
 if(WIN32)
 	install(TARGETS ${PROJECT_NAME} RUNTIME
-					DESTINATION "C:/Program Files/Chaos Group/V-Ray/VRayZmqServer/")
+					DESTINATION "${INSTALL_PREFIX}V-Ray/VRayZmqServer/")
 elseif(UNIX)
 	if(APPLE)
 		install(TARGETS ${PROJECT_NAME}
-					DESTINATION "/Applications/ChaosGroup/V-Ray/VRayZmqServer/")
+					DESTINATION "${INSTALL_PREFIX}V-Ray/VRayZmqServer/")
 	else()
 		install(TARGETS ${PROJECT_NAME}
-					DESTINATION "/usr/ChaosGroup/V-Ray/VRayZmqServer/")
+					DESTINATION "${INSTALL_PREFIX}V-Ray/VRayZmqServer/")
 	endif()
 endif()
