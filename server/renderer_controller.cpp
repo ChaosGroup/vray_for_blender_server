@@ -179,7 +179,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 		{
 			const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
 			VRay::ValueList pluginList(plist.getCount());
-			std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [](const VRayBaseTypes::AttrPlugin & plugin) {
+			std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [this, &message](const VRayBaseTypes::AttrPlugin & plugin) {
+				if (!renderer->getPlugin(plugin.plugin)) {
+					Logger::log(Logger::Warning, "Missing plugin", plugin.plugin, "referenced in plugin list for", message.getPlugin());
+				}
 				return VRay::Value(plugin.plugin);
 			});
 			success = plugin.setValue(message.getProperty(), VRay::Value(pluginList));
@@ -297,7 +300,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin().c_str());
 		if (plugin) {
-			renderer->removePlugin(plugin);
+			if (!renderer->removePlugin(plugin)) {
+				auto err = renderer->getLastError();
+				Logger::log(Logger::Error, err.toString());
+			}
 			Logger::log(Logger::Info, "Removed plugin", message.getPlugin());
 		} else {
 			Logger::log(Logger::Warning, "Failed to remove plugin:", message.getPlugin());
@@ -417,7 +423,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	case VRayMessage::RendererAction::ExportScene:
 	{
 		VRay::VRayExportSettings exportParams;
-		exportParams.useHexFormat = false;
+		exportParams.useHexFormat = true;
 		exportParams.compressed = false;
 
 		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, &exportParams);
@@ -462,10 +468,10 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 			set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), std::move(attrImage));
 			break;
 		}
-		case VRay::RenderElement::Type::VFB_ZDEPTH:
-		case VRay::RenderElement::Type::VFB_REALCOLOR:
-		case VRay::RenderElement::Type::VFB_NORMAL:
-		case VRay::RenderElement::Type::VFB_RENDERID:
+		case VRay::RenderElement::Type::ZDEPTH:
+		case VRay::RenderElement::Type::REALCOLOR:
+		case VRay::RenderElement::Type::NORMALS:
+		case VRay::RenderElement::Type::RENDERID:
 		try {
 			auto element = renderer->getRenderElements().getByType(type);
 			if (element) {

@@ -1,3 +1,4 @@
+#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "zmq_proxy_server.h"
 #include "utils/logger.h"
 #include "utils/version.h"
@@ -69,12 +70,22 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
+	const char * sdkPathName = "VRAY_ZMQSERVER_APPSDK_PATH";
+
+	const char * path = std::getenv(sdkPathName);
+	if (!path) {
+		printf("Undefined %s", sdkPathName);
+		printHelp();
+		return 0;
+	}
+
+
 	printInfo();
-	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\n",
-		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel);
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s",
+		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	try {
-		ZmqProxyServer server(settings.port, settings.showVFB);
+		ZmqProxyServer server(settings.port, path, settings.showVFB);
 		server.run();
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());

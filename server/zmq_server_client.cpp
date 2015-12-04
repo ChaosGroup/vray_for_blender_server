@@ -1,3 +1,4 @@
+#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "zmq_server_client.h"
 #include <random>
 

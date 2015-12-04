@@ -19,7 +19,7 @@ class ZmqProxyServer {
 	};
 
 public:
-	ZmqProxyServer(const std::string & port, bool showVFB = false);
+	ZmqProxyServer(const std::string &port, const std::string &appsdkPath, bool showVFB = false);
 
 	void run();
 

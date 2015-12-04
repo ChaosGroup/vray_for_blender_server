@@ -22,6 +22,9 @@ set(APPSDK_VERSION "447" CACHE STRING "V-Ray AppSDK version")
 set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
 set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
 
+if(WIN32)
+	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+endif()
 
 macro(use_vray_appsdk)
 	if(NOT EXISTS ${APPSDK_ROOT})

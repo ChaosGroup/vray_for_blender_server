@@ -1,3 +1,4 @@
+#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "zmq_proxy_server.h"
 #include "utils/logger.h"
 #include <chrono>
@@ -8,9 +9,9 @@ using namespace std;
 using namespace std::chrono;
 using namespace zmq;
 
-ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB)
+ZmqProxyServer::ZmqProxyServer(const string & port, const std::string &appsdkPath, bool showVFB)
 	: port(port), context(nullptr), routerSocket(nullptr),
-	vray(new VRay::VRayInit(true)), showVFB(showVFB), dataTransfered(0) {
+	vray(new VRay::VRayInit(appsdkPath.c_str())), showVFB(showVFB), dataTransfered(0) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}

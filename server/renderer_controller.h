@@ -1,9 +1,12 @@
 #ifndef RENDERER_CONTROLLER_H
 #define RENDERER_CONTROLLER_H
 
+#define WIN32_LEAN_AND_MEAN
+#define VRAY_RUNTIME_LOAD_PRIMARY
+#include <vraysdk.hpp>
+
 #include <memory>
 #include <unordered_set>
-#include <vraysdk.hpp>
 #include "zmq_wrapper.h"
 #include "zmq_server_client.h"
 
