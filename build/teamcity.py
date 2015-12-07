@@ -93,7 +93,7 @@ def main(args):
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
     cmd.append('--github-src-branch=%s' % args.teamcity_branch)
     cmd.append('--dir_source=%s' % os.path.join(args.teamcity_source_path, "vrayserverzmq"))
-    cmd.append('--dir_build=%s' % os.path.join(, "vrayserverzmq-" + args.teamcity_branch_hash[:7]))
+    cmd.append('--dir_build=%s' % os.path.join(args.teamcity_source_path, "vrayserverzmq-" + args.teamcity_branch_hash[:7]))
 
     cmd.append('--dir_install=%s' % args.teamcity_install_path)
     cmd.append('--dir_release=%s' % args.teamcity_release_path)
