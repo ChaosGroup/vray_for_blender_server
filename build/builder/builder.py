@@ -32,13 +32,6 @@ import datetime
 
 from . import utils
 
-
-OFFICIAL_REPO = "http://git.blender.org/blender.git"
-GITHUB_REPO   = "https://github.com/bdancer/blender-for-vray.git"
-
-BLENDER_HASH_271 = "772af36fc469e7666fc59d1d0b0e4dbcf52cfe2c"
-
-
 class Builder:
 	"""
 	  A generic build class.
@@ -50,9 +43,7 @@ class Builder:
 			setattr(self, p, params[p])
 
 		# Always building vb30
-		self.project        = "vrayblender3"
-		if self.use_github_branch in {'dev/vray_for_blender/vb35'}:
-			self.project = "vrayblender35"
+		self.project        = "vrayserverzmq"
 
 		self.version        = utils.VERSION
 		self.revision       = utils.REVISION

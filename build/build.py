@@ -173,7 +173,7 @@ gr_src.add_argument('--uppatch',
 gr_src.add_argument(
 	'--github-src-branch',
 	dest    = "use_github_branch",
-	default = "dev/vray_for_blender/vb30",
+	default = "master",
 	help    = "Use sources from specific branch"
 )
 gr_src.add_argument(

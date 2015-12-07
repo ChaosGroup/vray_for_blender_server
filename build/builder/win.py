@@ -58,7 +58,7 @@ class WindowsBuilder(Builder):
 		cmake.append('-DZMQ_ROOT=%s' % os.environ['CGR_ZMQ_ROOT'])
 		cmake.append('-DBOOST_ROOT=%s' % os.environ['CGR_BOOST_ROOT'])
 
-		cmake.append("../vrayserverzmq")
+		cmake.append("vrayserverzmq")
 
 		res = subprocess.call(cmake)
 		if not res == 0:
