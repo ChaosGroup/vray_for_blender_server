@@ -88,12 +88,12 @@ def main(args):
         os.environ['LIBPATH'] = ";".join(LIBPATH)
 
     cmd = [python_exe]
-    cmd.append("D:/dev/vrayserverzmq/build/build.py")
+    cmd.append(os.path.join(args.teamcity_source_path, "vrayzmqserver/build/build.py"))
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
     cmd.append('--github-src-branch=%s' % args.teamcity_branch)
-    cmd.append('--dir_source=D:/dev/vrayserverzmq')
-    cmd.append('--dir_build=D:/dev/vb')
+    cmd.append('--dir_source=%s' % os.path.join(args.teamcity_source_path, "vrayzmqserver"))
+    cmd.append('--dir_build=%s' % args.teamcity_source_path)
 
     cmd.append('--dir_install=%s' % args.teamcity_install_path)
     cmd.append('--dir_release=%s' % args.teamcity_release_path)
@@ -129,6 +129,10 @@ if __name__ == '__main__':
     )
 
     parser.add_argument('--teamcity_release_path',
+        default = "",
+    )
+
+    parser.add_argument('--teamcity_source_path',
         default = "",
     )
 
