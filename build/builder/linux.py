@@ -65,7 +65,7 @@ class LinuxBuilder(Builder):
 
 		cmake.append('-DZMQ_ROOT=%s' % os.environ['CGR_ZMQ_ROOT'])
 		cmake.append('-DBOOST_ROOT=%s' % os.environ['CGR_BOOST_ROOT'])
-		cmake.append('-DBoost_ROOT=%s' % os.environ['CGR_BOOST_ROOT'])
+		cmake.append('-DBoost_DIR=%s' % os.environ['CGR_BOOST_ROOT'])
 
 		cmake.append("../vrayserverzmq")
 
