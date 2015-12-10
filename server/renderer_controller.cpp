@@ -28,7 +28,7 @@ RendererController::~RendererController() {
 	}
 }
 
-void RendererController::handle(VRayMessage & message) {
+void RendererController::handle(const VRayMessage & message) {
 	try {
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
@@ -70,7 +70,7 @@ void RendererController::handle(VRayMessage & message) {
 	}
 }
 
-void RendererController::pluginMessage(VRayMessage & message) {
+void RendererController::pluginMessage(const VRayMessage & message) {
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 		VRay::Plugin plugin = renderer->getOrCreatePlugin(message.getPlugin(), message.getPluginType());
 		if (!plugin) {
@@ -311,7 +311,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	}
 }
 
-void RendererController::rendererMessage(VRayMessage & message) {
+void RendererController::rendererMessage(const VRayMessage & message) {
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentTime:

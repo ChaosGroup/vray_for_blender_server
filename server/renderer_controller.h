@@ -20,7 +20,7 @@ public:
 	RendererController(const RendererController &) = delete;
 	RendererController & operator=(const RendererController &) = delete;
 
-	void handle(VRayMessage & message);
+	void handle(const VRayMessage & message);
 private:
 	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg);
 	void imageDone(VRay::VRayRenderer & renderer, void * arg);
@@ -30,13 +30,13 @@ private:
 
 	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType);
 
-	void pluginMessage(VRayMessage & message);
-	void rendererMessage(VRayMessage & message);
+	void pluginMessage(const VRayMessage & message);
+	void rendererMessage(const VRayMessage & message);
 private:
 
 	send_fn_t sendFn;
 	std::unique_ptr<VRay::VRayRenderer> renderer;
-	std::unordered_set<VRay::RenderElement::Type> elementsToSend;
+	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elementsToSend;
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
