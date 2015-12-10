@@ -46,6 +46,9 @@ else()
 	set(ZMQ_LIB  zmq)
 endif()
 
+include_directories(${ZMQ_ROOT}/include)
+link_directories(${ZMQ_ROOT}/lib)
+
 if(WIN32)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")

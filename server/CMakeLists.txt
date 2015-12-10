@@ -40,6 +40,9 @@ if(UNIX)
 endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})
+if(UNIX)
+	target_link_libraries(${PROJECT_NAME} dl)
+endif()
 
 
 if(WIN32)
