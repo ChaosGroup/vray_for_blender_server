@@ -2,4 +2,3 @@
 	path = extern/vray-zmq-wrapper
 	url = https://github.com/bdancer/vray-zmq-wrapper
 	ignore = all
-	branch = master
