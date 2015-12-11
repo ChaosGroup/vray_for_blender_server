@@ -64,6 +64,8 @@ class LinuxBuilder(Builder):
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
 
 		cmake.append('-DZMQ_ROOT=%s' % os.environ['CGR_ZMQ_ROOT'])
+		cmake.append('-DSODIUM_ROOT=%s' % os.environ['CGR_SODIUM_ROOT'])
+
 		cmake.append('-DBoost_DIR=%s' % os.environ['CGR_BOOST_ROOT'])
 		cmake.append('-DBoost_INCLUDE_DIR=%s' % os.path.join(os.environ['CGR_BOOST_ROOT'], 'include'))
 		cmake.append('-DBoost_LIBRARY_DIRS=%s' % os.path.join(os.environ['CGR_BOOST_ROOT'], 'lib'))

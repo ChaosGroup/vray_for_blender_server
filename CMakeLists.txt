@@ -32,22 +32,20 @@ set(Boost_USE_STATIC_RUNTIME    OFF)
 if(BOOST_ROOT)
 	find_package(Boost)
 endif()
-
 include_directories(${Boost_INCLUDE_DIR})
-
 
 if(WIN32)
 	set(ZMQ_ROOT "" CACHE PATH "ZMQ lib location")
 	set(ZMQ_LIB  zmq-v120-mt-gd-4_0_4)
-
-	include_directories(${ZMQ_ROOT}/include)
-	link_directories(${ZMQ_ROOT}/lib)
 else()
 	set(ZMQ_LIB  zmq)
+	set(SODIUM_LIB sodium)
 endif()
 
+include_directories(${SODIUM_ROOT}/include)
 include_directories(${ZMQ_ROOT}/include)
 link_directories(${ZMQ_ROOT}/lib)
+link_directories(${SODIUM_ROOT}/lib)
 
 if(WIN32)
 else()

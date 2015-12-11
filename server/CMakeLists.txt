@@ -39,7 +39,7 @@ if(UNIX)
 	endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SYSTEM_LIBS})
+target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SODIUM_LIB} ${SYSTEM_LIBS})
 if(UNIX)
 	target_link_libraries(${PROJECT_NAME} dl)
 endif()
