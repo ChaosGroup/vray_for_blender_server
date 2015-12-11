@@ -30,9 +30,9 @@ set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 
 if(BOOST_ROOT)
-	find_package(Boost PATHS ${BOOST_ROOT} NO_DEFAULT_PATH)
+	find_package(Boost)
 endif()
-find_package(Boost)
+
 include_directories(${Boost_INCLUDE_DIR})
 
 
