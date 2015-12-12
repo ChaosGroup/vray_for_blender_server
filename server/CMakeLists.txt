@@ -41,7 +41,7 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SODIUM_LIB} ${SYSTEM_LIBS})
 if(UNIX)
-	target_link_libraries(${PROJECT_NAME} dl)
+	target_link_libraries(${PROJECT_NAME} dl rt)
 endif()
 
 
