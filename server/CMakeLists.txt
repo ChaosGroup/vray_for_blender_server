@@ -27,8 +27,6 @@ use_vray_appsdk()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
-#link_with_vray_appsdk(${PROJECT_NAME})
-
 set(SYSTEM_LIBS "")
 if(UNIX)
 	if(APPLE)
@@ -39,9 +37,18 @@ if(UNIX)
 	endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${ZMQ_LIB} ${SODIUM_LIB} ${SYSTEM_LIBS})
+target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${SYSTEM_LIBS})
+
 if(UNIX)
-	target_link_libraries(${PROJECT_NAME} dl rt)
+	target_link_libraries(${PROJECT_NAME} sodium zmq dl rt)
+elseif(WIN32)
+	add_definitions(-DZMQ_STATIC)
+	add_definitions(-DSODIUM_STATIC)
+	target_link_libraries(${PROJECT_NAME} debug Debug/libsodium)
+	target_link_libraries(${PROJECT_NAME} debug Debug/libzmq)
+	target_link_libraries(${PROJECT_NAME} optimized Release/libsodium)
+	target_link_libraries(${PROJECT_NAME} optimized Release/libzmq)
+	target_link_libraries(${PROJECT_NAME} wsock32 ws2_32)
 endif()
 
 
