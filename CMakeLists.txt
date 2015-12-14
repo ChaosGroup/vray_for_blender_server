@@ -38,8 +38,11 @@ include_directories(${Boost_INCLUDE_DIR})
 set(LIBS_ROOT "" CACHE PATH "Custom libs root - zmq, sodium")
 
 include_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
-link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib)
-link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib)
+
+if(WIN32)
+	link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib)
+	link_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib)
+endif()
 
 if(WIN32)
 	if (MSVC)

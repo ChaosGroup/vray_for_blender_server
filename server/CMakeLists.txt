@@ -32,18 +32,21 @@ if(UNIX)
 	if(APPLE)
 	else()
 		set(SYSTEM_LIBS
-			pthread
+			pthread rt dl
 		)
 	endif()
 endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${SYSTEM_LIBS})
 
+add_definitions(-DSODIUM_STATIC)
+add_definitions(-DZMQ_STATIC)
 if(UNIX)
-	target_link_libraries(${PROJECT_NAME} sodium zmq dl rt)
+	target_link_libraries(${PROJECT_NAME}
+		${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/lib/Release/libzmq.a
+		${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/sodium/lib/Release/libsodium.a
+		)
 elseif(WIN32)
-	add_definitions(-DZMQ_STATIC)
-	add_definitions(-DSODIUM_STATIC)
 	target_link_libraries(${PROJECT_NAME} debug Debug/libsodium)
 	target_link_libraries(${PROJECT_NAME} debug Debug/libzmq)
 	target_link_libraries(${PROJECT_NAME} optimized Release/libsodium)
