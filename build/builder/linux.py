@@ -63,8 +63,7 @@ class LinuxBuilder(Builder):
 		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
 
-		cmake.append('-DZMQ_ROOT=%s' % os.environ['CGR_ZMQ_ROOT'])
-		cmake.append('-DSODIUM_ROOT=%s' % os.environ['CGR_SODIUM_ROOT'])
+		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_build, '..', 'blender-for-vray-libs'))
 
 		cmake.append('-DBoost_DIR=%s' % os.environ['CGR_BOOST_ROOT'])
 		cmake.append('-DBoost_INCLUDE_DIR=%s' % os.path.join(os.environ['CGR_BOOST_ROOT'], 'include'))
