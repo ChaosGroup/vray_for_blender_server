@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
 	const char * path = std::getenv(sdkPathName);
 	if (!path) {
-		printf("Undefined %s", sdkPathName);
+		printf("Undefined %s\n", sdkPathName);
 		printHelp();
 		return 0;
 	}
