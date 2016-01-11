@@ -72,7 +72,7 @@ void RendererController::handle(const VRayMessage & message) {
 
 void RendererController::pluginMessage(const VRayMessage & message) {
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
-		VRay::Plugin plugin = renderer->getOrCreatePlugin(message.getPlugin(), message.getPluginType());
+		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
 		if (!plugin) {
 			Logger::getInstance().log(Logger::Warning, "Failed to load plugin: ", message.getPlugin());
 			return;
