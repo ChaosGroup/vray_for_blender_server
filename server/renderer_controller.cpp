@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <unordered_map>
 #include "renderer_controller.h"
 #include "utils/logger.h"
@@ -10,7 +11,8 @@ RendererController::RendererController(send_fn_t fn, bool showVFB):
 	showVFB(showVFB),
 	sendFn(fn),
 	currentFrame(0),
-	type(VRayMessage::RendererType::None) {
+	type(VRayMessage::RendererType::None),
+	jpegQuality(60) {
 }
 
 RendererController::~RendererController() {
@@ -434,6 +436,10 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 	case VRayMessage::RendererAction::GetImage:
 		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->m_Value));
 		break;
+	case VRayMessage::RendererAction::SetQuality:
+		jpegQuality = message.getValue<AttrSimpleType<int>>()->m_Value;
+		jpegQuality = std::max(0, std::min(100, jpegQuality));
+		break;
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
@@ -461,7 +467,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 				img->getSize(width, height);
 				attrImage = AttrImage(data, size, fullImageType, width, height);
 			} else if (fullImageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
-				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, 50));
+				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, jpegQuality));
 				img->getSize(width, height);
 				attrImage = AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height);
 			}

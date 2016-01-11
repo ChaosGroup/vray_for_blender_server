@@ -2,6 +2,7 @@
 #define RENDERER_CONTROLLER_H
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #define VRAY_RUNTIME_LOAD_PRIMARY
 #include <vraysdk.hpp>
 
@@ -40,6 +41,7 @@ private:
 	bool showVFB;
 	VRayMessage::RendererType type;
 	float currentFrame;
+	int jpegQuality;
 
 	/// Should protect all callbacks in order to assure they are executing with valid renderer
 	std::mutex rendererMtx;
