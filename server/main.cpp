@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
 
 	printInfo();
-	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s",
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	try {
