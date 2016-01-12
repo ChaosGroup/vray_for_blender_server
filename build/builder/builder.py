@@ -50,6 +50,7 @@ class Builder:
 		self.brev           = ""
 		self.commits        = '0'
 
+		self.teamcity_branch_hash = self.teamcity_branch_hash[:7]
 		self.dir_install_path = os.path.join(self.dir_install, self.teamcity_branch_hash)
 
 		# Host info
