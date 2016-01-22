@@ -371,13 +371,14 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		VRay::RendererOptions options;
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		options.noDR = true;
+		options.showFrameBuffer = showVFB;
 		renderer.reset(new VRay::VRayRenderer(options));
 		if (!renderer) {
 			completed = false;
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			renderer->vfb.show(showVFB);
+			//renderer->vfb.show(showVFB);
 
 
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
