@@ -1,3 +1,4 @@
+#define VRAY_RUNTIME_LOAD_PRIMARY
 #include <algorithm>
 #include <unordered_map>
 #include "renderer_controller.h"

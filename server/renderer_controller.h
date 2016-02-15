@@ -1,9 +1,13 @@
 #ifndef RENDERER_CONTROLLER_H
 #define RENDERER_CONTROLLER_H
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#define VRAY_RUNTIME_LOAD_PRIMARY
+#ifdef _WIN32
+	#define WIN32_LEAN_AND_MEAN
+	#define NOMINMAX
+	#include <windows.h>
+#else
+	#include <dlfcn.h>
+#endif
 #include <vraysdk.hpp>
 
 #include <memory>
