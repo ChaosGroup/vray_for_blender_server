@@ -110,14 +110,19 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				pluginData.append(attrPlugin.output);
 			}
 
-			if (!renderer->getPlugin(attrPlugin.plugin)) {
-				Logger::log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
+			if (attrPlugin.plugin == "NULL") {
+				success = plugin.setValue(message.getProperty(), VRay::Plugin());
+				Logger::log(Logger::Info, "Removing", message.getProperty(), "for plugin", message.getPlugin(), "Success:", success);
 			} else {
-				success = plugin.setValueAsString(message.getProperty(), pluginData);
+				if (!renderer->getPlugin(attrPlugin.plugin)) {
+					Logger::log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
+				} else {
+					success = plugin.setValueAsString(message.getProperty(), pluginData);
 
-				Logger::log(Logger::Info,
-					"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
-					pluginData, "\nSuccess:", success);
+					Logger::log(Logger::Info,
+						"Setting", message.getProperty(), "for plugin", message.getPlugin(), "value:",
+						pluginData, "\nSuccess:", success);
+				}
 			}
 
 			break;
