@@ -74,7 +74,8 @@ int main(int argc, char *argv[]) {
 
 	const char * path = std::getenv(sdkPathName);
 	if (!path) {
-		printf("Undefined %s\n", sdkPathName);
+		const char * ldPath = std::getenv("LD_LIBRARY_PATH");
+		printf("Undefined %s, will try to load appsdk from $LD_LIBRARY_PATH = \"%s\"\n", sdkPathName, ldPath ? ldPath : "");
 		printHelp();
 		return 0;
 	}

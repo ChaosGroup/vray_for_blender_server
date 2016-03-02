@@ -9,9 +9,9 @@ using namespace std;
 using namespace std::chrono;
 using namespace zmq;
 
-ZmqProxyServer::ZmqProxyServer(const string & port, const std::string &appsdkPath, bool showVFB)
+ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool showVFB)
 	: port(port), context(nullptr), routerSocket(nullptr),
-	vray(new VRay::VRayInit(appsdkPath.c_str())), showVFB(showVFB), dataTransfered(0) {
+	vray(new VRay::VRayInit(appsdkPath)), showVFB(showVFB), dataTransfered(0) {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
