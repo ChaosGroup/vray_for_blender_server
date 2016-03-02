@@ -368,6 +368,8 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		renderer->vfb.show(false);
 
 		renderer.release();
+		elementsToSend.clear();
+
 		break;
 	}
 	case VRayMessage::RendererAction::Init:
