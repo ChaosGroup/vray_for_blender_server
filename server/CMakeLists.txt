@@ -25,6 +25,10 @@ file(GLOB_RECURSE HEADERS "*.h")
 
 use_vray_appsdk()
 
+if(WITH_STATIC_LIBC)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 
 set(SYSTEM_LIBS "")
