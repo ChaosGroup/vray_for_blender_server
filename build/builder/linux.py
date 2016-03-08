@@ -68,10 +68,6 @@ class LinuxBuilder(Builder):
 
 		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_build, '..', 'blender-for-vray-libs'))
 
-		cmake.append('-DBoost_DIR=%s' % os.environ['CGR_BOOST_ROOT'])
-		cmake.append('-DBoost_INCLUDE_DIR=%s' % os.path.join(os.environ['CGR_BOOST_ROOT'], 'include'))
-		cmake.append('-DBoost_LIBRARY_DIRS=%s' % os.path.join(os.environ['CGR_BOOST_ROOT'], 'lib'))
-
 		cmake.append("../vrayserverzmq")
 
 		if self.mode_test:

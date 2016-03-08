@@ -22,19 +22,6 @@ project(VRayServerZmq)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-if(WIN32)
-	set(CMAKE_PREFIX_PATH "D:\\libs\\boost_1_58_0")
-endif()
-
-set(Boost_USE_STATIC_LIBS        ON)
-set(Boost_USE_STATIC_RUNTIME    OFF)
-
-if(BOOST_ROOT)
-	find_package(Boost)
-endif()
-include_directories(${Boost_INCLUDE_DIR})
-
-
 set(LIBS_ROOT "" CACHE PATH "Custom libs root - zmq, sodium")
 
 include_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
