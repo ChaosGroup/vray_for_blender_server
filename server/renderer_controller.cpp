@@ -267,12 +267,12 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				instance.push_back(VRay::Value(*tm));
 				instance.push_back(VRay::Value(*vel));
 
-				if (instanceReferences.find(item.node.plugin) == instanceReferences.end()) {
-					instanceReferences[item.node.plugin] = renderer->getPlugin(item.node.plugin);
+				auto pluginIter = instanceReferences.find(item.node.plugin);
+				if (pluginIter == instanceReferences.end()) {
+					pluginIter = instanceReferences.insert(pluginIter, make_pair(item.node.plugin, renderer->getPlugin(item.node.plugin)));
 				}
 
-				auto & plugin = instanceReferences[item.node.plugin];
-
+				auto & plugin = pluginIter->second;
 				if (!plugin) {
 					Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
 					break;
