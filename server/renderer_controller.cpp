@@ -24,7 +24,7 @@ RendererController::~RendererController() {
 		renderer->setOnImageReady(nullptr);
 		renderer->setOnBucketReady(nullptr);
 		renderer->setOnDumpMessage(nullptr);
-		renderer->vfb.show(false);
+		renderer->vfb.show(false, false);
 
 		renderer->stop();
 		renderer.release();
@@ -365,7 +365,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		renderer->setOnImageReady(nullptr);
 		renderer->setOnBucketReady(nullptr);
 		renderer->setOnDumpMessage(nullptr);
-		renderer->vfb.show(false);
+		renderer->vfb.show(false, false);
 
 		renderer.release();
 		elementsToSend.clear();
