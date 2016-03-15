@@ -247,9 +247,8 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeInstancer:
 		{
 			const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
-			VRay::ValueList instancer(0);
-			instancer.reserve(inst.data.getCount() + 1);
-			instancer.push_back(VRay::Value(inst.frameNumber));
+			VRay::VUtils::ValueRefList instancer(inst.data.getCount() + 1);
+			instancer[0] = VRay::VUtils::Value(inst.frameNumber);
 
 			std::unordered_map<std::string, VRay::Plugin> instanceReferences;
 
@@ -257,15 +256,15 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
 
 				// XXX: Also pretty crazy...
-				VRay::ValueList instance;
+				VRay::VUtils::ValueRefList instance(4);
 
 				const VRay::Transform * tm, *vel;
 				tm = reinterpret_cast<const VRay::Transform*>(&item.tm);
 				vel = reinterpret_cast<const VRay::Transform*>(&item.vel);
 
-				instance.push_back(VRay::Value(item.index));
-				instance.push_back(VRay::Value(*tm));
-				instance.push_back(VRay::Value(*vel));
+				instance[0].setDouble(item.index);
+				instance[1].setTransform(*tm);
+				instance[2].setTransform(*vel);
 
 				auto pluginIter = instanceReferences.find(item.node.plugin);
 				if (pluginIter == instanceReferences.end()) {
@@ -277,13 +276,15 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 					Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
 					break;
 				}
-				instance.push_back(VRay::Value(plugin));
 
-				instancer.push_back(VRay::Value(instance));
+				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
+
+				instance[3].setObjectID(pluginId);
+				instancer[i + 1].setList(instance);
 			}
 
 			if (instancer.size() == inst.data.getCount() + 1) {
-				success = plugin.setValue(message.getProperty(), VRay::Value(instancer));
+				success = plugin.setValue(message.getProperty(), instancer);
 				Logger::log(Logger::Info,
 					"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
 					inst.data.getCount(), "\nSuccess:", success);
