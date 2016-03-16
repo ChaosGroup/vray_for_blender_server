@@ -603,10 +603,13 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
 	RendererController * rc = reinterpret_cast<RendererController*>(arg);
 
-	Logger::Level logLvl = level <= VRay::MessageError ? Logger::Warning :
-							level <= VRay::MessageWarning ? Logger::Debug :
-							Logger::Info;
-	Logger::log(logLvl, "VRAY:", msg);
+	if (level <= VRay::MessageError) {
+		Logger::log(Logger::Error, "VRAY:", msg);
+	} else if (level <= VRay::MessageWarning) {
+		Logger::log(Logger::Warning, "VRAY:", msg);
+	} else {
+		Logger::log(Logger::Info, "VRAY:", msg);
+	}
 
 	sendFn(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 }
