@@ -186,14 +186,23 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeListPlugin:
 		{
 			const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
-			VRay::ValueList pluginList(plist.getCount());
-			std::transform(plist.getData()->begin(), plist.getData()->end(), pluginList.begin(), [this, &message](const VRayBaseTypes::AttrPlugin & plugin) {
-				if (!renderer->getPlugin(plugin.plugin)) {
-					Logger::log(Logger::Warning, "Missing plugin", plugin.plugin, "referenced in plugin list for", message.getPlugin());
+			VRay::VUtils::ValueRefList pluginList(plist.getCount());
+
+			for (int c = 0; c < plist.getCount(); ++c) {
+				const auto & messagePlugin = (*plist)[c];
+				const auto & vrayPlugin = renderer->getPlugin(messagePlugin.plugin);
+				VRay::VUtils::ObjectID pluginId = { VRay::NO_ID };
+
+				if (!vrayPlugin) {
+					Logger::log(Logger::Warning, "Missing plugin", messagePlugin.plugin, "referenced in plugin list for", message.getPlugin());
+				} else {
+					pluginId = {vrayPlugin.getId()};
 				}
-				return VRay::Value(plugin.plugin);
-			});
-			success = plugin.setValue(message.getProperty(), VRay::Value(pluginList));
+
+				pluginList[c].setObjectID(pluginId);
+			}
+			plugin.setValue(message.getProperty(), pluginList);
+
 			Logger::log(Logger::Info,
 				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
 				plist.getCount(), "\nSuccess:", success);
@@ -202,11 +211,12 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeListString:
 		{
 			const VRayBaseTypes::AttrListString & slist = *message.getValue<VRayBaseTypes::AttrListString>();
-			VRay::ValueList stringList(slist.getCount());
-			std::transform(slist.getData()->begin(), slist.getData()->end(), stringList.begin(), [](const std::string & str) {
-				return VRay::Value(str);
-			});
-			success = plugin.setValue(message.getProperty(), VRay::Value(stringList));
+			VRay::VUtils::CharStringRefList stringList(slist.getCount());
+
+			for (int c = 0; c < slist.getCount(); ++c) {
+				stringList[c].set((*slist)[c].c_str());
+			}
+			success = plugin.setValue(message.getProperty(), stringList);
 
 			Logger::log(Logger::Info,
 				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
@@ -215,29 +225,33 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		}
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:
 		{
-			VRay::ValueList map_channels;
 			const VRayBaseTypes::AttrMapChannels & channelMap = *message.getValue<VRayBaseTypes::AttrMapChannels>();
+			VRay::VUtils::ValueRefList map_channels(channelMap.data.size());
 
 			int i = 0;
 			for (const auto &mcIt : channelMap.data) {
 				const VRayBaseTypes::AttrMapChannels::AttrMapChannel &map_channel_data = mcIt.second;
 
-				VRay::ValueList map_channel;
-				map_channel.push_back(VRay::Value(i++));
+				// Construct VRay::VUtils::IntRefList from std::vector (VRayBaseTypes::AttrListInt)'s data ptr
+				auto & intVec = *map_channel_data.faces.getData();
+				VRay::VUtils::IntRefList faces(intVec.size());
+				memcpy(faces.get(), intVec.data(), intVec.size() * sizeof(int));
 
-				// VRay::IntList should be binary the same as VRayBaseTypes::AttrListInt
-				const VRay::IntList & faces = reinterpret_cast<const VRay::IntList &>(*map_channel_data.faces.getData());
+				// Construct VRay::VUtils::IntRefList from std::vector (VRayBaseTypes::AttrListInt)'s data ptr
+				auto & vecVec = *map_channel_data.vertices.getData();
+				// Additionally VRay::Vector and VRayBaseTypes::AttrVector should have the same layout
+				VRay::VUtils::VectorRefList vertices(vecVec.size());
+				memcpy(vertices.get(), vecVec.data(), vecVec.size() & sizeof(VRayBaseTypes::AttrVector));
 
-				// VRay::VectorList should be binary the same as VRayBaseTypes::AttrListVector
-				const VRay::VectorList & vertices = reinterpret_cast<const VRay::VectorList &>(*map_channel_data.vertices.getData());
+				VRay::VUtils::ValueRefList map_channel(3);
+				map_channel[0].setDouble(i);
+				map_channel[1].setListVector(vertices);
+				map_channel[2].setListInt(faces);
 
-				map_channel.push_back(VRay::Value(vertices));
-				map_channel.push_back(VRay::Value(faces));
-
-				map_channels.push_back(VRay::Value(map_channel));
+				map_channels[i++].setList(map_channel);
 			}
 
-			success = plugin.setValue(message.getProperty(), VRay::Value(map_channels));
+			success = plugin.setValue(message.getProperty(), map_channels);
 
 			Logger::log(Logger::Info,
 				"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
