@@ -55,16 +55,16 @@ int main(int argc, char *argv[]) {
 		if (lvl >= settings.logLevel - 1) {
 			switch (lvl) {
 			case Logger::Debug:
-				printf("DEBUG: %s\n", msg.c_str());
+				printf("ZMQ_DEBUG: %s\n", msg.c_str());
 				break;
 			case Logger::Warning:
-				printf("WARNING: %s\n", msg.c_str());
+				printf("ZMQ_WARNING: %s\n", msg.c_str());
 				break;
 			case Logger::Error:
-				printf("ERROR: %s\n", msg.c_str());
+				printf("ZMQ_ERROR: %s\n", msg.c_str());
 				break;
 			case Logger::Info:
-				printf("INFO: %s\n", msg.c_str());
+				printf("ZMQ_INFO: %s\n", msg.c_str());
 				break;
 			}
 		}
