@@ -43,6 +43,7 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} vray_zmq_wrapper ${SYSTEM_LIBS})
 
+add_definitions(-DVRAY_SDK_INTEROPERABILITY)
 add_definitions(-DSODIUM_STATIC)
 add_definitions(-DZMQ_STATIC)
 if(UNIX)
