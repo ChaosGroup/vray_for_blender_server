@@ -17,18 +17,7 @@ RendererController::RendererController(send_fn_t fn, bool showVFB):
 }
 
 RendererController::~RendererController() {
-	std::lock_guard<std::mutex> l(rendererMtx);
-
-	if (renderer) {
-		renderer->setOnRTImageUpdated(nullptr);
-		renderer->setOnImageReady(nullptr);
-		renderer->setOnBucketReady(nullptr);
-		renderer->setOnDumpMessage(nullptr);
-		renderer->vfb.show(false, false);
-
-		renderer->stop();
-		renderer.release();
-	}
+	stopRenderer();
 }
 
 void RendererController::handle(const VRayMessage & message) {
@@ -370,23 +359,12 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		renderer->stop();
 		break;
 	}
-	case VRayMessage::RendererAction::Free: {
-		std::lock_guard<std::mutex> l(rendererMtx);
-
+	case VRayMessage::RendererAction::Free:
 		Logger::log(Logger::Info, "Renderer::free");
-		renderer->stop();
-
-		renderer->setOnRTImageUpdated(nullptr);
-		renderer->setOnImageReady(nullptr);
-		renderer->setOnBucketReady(nullptr);
-		renderer->setOnDumpMessage(nullptr);
-		renderer->vfb.show(false, false);
-
-		renderer.release();
+		stopRenderer();
 		elementsToSend.clear();
 
 		break;
-	}
 	case VRayMessage::RendererAction::Init:
 	{
 		Logger::log(Logger::Info, "Renderer::init");
@@ -546,6 +524,25 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 	}
 
 	sendFn(VRayMessage::createMessage(std::move(set)));
+}
+
+
+void RendererController::stopRenderer() {
+	Logger::log(Logger::Info, "Freeing renderer object");
+
+	std::lock_guard<std::mutex> l(rendererMtx);
+	if (renderer) {
+
+		renderer->setOnRTImageUpdated(nullptr);
+		renderer->setOnImageReady(nullptr);
+		renderer->setOnBucketReady(nullptr);
+		renderer->setOnDumpMessage(nullptr);
+		renderer->vfb.show(false, false);
+
+		renderer->reset();
+		renderer->stop();
+		renderer.release();
+	}
 }
 
 

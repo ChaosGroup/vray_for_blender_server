@@ -27,6 +27,8 @@ public:
 
 	void handle(const VRayMessage & message);
 private:
+	void stopRenderer();
+
 	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg);
 	void imageDone(VRay::VRayRenderer & renderer, void * arg);
 	void bucketReady(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg);
