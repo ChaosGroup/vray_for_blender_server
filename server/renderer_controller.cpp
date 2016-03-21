@@ -344,7 +344,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::resume");
 		break;
 	case VRayMessage::RendererAction::Start:
-		renderer->start();
+		renderer->startSync();
 		Logger::log(Logger::Info, "Renderer::start");
 
 		if (type == VRayMessage::RendererType::Animation) {
