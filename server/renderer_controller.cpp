@@ -456,6 +456,8 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType) {
 	AttrImageSet set(sourceType);
 
+	auto allElements = renderer->getRenderElements();
+
 	for (const auto &type : elementsToSend) {
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
@@ -480,44 +482,47 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 		case VRay::RenderElement::Type::REALCOLOR:
 		case VRay::RenderElement::Type::NORMALS:
 		case VRay::RenderElement::Type::RENDERID:
-		try {
-			auto element = renderer->getRenderElements().getByType(type);
-			if (element) {
-				VRay::RenderElement::PixelFormat pixelFormat = element.getDefaultPixelFormat();
+			try {
+				auto element = allElements.getByType(type);
+				if (element) {
+					VRay::RenderElement::PixelFormat pixelFormat = element.getDefaultPixelFormat();
 
-				VRayBaseTypes::AttrImage::ImageType imgType = VRayBaseTypes::AttrImage::ImageType::NONE;
-				switch (pixelFormat) {
-				case VRay::RenderElement::PF_BW_FLOAT:
-					imgType = VRayBaseTypes::AttrImage::ImageType::BW_REAL;
-					break;
-				case VRay::RenderElement::PF_RGB_FLOAT:
-					imgType = VRayBaseTypes::AttrImage::ImageType::RGB_REAL;
-					break;
-				case VRay::RenderElement::PF_RGBA_FLOAT:
-					imgType = VRayBaseTypes::AttrImage::ImageType::RGBA_REAL;
-					break;
+					VRayBaseTypes::AttrImage::ImageType imgType = VRayBaseTypes::AttrImage::ImageType::NONE;
+					switch (pixelFormat) {
+					case VRay::RenderElement::PF_BW_FLOAT:
+						imgType = VRayBaseTypes::AttrImage::ImageType::BW_REAL;
+						break;
+					case VRay::RenderElement::PF_RGB_FLOAT:
+						imgType = VRayBaseTypes::AttrImage::ImageType::RGB_REAL;
+						break;
+					case VRay::RenderElement::PF_RGBA_FLOAT:
+						imgType = VRayBaseTypes::AttrImage::ImageType::RGBA_REAL;
+						break;
+					}
+
+
+					if (imgType == VRayBaseTypes::AttrImage::ImageType::NONE) {
+						Logger::log(Logger::Error, "Unsupported pixel format!", pixelFormat);
+					} else {
+						Logger::log(Logger::Error, "Render channel:", type, "Pixel format:", pixelFormat);
+						VRay::VRayImage *img = element.getImage();
+
+						int width, height;
+						img->getSize(width, height);
+						size_t size;
+						VRay::AColor *data = img->getPixelData(size);
+						size *= sizeof(VRay::AColor);
+
+						set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(data, size, imgType, width, height));
+					}
 				}
-
-
-				if (imgType == VRayBaseTypes::AttrImage::ImageType::NONE) {
-					Logger::log(Logger::Error, "Unsupported pixel format!", pixelFormat);
-				} else {
-					Logger::log(Logger::Error, "Render channel:", type, "Pixel format:", pixelFormat);
-					VRay::VRayImage *img = element.getImage();
-
-					int width, height;
-					img->getSize(width, height);
-					size_t size;
-					VRay::AColor *data = img->getPixelData(size);
-					size *= sizeof(VRay::AColor);
-
-					set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(data, size, imgType, width, height));
-				}
+			} catch (VRay::InvalidRenderElementErr &e) {
+				Logger::log(Logger::Warning, e.what(), static_cast<int>(type));
+			} catch (VRay::VRayException &e) {
+				Logger::log(Logger::Error, e.what(), static_cast<int>(type));
 			}
-			break;
-		} catch (VRay::VRayException &e) {
-			Logger::log(Logger::Error, e.what());
-		}
+		break;
+
 		default:
 			Logger::log(Logger::Warning, "Element requested, but not found", static_cast<int>(type));
 		}
