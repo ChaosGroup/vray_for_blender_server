@@ -230,7 +230,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				auto & vecVec = *map_channel_data.vertices.getData();
 				// Additionally VRay::Vector and VRayBaseTypes::AttrVector should have the same layout
 				VRay::VUtils::VectorRefList vertices(vecVec.size());
-				memcpy(vertices.get(), vecVec.data(), vecVec.size() & sizeof(VRayBaseTypes::AttrVector));
+				memcpy(vertices.get(), vecVec.data(), vecVec.size() * sizeof(VRayBaseTypes::AttrVector));
 
 				VRay::VUtils::ValueRefList map_channel(3);
 				map_channel[0].setDouble(i);
