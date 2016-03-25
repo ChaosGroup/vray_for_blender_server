@@ -88,7 +88,7 @@ class WindowsBuilder(Builder):
 
 
 	def package(self):
-		releasePath = os.path.join(self.dir_release, 'V-Ray', 'VRayZmqServer', 'VRayZmqServer.exe')
+		releasePath = os.path.join(self.dir_install, 'V-Ray', 'VRayZmqServer', 'VRayZmqServer')
 
 		sys.stdout.write("##teamcity[setParameter name='env.ENV_ARTEFACT_FILES' value='%s']" % releasePath)
 		sys.stdout.flush()
