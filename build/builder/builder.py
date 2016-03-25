@@ -51,7 +51,7 @@ class Builder:
 		self.commits        = '0'
 
 		self.teamcity_branch_hash = self.teamcity_branch_hash[:7]
-		self.dir_install_path = os.path.join(self.dir_install, self.teamcity_branch_hash)
+		self.dir_install = os.path.join(self.dir_install, self.teamcity_branch_hash)
 
 		# Host info
 		self.host_os        = utils.get_host_os()
@@ -78,7 +78,7 @@ class Builder:
 		sys.stdout.write("Target: %s %s (%s)\n" % (self.project, self.version, self.revision))
 		sys.stdout.write("Source directory:  %s\n" % (self.dir_source))
 		sys.stdout.write("Build directory:   %s\n" % (self.dir_build))
-		sys.stdout.write("Install directory: %s\n" % (self.dir_install_path))
+		sys.stdout.write("Install directory: %s\n" % (self.dir_install))
 		sys.stdout.write("Release directory: %s\n" % (self.dir_release))
 		sys.stdout.write("\n")
 
@@ -97,7 +97,7 @@ class Builder:
 
 		self.dir_build        = utils.path_slashify(self.dir_build)
 		self.dir_source       = utils.path_slashify(self.dir_source)
-		self.dir_install_path = utils.path_slashify(self.dir_install_path)
+		self.dir_install = utils.path_slashify(self.dir_install)
 
 		if self.build_clean:
 			if os.path.exists(self.dir_build):
@@ -125,7 +125,7 @@ class Builder:
 	# 		else:
 	# 			files.append("vcomp90.dll")
 	# 		for f in files:
-	# 			shutil.copy(utils.path_join(runtimeDir, f), self.dir_install_path)
+	# 			shutil.copy(utils.path_join(runtimeDir, f), self.dir_install)
 
 
 	def package(self):

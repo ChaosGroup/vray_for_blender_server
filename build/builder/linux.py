@@ -58,7 +58,7 @@ class LinuxBuilder(Builder):
 			cmake.append("-DCMAKE_CXX_COMPILER=%s" % self.gxx)
 
 		cmake.append('-DCMAKE_BUILD_TYPE=%s' % os.environ['CGR_BUILD_TYPE'])
-		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install_path)
+		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install)
 
 		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
