@@ -144,3 +144,5 @@ class Builder:
 		if not self.export_only:
 			self.compile()
 			self.compile_post()
+
+		self.package()
