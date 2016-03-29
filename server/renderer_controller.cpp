@@ -379,8 +379,11 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			//renderer->vfb.show(showVFB);
-
+			if (showVFB) {
+				renderer->vfb.show(true, true);
+			} else {
+				renderer->vfb.show(false, false);
+			}
 
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
 			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
