@@ -402,8 +402,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 	case VRayMessage::RendererAction::Resize:
 		int width, height;
 		message.getRendererSize(width, height);
-		completed = renderer->setWidth(width);
-		completed = completed && renderer->setHeight(height);
+		completed = renderer->setImageSize(width, height);
 
 		Logger::log(Logger::Info, "Renderer::resize", width, "x", height);
 		break;
