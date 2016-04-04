@@ -444,6 +444,16 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		jpegQuality = message.getValue<AttrSimpleType<int>>()->m_Value;
 		jpegQuality = std::max(0, std::min(100, jpegQuality));
 		break;
+	case VRayMessage::RendererAction::SetCurrentCamera: {
+		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		if (!cameraPlugin) {
+			Logger::log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->m_Value, "to set as current camera.");
+			completed = false;
+		} else {
+			completed = renderer->setCamera(cameraPlugin);
+		}
+		break;
+	}
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
