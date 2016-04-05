@@ -454,6 +454,28 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		}
 		break;
 	}
+	case VRayMessage::RendererAction::SetCommitAction:
+		switch (static_cast<CommitAction>(message.getValue<AttrSimpleType<int>>()->m_Value)) {
+		case CommitAction::CommitNow:
+			renderer->commit(false);
+			Logger::log(Logger::Info, "Renderer::commit(false)");
+			break;
+		case CommitAction::CommitNowForce:
+			renderer->commit(true);
+			Logger::log(Logger::Info, "Renderer::commit(true)");
+			break;
+		case CommitAction::CommitAutoOn:
+			renderer->setAutoCommit(true);
+			Logger::log(Logger::Info, "Renderer::setAutoCommit(true)");
+			break;
+		case CommitAction::CommitAutoOff:
+			renderer->setAutoCommit(false);
+			Logger::log(Logger::Info, "Renderer::setAutoCommit(false)");
+			break;
+		default:
+			Logger::log(Logger::Warning, "Invalid CommitAction: ", message.getValue<AttrSimpleType<int>>()->m_Value);
+		}
+		break;
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
