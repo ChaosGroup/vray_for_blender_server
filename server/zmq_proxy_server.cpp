@@ -101,8 +101,8 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 			{
 				lock_guard<mutex> qLock(dispatchQMutex);
 
-				int size = dispatcherQ.size();
-				for (int c = size; c < size; c++) {
+				auto size = dispatcherQ.size();
+				for (auto c = size; c < size; c++) {
 					auto item = move(dispatcherQ.front());
 					dispatcherQ.pop();
 

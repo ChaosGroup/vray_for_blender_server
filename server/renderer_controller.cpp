@@ -215,7 +215,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:
 		{
 			const VRayBaseTypes::AttrMapChannels & channelMap = *message.getValue<VRayBaseTypes::AttrMapChannels>();
-			VRay::VUtils::ValueRefList map_channels(channelMap.data.size());
+			VRay::VUtils::ValueRefList map_channels(static_cast<int>(channelMap.data.size()));
 
 			int i = 0;
 			for (const auto &mcIt : channelMap.data) {
@@ -223,13 +223,13 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 
 				// Construct VRay::VUtils::IntRefList from std::vector (VRayBaseTypes::AttrListInt)'s data ptr
 				auto & intVec = *map_channel_data.faces.getData();
-				VRay::VUtils::IntRefList faces(intVec.size());
+				VRay::VUtils::IntRefList faces(static_cast<int>(intVec.size()));
 				memcpy(faces.get(), intVec.data(), intVec.size() * sizeof(int));
 
 				// Construct VRay::VUtils::IntRefList from std::vector (VRayBaseTypes::AttrListInt)'s data ptr
 				auto & vecVec = *map_channel_data.vertices.getData();
 				// Additionally VRay::Vector and VRayBaseTypes::AttrVector should have the same layout
-				VRay::VUtils::VectorRefList vertices(vecVec.size());
+				VRay::VUtils::VectorRefList vertices(static_cast<int>(vecVec.size()));
 				memcpy(vertices.get(), vecVec.data(), vecVec.size() * sizeof(VRayBaseTypes::AttrVector));
 
 				VRay::VUtils::ValueRefList map_channel(3);
