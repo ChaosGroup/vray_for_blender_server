@@ -4,8 +4,35 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <ostream>
 
 #include "renderer_controller.h"
+
+// minimal implemetation required for the project
+class client_id_t {
+public:
+	client_id_t(uint64_t id): m_id(id) {}
+
+	operator const uint64_t() const {
+		return m_id;
+	}
+
+private:
+	uint64_t m_id;
+};
+
+inline std::ostream & operator<<(std::ostream & strm, const client_id_t & id) {
+	return strm << (uint64_t)id % 1000;
+}
+
+namespace std {
+	template <>
+	struct hash<client_id_t> {
+		size_t operator()(const client_id_t & el) {
+			return el;
+		}
+	};
+}
 
 class ZmqProxyServer {
 	typedef std::chrono::high_resolution_clock::time_point time_point;
@@ -14,7 +41,7 @@ class ZmqProxyServer {
 	struct WorkerWrapper {
 		std::shared_ptr<RendererController> worker;
 		time_point lastKeepAlive;
-		uint64_t id;
+		client_id_t id;
 		uint64_t appsdkWorkTimeMs;
 	};
 
@@ -27,7 +54,7 @@ private:
 
 	void dispatcherThread();
 
-	void addWorker(uint64_t clientId, time_point now);
+	void addWorker(client_id_t clientId, time_point now);
 	uint64_t sendOutMessages();
 	bool initZmq();
 	bool reportStats(time_point now);
@@ -40,7 +67,7 @@ private:
 	std::string port;
 
 	// active workers
-	std::unordered_map<uint64_t, WorkerWrapper> workers;
+	std::unordered_map<client_id_t, WorkerWrapper> workers;
 	std::mutex workersMutex;
 
 	std::unique_ptr<zmq::context_t> context;
@@ -49,9 +76,9 @@ private:
 	std::unique_ptr<VRay::VRayInit> vray;
 
 	// message queue for sending
-	std::queue<std::pair<uint64_t, VRayMessage>> sendQ;
+	std::queue<std::pair<client_id_t, VRayMessage>> sendQ;
 	// message queue for receieveing messages
-	std::queue<std::pair<uint64_t, zmq::message_t>> dispatcherQ;
+	std::queue<std::pair<client_id_t, zmq::message_t>> dispatcherQ;
 	std::mutex sendQMutex, dispatchQMutex;
 
 

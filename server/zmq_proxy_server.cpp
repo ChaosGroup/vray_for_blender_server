@@ -44,7 +44,7 @@ void ZmqProxyServer::dispatcherThread() {
 	}
 }
 
-void ZmqProxyServer::addWorker(uint64_t clientId, time_point now) {
+void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 	auto sendFn = [this, clientId](VRayMessage && msg) {
 		lock_guard<mutex> l(this->sendQMutex);
 		this->sendQ.emplace(make_pair(clientId, move(msg)));
@@ -73,8 +73,8 @@ uint64_t ZmqProxyServer::sendOutMessages() {
 		auto & p = sendQ.front();
 		transferred += p.second.getMessage().size();
 
-		message_t id(sizeof(uint64_t));
-		memcpy(id.data(), &p.first, sizeof(uint64_t));
+		message_t id(sizeof(client_id_t));
+		memcpy(id.data(), &p.first, sizeof(client_id_t));
 		routerSocket->send(id, ZMQ_SNDMORE);
 		routerSocket->send("", 0, ZMQ_SNDMORE);
 		routerSocket->send(p.second.getMessage());
@@ -208,7 +208,7 @@ void ZmqProxyServer::run() {
 			assert(!e.size() && "No empty frame!");
 			assert(payload.size() && "Unexpected empty frame");
 
-			const uint64_t messageIdentity = *reinterpret_cast<uint64_t*>(identity.data());
+			const client_id_t messageIdentity = *reinterpret_cast<client_id_t*>(identity.data());
 
 			uint64_t receiverId = 0;
 
