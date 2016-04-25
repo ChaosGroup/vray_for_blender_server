@@ -28,7 +28,7 @@ inline std::ostream & operator<<(std::ostream & strm, const client_id_t & id) {
 namespace std {
 	template <>
 	struct hash<client_id_t> {
-		size_t operator()(const client_id_t & el) {
+		size_t operator()(const client_id_t & el) const {
 			return el;
 		}
 	};
