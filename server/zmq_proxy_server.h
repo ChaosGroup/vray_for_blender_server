@@ -5,6 +5,7 @@
 #include <thread>
 #include <unordered_map>
 #include <ostream>
+#include <iomanip>
 
 #include "renderer_controller.h"
 
@@ -22,7 +23,7 @@ private:
 };
 
 inline std::ostream & operator<<(std::ostream & strm, const client_id_t & id) {
-	return strm << (uint64_t)id % 1000;
+	return strm << std::setfill('0') << std::setw(3) << (uint64_t)id % 1000;
 }
 
 namespace std {

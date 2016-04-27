@@ -116,7 +116,6 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 	}
 
 	lastTimeoutCheck = now;
-	int activeExporters = 0;
 	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
 		uint64_t maxTimeout = 0;
@@ -124,7 +123,6 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 		switch (workerIter->second.clientType) {
 		case ClientType::Exporter:
 			maxTimeout = EXPORTER_TIMEOUT;
-			++activeExporters;
 			break;
 		case ClientType::Heartbeat:
 			maxTimeout = HEARBEAT_TIMEOUT;
@@ -134,7 +132,11 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 		}
 
 		if (inactiveTime > maxTimeout) {
-			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
+			if (workerIter->second.clientType == ClientType::Exporter) {
+				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
+			} else if (workerIter->second.clientType == ClientType::Heartbeat) {
+				Logger::log(Logger::Debug, "Blender instance heartbeat (", workerIter->first, ") timed out");
+			}
 
 			// filter messages intended for the selected client
 			clearMessagesForClient(workerIter->first);
@@ -148,9 +150,6 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 		}
 	}
 
-	if (activeExporters) {
-		Logger::log(Logger::Debug, "Active renderers:", activeExporters);
-	}
 	return true;
 }
 
@@ -193,11 +192,15 @@ bool ZmqProxyServer::reportStats(time_point now) {
 		dataTransfered = 0;
 	}
 
+	int exporterCount = 0;
 	for (const auto & worker : workers) {
 		if (worker.second.clientType == ClientType::Exporter) {
+			++exporterCount;
 			Logger::log(Logger::Debug, "Client (", worker.second.id, ") appsdk time:", worker.second.appsdkWorkTimeMs, "ms");
 		}
 	}
+
+	Logger::log(Logger::Debug, "Exporters:", exporterCount, "Active Blender instaces:", workers.size() - exporterCount);
 
 	return true;
 }
