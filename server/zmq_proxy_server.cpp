@@ -220,8 +220,8 @@ void ZmqProxyServer::run() {
 			didWork = didWork || checkForTimeout(now);
 
 			if (checkForHeartbeat(now)) {
-				Logger::log(Logger::Error, "No active blender instaces for more than", HEARBEAT_TIMEOUT, "ms Shutting down");
 				if (checkHeartbeat) {
+					Logger::log(Logger::Error, "No active blender instaces for more than", HEARBEAT_TIMEOUT, "ms Shutting down");
 					break;
 				}
 			}
