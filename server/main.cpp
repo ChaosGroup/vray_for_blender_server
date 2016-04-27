@@ -5,8 +5,15 @@
 #include <string>
 
 struct ArgvSettings {
+	ArgvSettings()
+	    : port("")
+	    , showVFB(false)
+	    , checkHearbeat(true)
+	    , logLevel(Logger::Warning)
+	{}
 	std::string port;
 	bool showVFB;
+	bool checkHearbeat;
 	Logger::Level logLevel;
 };
 
@@ -20,8 +27,10 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			std::stringstream strm(argv[++c]);
 			int lvl;
 			if (strm >> lvl) {
-				settings.logLevel = static_cast<Logger::Level>( (lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl) );
+				settings.logLevel = static_cast<Logger::Level>((lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl));
 			}
+		} else if (!strcmp(argv[c], "-noHearthbeat")) {
+			settings.checkHearbeat = false;
 		} else {
 			return false;
 		}
@@ -45,7 +54,7 @@ void printHelp() {
 
 
 int main(int argc, char *argv[]) {
-	ArgvSettings settings = {"", false, Logger::Warning};
+	ArgvSettings settings;
 	if (!parseArgv(settings, argc, argv)) {
 		printHelp();
 		return 0;
@@ -83,7 +92,7 @@ int main(int argc, char *argv[]) {
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	try {
-		ZmqProxyServer server(settings.port, path, settings.showVFB);
+		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
 		server.run();
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());

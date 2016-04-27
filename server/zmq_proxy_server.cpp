@@ -9,9 +9,15 @@ using namespace std;
 using namespace std::chrono;
 using namespace zmq;
 
-ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool showVFB)
-	: port(port), context(nullptr), routerSocket(nullptr),
-	vray(new VRay::VRayInit(appsdkPath)), showVFB(showVFB), dataTransfered(0) {
+ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool showVFB, bool checkHeartbeat)
+    : port(port)
+    , context(nullptr)
+    , routerSocket(nullptr)
+    , vray(new VRay::VRayInit(appsdkPath))
+    , dataTransfered(0)
+    , showVFB(showVFB)
+	, checkHeartbeat(checkHeartbeat)
+{
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
 	}
@@ -33,6 +39,9 @@ void ZmqProxyServer::dispatcherThread() {
 			lock_guard<mutex> workerLock(workersMutex);
 			auto worker = this->workers.find(item.first);
 			if (worker != this->workers.end()) {
+				if (worker->second.clientType != ClientType::Exporter) {
+					Logger::log(Logger::Error, "Message from non exporter client");
+				}
 
 				auto beforeCall = chrono::high_resolution_clock::now();
 				worker->second.worker->handle(VRayMessage(item.second));
@@ -52,7 +61,7 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 
 	WorkerWrapper wrapper = {
 		shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
-		now, clientId, 0
+		now, clientId, 0, ClientType::Exporter
 	};
 
 	auto res = workers.emplace(make_pair(clientId, wrapper));
@@ -85,34 +94,48 @@ uint64_t ZmqProxyServer::sendOutMessages() {
 	return transferred;
 }
 
-#ifdef VRAY_ZMQ_PING
+void ZmqProxyServer::clearMessagesForClient(const client_id_t & cl) {
+	lock_guard<mutex> qLock(dispatchQMutex);
+
+	auto size = dispatcherQ.size();
+	for (auto c = size; c < size; c++) {
+		auto item = move(dispatcherQ.front());
+		dispatcherQ.pop();
+
+		if (dispatcherQ.front().first != cl) {
+			dispatcherQ.emplace(move(item));
+		} else {
+			--size;
+		}
+	}
+}
+
 bool ZmqProxyServer::checkForTimeout(time_point now) {
-	if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() <= DISCONNECT_TIMEOUT || workers.empty()) {
+	if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() <= 100 || workers.empty()) {
 		return false;
 	}
 
 	lastTimeoutCheck = now;
 	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
-		if (inactiveTime > DISCONNECT_TIMEOUT) {
+		uint64_t max_timeout = 0;
+
+		switch (workerIter->second.clientType) {
+		case ClientType::Exporter:
+			max_timeout = EXPORTER_TIMEOUT;
+			break;
+		case ClientType::Heartbeat:
+			max_timeout = HEARBEAT_TIMEOUT;
+			break;
+		default:
+			max_timeout = 0;
+		}
+
+		if (inactiveTime > max_timeout) {
 			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer.");
 
 			// filter messages intended for the selected client
-			{
-				lock_guard<mutex> qLock(dispatchQMutex);
-
-				auto size = dispatcherQ.size();
-				for (auto c = size; c < size; c++) {
-					auto item = move(dispatcherQ.front());
-					dispatcherQ.pop();
-
-					if (dispatcherQ.front().first != workerIter->first) {
-						dispatcherQ.emplace(move(item));
-					} else {
-						--size;
-					}
-				}
-			}
+			clearMessagesForClient(workerIter->first);
 
 			{
 				lock_guard<mutex> workerLock(workersMutex);
@@ -126,7 +149,19 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 	Logger::log(Logger::Debug, "Active renderers:", workers.size());
 	return true;
 }
-#endif // VRAY_ZMQ_PING
+
+bool ZmqProxyServer::checkForHeartbeat(time_point now) {
+	auto active_heartbeats = count_if(workers.begin(), workers.end(), [](const pair<client_id_t, WorkerWrapper> & worker) {
+		return worker.second.clientType == ClientType::Heartbeat;
+	});
+
+	if (active_heartbeats != 0) {
+		lastHeartbeat = now;
+		return false;
+	} else {
+		return duration_cast<milliseconds>(now - lastHeartbeat).count() > HEARBEAT_TIMEOUT;
+	}
+}
 
 bool ZmqProxyServer::initZmq() {
 	try {
@@ -182,10 +217,14 @@ void ZmqProxyServer::run() {
 			auto now = high_resolution_clock::now();
 
 			didWork = didWork || reportStats(now);
-
-#ifdef VRAY_ZMQ_PING
 			didWork = didWork || checkForTimeout(now);
-#endif // VRAY_ZMQ_PING
+
+			if (checkForHeartbeat(now)) {
+				Logger::log(Logger::Error, "No active blender instaces for more than", HEARBEAT_TIMEOUT, "ms Shutting down");
+				if (checkHeartbeat) {
+					break;
+				}
+			}
 
 			if (auto transfer = sendOutMessages()) {
 				didWork = true;
@@ -224,10 +263,26 @@ void ZmqProxyServer::run() {
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 
-			if (payload.size() > 1) {
+
+			if (payload.size() == sizeof(ClientType)) {
+				const ClientType * type = reinterpret_cast<ClientType *>(payload.data());
+				worker->second.clientType = *type;
+				if (*type != ClientType::Heartbeat && *type != ClientType::Exporter) {
+					Logger::log(Logger::Error, "Unexpected client type", static_cast<int>(*type), "Disconnecting client", worker->first);
+					clearMessagesForClient(worker->first);
+					workers.erase(worker);
+				} else {
+					// respond to heartbeat
+					lock_guard<mutex> l(this->sendQMutex);
+					VRayMessage msg(sizeof(ClientType));
+					memcpy(msg.getMessage().data(), type, sizeof(ClientType));
+					this->sendQ.emplace(make_pair(messageIdentity, move(msg)));
+				}
+			} else {
 				lock_guard<mutex> l(dispatchQMutex);
 				dispatcherQ.push(make_pair(messageIdentity, move(payload)));
 			}
+
 			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
 	} catch (zmq::error_t & e) {

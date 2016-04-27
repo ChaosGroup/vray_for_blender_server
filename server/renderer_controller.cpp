@@ -429,7 +429,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 	case VRayMessage::RendererAction::ExportScene:
 	{
 		VRay::VRayExportSettings exportParams;
-		exportParams.useHexFormat = true;
+		exportParams.useHexFormat = false;
 		exportParams.compressed = false;
 
 		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, &exportParams);
@@ -578,8 +578,8 @@ void RendererController::stopRenderer() {
 		renderer->setOnDumpMessage(nullptr);
 		renderer->vfb.show(false, false);
 
-		renderer->reset();
 		renderer->stop();
+		//renderer->reset();
 		renderer.release();
 	}
 }

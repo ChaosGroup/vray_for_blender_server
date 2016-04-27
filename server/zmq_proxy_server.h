@@ -43,10 +43,11 @@ class ZmqProxyServer {
 		time_point lastKeepAlive;
 		client_id_t id;
 		uint64_t appsdkWorkTimeMs;
+		ClientType clientType;
 	};
 
 public:
-	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false);
+	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false, bool checkHeartbeat = true);
 
 	void run();
 
@@ -58,11 +59,15 @@ private:
 	uint64_t sendOutMessages();
 	bool initZmq();
 	bool reportStats(time_point now);
-#ifdef VRAY_ZMQ_PING
+
+	// this will return true if there is no client for more than SHUTDOWN_TIMEOUT
+	bool checkForHeartbeat(time_point now);
 	bool checkForTimeout(time_point now);
-#endif // VRAY_ZMQ_PING
+
+	void clearMessagesForClient(const client_id_t & client);
 
 private:
+	const bool checkHeartbeat;
 	bool showVFB;
 	std::string port;
 
@@ -82,7 +87,9 @@ private:
 	std::mutex sendQMutex, dispatchQMutex;
 
 
-	time_point lastDataCheck, lastTimeoutCheck;
+	time_point lastDataCheck;
+	time_point lastTimeoutCheck;
+	time_point lastHeartbeat;
 	uint64_t dataTransfered;
 };
 
