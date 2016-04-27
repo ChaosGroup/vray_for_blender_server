@@ -208,13 +208,15 @@ void ZmqProxyServer::run() {
 		return;
 	}
 
-	lastTimeoutCheck = high_resolution_clock::now();
-	lastDataCheck = high_resolution_clock::now();
+	auto now = high_resolution_clock::now();
+	lastTimeoutCheck = now;
+	lastDataCheck = now;
+	lastHeartbeat = now;
 
 	try {
 		while (true) {
 			bool didWork = false;
-			auto now = high_resolution_clock::now();
+			now = high_resolution_clock::now();
 
 			didWork = didWork || reportStats(now);
 			didWork = didWork || checkForTimeout(now);
