@@ -16,7 +16,8 @@ ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool
     , vray(new VRay::VRayInit(appsdkPath))
     , dataTransfered(0)
     , showVFB(showVFB)
-	, checkHeartbeat(checkHeartbeat)
+    , checkHeartbeat(checkHeartbeat)
+    , dispatcherRunning(false)
 {
 	if (!vray) {
 		throw logic_error("Failed to instantiate vray!");
@@ -24,7 +25,7 @@ ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool
 }
 
 void ZmqProxyServer::dispatcherThread() {
-	while (true) {
+	while (dispatcherRunning) {
 		if (!dispatcherQ.empty()) {
 			unique_lock<mutex> lock(dispatchQMutex);
 			if (dispatcherQ.empty()) {
@@ -38,6 +39,11 @@ void ZmqProxyServer::dispatcherThread() {
 
 			lock_guard<mutex> workerLock(workersMutex);
 			auto worker = this->workers.find(item.first);
+
+			if (!dispatcherRunning) {
+				return;
+			}
+
 			if (worker != this->workers.end()) {
 				if (worker->second.clientType != ClientType::Exporter) {
 					Logger::log(Logger::Error, "Message from non exporter client");
@@ -64,8 +70,11 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 		now, clientId, 0, ClientType::Exporter
 	};
 
-	auto res = workers.emplace(make_pair(clientId, wrapper));
-	assert(res.second && "Failed to add worker!");
+	{
+		lock_guard<std::mutex> workerLock(workersMutex);
+		auto res = workers.emplace(make_pair(clientId, wrapper));
+		assert(res.second && "Failed to add worker!");
+	}
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected - spawning renderer.");
 }
 
@@ -206,16 +215,23 @@ bool ZmqProxyServer::reportStats(time_point now) {
 }
 
 void ZmqProxyServer::run() {
-	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this);
-	auto stopDispatcher = [](thread *th) {
-		th->detach();
-	};
-
-	unique_ptr<thread, decltype(stopDispatcher)> wrapper(&dispacther, stopDispatcher);
-
 	if (!initZmq()) {
 		return;
 	}
+
+	dispatcherRunning = true;
+	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this);
+
+	auto stopDispatcher = [this](thread *th) {
+		dispatcherRunning = false;
+		if (th->joinable()) {
+			th->join();
+		} else {
+			th->detach();
+		}
+	};
+
+	unique_ptr<thread, decltype(stopDispatcher)> wrapper(&dispacther, stopDispatcher);
 
 	auto now = high_resolution_clock::now();
 	lastTimeoutCheck = now;
@@ -302,7 +318,13 @@ void ZmqProxyServer::run() {
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
 
-	workers.clear();
+	dispatcherRunning = false;
+	Logger::log(Logger::Debug, "Waiting for dispatcher thread to stop.");
+	dispacther.join();
+	{
+		lock_guard<std::mutex> workrsLock(workersMutex);
+		workers.clear();
+	}
 	routerSocket.release();
 	context.release();
 }

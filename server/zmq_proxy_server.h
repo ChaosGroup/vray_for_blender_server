@@ -70,6 +70,7 @@ private:
 private:
 	const bool checkHeartbeat;
 	bool showVFB;
+	bool dispatcherRunning;
 	std::string port;
 
 	// active workers
