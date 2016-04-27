@@ -83,7 +83,7 @@ private:
 	std::unique_ptr<VRay::VRayInit> vray;
 
 	// message queue for sending
-	std::queue<std::pair<client_id_t, VRayMessage>> sendQ;
+	std::deque<std::pair<client_id_t, VRayMessage>> sendQ;
 	// message queue for receieveing messages
 	std::queue<std::pair<client_id_t, zmq::message_t>> dispatcherQ;
 	std::mutex sendQMutex, dispatchQMutex;

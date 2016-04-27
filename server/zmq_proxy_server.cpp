@@ -62,7 +62,7 @@ void ZmqProxyServer::dispatcherThread() {
 void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 	auto sendFn = [this, clientId](VRayMessage && msg) {
 		lock_guard<mutex> l(this->sendQMutex);
-		this->sendQ.emplace(make_pair(clientId, move(msg)));
+		this->sendQ.emplace_back(make_pair(clientId, move(msg)));
 	};
 
 	WorkerWrapper wrapper = {
@@ -97,7 +97,7 @@ uint64_t ZmqProxyServer::sendOutMessages() {
 		routerSocket->send("", 0, ZMQ_SNDMORE);
 		routerSocket->send(p.second.getMessage());
 
-		sendQ.pop();
+		sendQ.pop_front();
 	}
 
 	return transferred;
@@ -303,7 +303,8 @@ void ZmqProxyServer::run() {
 					lock_guard<mutex> l(this->sendQMutex);
 					VRayMessage msg(sizeof(ClientType));
 					memcpy(msg.getMessage().data(), type, sizeof(ClientType));
-					this->sendQ.emplace(make_pair(messageIdentity, move(msg)));
+					// answer to hearbeat with priority - put it first
+					sendQ.emplace_front(make_pair(messageIdentity, move(msg)));
 				}
 			} else {
 				lock_guard<mutex> l(dispatchQMutex);
