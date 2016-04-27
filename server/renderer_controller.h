@@ -13,7 +13,6 @@
 #include <memory>
 #include <unordered_set>
 #include "zmq_wrapper.h"
-#include "zmq_server_client.h"
 
 class RendererController {
 public:
