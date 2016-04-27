@@ -631,7 +631,7 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 
 		sendFn(VRayMessage::createMessage(std::move(set)));
 
-		Logger::log(Logger::Debug, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
+		Logger::log(Logger::Info, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 	}
 }
 
