@@ -321,7 +321,7 @@ void ZmqProxyServer::run() {
 
 	dispatcherRunning = false;
 	Logger::log(Logger::Debug, "Waiting for dispatcher thread to stop.");
-	dispacther.join();
+	wrapper.reset();
 	{
 		lock_guard<std::mutex> workrsLock(workersMutex);
 		workers.clear();
