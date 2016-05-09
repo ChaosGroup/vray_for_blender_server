@@ -341,7 +341,6 @@ void ZmqProxyServer::run() {
 				if (worker == workers.end()) {
 					Logger::log(Logger::Error, "Failed to create worker for client (", messageIdentity, ")");
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 
 
