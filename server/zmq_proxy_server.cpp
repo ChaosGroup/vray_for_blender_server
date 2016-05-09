@@ -125,37 +125,54 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 	}
 
 	lastTimeoutCheck = now;
+	// count how many exporters are active in the last HEARBEAT_TIMEOUT ms
+	// if none - then we will check heartbeat clients also
+	int activeExporterHeartbeats = 0;
+
 	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
-		uint64_t maxTimeout = 0;
 
-		switch (workerIter->second.clientType) {
-		case ClientType::Exporter:
-			maxTimeout = EXPORTER_TIMEOUT;
-			break;
-		case ClientType::Heartbeat:
-			maxTimeout = HEARBEAT_TIMEOUT;
-			break;
-		default:
-			maxTimeout = 0;
-		}
-
-		if (inactiveTime > maxTimeout) {
-			if (workerIter->second.clientType == ClientType::Exporter) {
-				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
-			} else if (workerIter->second.clientType == ClientType::Heartbeat) {
-				Logger::log(Logger::Debug, "Blender instance heartbeat (", workerIter->first, ") timed out");
+		if (workerIter->second.clientType == ClientType::Exporter) {
+			if (inactiveTime <= HEARBEAT_TIMEOUT) {
+				++activeExporterHeartbeats;
 			}
 
-			// filter messages intended for the selected client
-			clearMessagesForClient(workerIter->first);
+			if (inactiveTime > EXPORTER_TIMEOUT) {
+				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
 
-			{
-				lock_guard<mutex> workerLock(workersMutex);
-				workerIter = workers.erase(workerIter);
+				// filter messages intended for the selected client
+				clearMessagesForClient(workerIter->first);
+
+				{
+					lock_guard<mutex> workerLock(workersMutex);
+					workerIter = workers.erase(workerIter);
+				}
+			} else {
+				++workerIter;
 			}
 		} else {
 			++workerIter;
+		}
+	}
+
+	// check all heartbeat clients
+	if (activeExporterHeartbeats == 0) {
+		for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
+			if (workerIter->second.clientType == ClientType::Heartbeat) {
+				auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
+
+				if (inactiveTime > HEARBEAT_TIMEOUT) {
+					Logger::log(Logger::Debug, "Blender instance heartbeat (", workerIter->first, ") timed out");
+
+					clearMessagesForClient(workerIter->first);
+					{
+						lock_guard<mutex> workerLock(workersMutex);
+						workerIter = workers.erase(workerIter);
+					}
+				} else {
+					++workerIter;
+				}
+			}
 		}
 	}
 
