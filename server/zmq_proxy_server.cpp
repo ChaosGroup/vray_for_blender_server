@@ -173,6 +173,8 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 				} else {
 					++workerIter;
 				}
+			} else {
+				++workerIter;
 			}
 		}
 	}
