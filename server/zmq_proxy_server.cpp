@@ -75,7 +75,7 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 		auto res = workers.emplace(make_pair(clientId, wrapper));
 		assert(res.second && "Failed to add worker!");
 	}
-	Logger::log(Logger::Debug, "New client (", clientId, ") connected - spawning renderer.");
+	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
 }
 
 uint64_t ZmqProxyServer::sendOutMessages() {
@@ -157,6 +157,7 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 
 	// check all heartbeat clients
 	if (activeExporterHeartbeats == 0) {
+		Logger::log(Logger::Info, "Checking heartbeat clients for timeouts.");
 		for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 			if (workerIter->second.clientType == ClientType::Heartbeat) {
 				auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
@@ -337,7 +338,7 @@ void ZmqProxyServer::run() {
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
 
 	dispatcherRunning = false;
-	Logger::log(Logger::Debug, "Waiting for dispatcher thread to stop.");
+	Logger::log(Logger::Info, "Waiting for dispatcher thread to stop.");
 	wrapper.reset();
 	{
 		lock_guard<std::mutex> workrsLock(workersMutex);
@@ -345,4 +346,5 @@ void ZmqProxyServer::run() {
 	}
 	routerSocket.release();
 	context.release();
+	Logger::log(Logger::Debug, "Main thread stopping.");
 }
