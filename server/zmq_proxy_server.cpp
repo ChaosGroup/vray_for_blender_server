@@ -48,7 +48,7 @@ void ZmqProxyServer::dispatcherThread() {
 			// explicitly unlock at this point to allow main thread to use the Q sooner
 			lock.unlock();
 
-			lock_guard<mutex> workerLock(workersMutex);
+			unique_lock<mutex> workerLock(workersMutex);
 			auto worker = this->workers.find(item.first);
 
 			if (!dispatcherRunning) {
@@ -60,9 +60,21 @@ void ZmqProxyServer::dispatcherThread() {
 					Logger::log(Logger::Error, "Message from non exporter client");
 				}
 
+				auto workerPtr = worker->second.worker;
+				workerLock.unlock();
+
 				auto beforeCall = chrono::high_resolution_clock::now();
-				worker->second.worker->handle(VRayMessage(item.second));
+				workerPtr->handle(VRayMessage(item.second));
 				uint64_t duration = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
+
+				workerLock.lock();
+
+				worker = workers.find(item.first);
+				if (worker == workers.end()) {
+					Logger::log(Logger::Warning, "Renderer disconnected while handling message for", duration, "ms");
+					continue;
+				}
+
 				worker->second.appsdkMaxTimeMs = max(worker->second.appsdkMaxTimeMs, duration);
 				worker->second.appsdkWorkTimeMs += duration;
 			}
