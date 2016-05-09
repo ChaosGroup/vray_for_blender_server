@@ -43,8 +43,11 @@ class ZmqProxyServer {
 		std::shared_ptr<RendererController> worker;
 		time_point lastKeepAlive;
 		client_id_t id;
-		uint64_t appsdkWorkTimeMs;
 		ClientType clientType;
+		uint64_t appsdkWorkTimeMs;
+		uint64_t appsdkMaxTimeMs;
+
+		WorkerWrapper(std::shared_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType);
 	};
 
 public:

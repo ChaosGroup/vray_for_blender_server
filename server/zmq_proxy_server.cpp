@@ -9,6 +9,17 @@ using namespace std;
 using namespace std::chrono;
 using namespace zmq;
 
+ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::shared_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType)
+    : worker(worker)
+    , lastKeepAlive(lastKeepAlive)
+    , id(id)
+    , clientType(clType)
+    , appsdkWorkTimeMs(0)
+    , appsdkMaxTimeMs(0)
+{
+
+}
+
 ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool showVFB, bool checkHeartbeat)
     : port(port)
     , context(nullptr)
@@ -51,7 +62,9 @@ void ZmqProxyServer::dispatcherThread() {
 
 				auto beforeCall = chrono::high_resolution_clock::now();
 				worker->second.worker->handle(VRayMessage(item.second));
-				worker->second.appsdkWorkTimeMs += chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
+				uint64_t duration = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
+				worker->second.appsdkMaxTimeMs = max(worker->second.appsdkMaxTimeMs, duration);
+				worker->second.appsdkWorkTimeMs += duration;
 			}
 		} else {
 			this_thread::sleep_for(chrono::milliseconds(1));
@@ -67,7 +80,7 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 
 	WorkerWrapper wrapper = {
 		shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
-		now, clientId, 0, ClientType::Exporter
+		now, clientId, ClientType::Exporter
 	};
 
 	{
@@ -90,6 +103,14 @@ uint64_t ZmqProxyServer::sendOutMessages() {
 	while (sendQ.size() && --maxSend) {
 		auto & p = sendQ.front();
 		transferred += p.second.getMessage().size();
+
+		{
+			lock_guard<mutex> workerLock(workersMutex);
+			auto worker = workers.find(p.first);
+			if (worker != workers.end() && worker->second.clientType == ClientType::Heartbeat) {
+				Logger::log(Logger::Info, "Responding to heartbeat to (", p.first, ")");
+			}
+		}
 
 		message_t id(sizeof(client_id_t));
 		memcpy(id.data(), &p.first, sizeof(client_id_t));
@@ -225,7 +246,8 @@ bool ZmqProxyServer::reportStats(time_point now) {
 	for (const auto & worker : workers) {
 		if (worker.second.clientType == ClientType::Exporter) {
 			++exporterCount;
-			Logger::log(Logger::Debug, "Client (", worker.second.id, ") appsdk time:", worker.second.appsdkWorkTimeMs, "ms");
+			Logger::log(Logger::Debug, "Client (", worker.second.id, ") total appsdk time:", worker.second.appsdkWorkTimeMs, 
+			    "ms, max appsdk time:", worker.second.appsdkMaxTimeMs, "ms");
 		}
 	}
 
