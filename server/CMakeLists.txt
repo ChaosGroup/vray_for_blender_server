@@ -30,6 +30,7 @@ if(WITH_STATIC_LIBC)
 endif()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
+link_with_vray_appsdk(${PROJECT_NAME})
 
 set(SYSTEM_LIBS "")
 if(UNIX)

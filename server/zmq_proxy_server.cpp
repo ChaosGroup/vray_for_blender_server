@@ -1,9 +1,11 @@
-#define VRAY_RUNTIME_LOAD_SECONDARY
+#define VRAY_RUNTIME_LOAD_PRIMARY
 #include "zmq_proxy_server.h"
 #include "utils/logger.h"
 #include <chrono>
 #include <random>
 #include <exception>
+
+#include <vraysdk.hpp>
 
 using namespace std;
 using namespace std::chrono;

@@ -33,7 +33,7 @@ macro(use_vray_appsdk)
 
 	find_library(VRAY_APPSDK_LIB
 		NAMES VRaySDKLibrary
-		PATHS ${APPSDK_ROOT}/bin
+		PATHS ${APPSDK_ROOT}/bin ${APPSDK_ROOT}/lib
 	)
 
 	if(NOT VRAY_APPSDK_LIB)
@@ -44,6 +44,9 @@ macro(use_vray_appsdk)
 
 	include_directories(${APPSDK_ROOT}/cpp/include)
 	link_directories(${APPSDK_ROOT}/bin)
+	link_directories(${APPSDK_ROOT}/lib)
+
+	# DEPRECATED: should be removed
 	link_directories(${APPSDK_PATH}/devel)
 endmacro()
 

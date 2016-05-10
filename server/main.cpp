@@ -1,5 +1,5 @@
-#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "zmq_proxy_server.h"
+#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "utils/logger.h"
 #include "utils/version.h"
 #include <string>
