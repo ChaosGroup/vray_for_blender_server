@@ -103,7 +103,14 @@ int main(int argc, char *argv[]) {
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
 		stdQThread serverRunner(&ZmqProxyServer::run, &server);
 
-		return qapp.exec();
+		int retCode = qapp.exec();
+		if (serverRunner.joinable()) {
+			serverRunner.join();
+		} else {
+			serverRunner.detach();
+		}
+
+		return retCode;
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {

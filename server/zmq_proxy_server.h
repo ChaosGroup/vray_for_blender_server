@@ -30,6 +30,8 @@ public:
 
 	bool joinable() { return isFinished(); }
 	void join() { exit(); wait(); }
+
+	// this actually terminates the thread, name is so we match std
 	void detach() { terminate(); }
 
 	void run() override { execFn(); }
