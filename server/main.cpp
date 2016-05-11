@@ -4,6 +4,10 @@
 #include "utils/version.h"
 #include <string>
 
+#include <qapplication.h>
+#include <qthread.h>
+#include <qerrormessage.h>
+
 struct ArgvSettings {
 	ArgvSettings()
 	    : port("")
@@ -29,7 +33,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			if (strm >> lvl) {
 				settings.logLevel = static_cast<Logger::Level>((lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl));
 			}
-		} else if (!strcmp(argv[c], "-noHearthbeat")) {
+		} else if (!strcmp(argv[c], "-noHeartbeat")) {
 			settings.checkHearbeat = false;
 		} else {
 			return false;
@@ -92,8 +96,14 @@ int main(int argc, char *argv[]) {
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	try {
+		int argc = 0;
+		char *argv[1] = { nullptr };
+		QApplication qapp(argc, argv);
+
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
-		server.run();
+		stdQThread serverRunner(&ZmqProxyServer::run, &server);
+
+		return qapp.exec();
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {

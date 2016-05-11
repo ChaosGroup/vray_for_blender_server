@@ -32,6 +32,14 @@ endif()
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 link_with_vray_appsdk(${PROJECT_NAME})
 
+set(CMAKE_PREFIX_PATH "D:/libs/Qt/4.8.2")
+find_package(Qt4 REQUIRED)
+include_directories(${Qt4_INCLUDE_DIRS})
+INCLUDE(${QT_USE_FILE})
+
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${QT_QTMAIN_LIBRARY} ${QT_LIBRARIES})
+
 set(SYSTEM_LIBS "")
 if(UNIX)
 	if(APPLE)
