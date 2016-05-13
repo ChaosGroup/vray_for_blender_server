@@ -6,7 +6,6 @@
 #include <exception>
 
 #include <vraysdk.hpp>
-#include <qapplication.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -272,8 +271,6 @@ bool ZmqProxyServer::reportStats(time_point now) {
 }
 
 void ZmqProxyServer::run() {
-	using thread = stdQThread;
-
 	if (!initZmq()) {
 		return;
 	}

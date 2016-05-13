@@ -17,35 +17,6 @@
 #include <vraysdk.hpp>
 #include "renderer_controller.h"
 
-#include <qthread.h>
-
-// behaves like std::thread
-class stdQThread: QThread {
-public:
-	template<class Fn, class... Args>
-	explicit stdQThread(Fn && fn, Args&&... argv) {
-		execFn = std::bind(std::forward<Fn>(fn), std::forward<Args>(argv)...);
-		start();
-	}
-
-	bool joinable() { return isFinished(); }
-	void join() { exit(); wait(); }
-
-	// this actually terminates the thread, name is so we match std
-	void detach() { terminate(); }
-
-	void run() override { execFn(); }
-
-	~stdQThread() {
-		if (!isFinished()) {
-			throw std::logic_error("Thread not terminated before destructor of stdQThread");
-		}
-	}
-
-private:
-	std::function<void()> execFn;
-};
-
 // minimal implemetation required for the project
 class client_id_t {
 public:
@@ -91,7 +62,6 @@ public:
 	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false, bool checkHeartbeat = true);
 
 	void run();
-
 private:
 
 	void dispatcherThread();
