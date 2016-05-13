@@ -4,6 +4,8 @@
 #include "utils/version.h"
 #include <string>
 
+#include <qapplication.h>
+
 struct ArgvSettings {
 	ArgvSettings()
 	    : port("")
@@ -29,7 +31,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			if (strm >> lvl) {
 				settings.logLevel = static_cast<Logger::Level>((lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl));
 			}
-		} else if (!strcmp(argv[c], "-noHearthbeat")) {
+		} else if (!strcmp(argv[c], "-noHeartbeat")) {
 			settings.checkHearbeat = false;
 		} else {
 			return false;
@@ -86,14 +88,27 @@ int main(int argc, char *argv[]) {
 		printf("Undefined %s, will try to load appsdk from LD_LIBRARY_PATH OR PATH\n", sdkPathName);
 	}
 
-
 	printInfo();
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	try {
+		int argc = 0;
+		char *argv[1] = { nullptr };
+		QApplication qapp(argc, argv);
+
+		// keep this until appsdk gets fix for QT
+		{
+			VRay::RendererOptions opts;
+			opts.showFrameBuffer = false;
+			VRay::VRayRenderer r(opts);
+		}
+
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
-		server.run();
+		std::thread serverRunner(&ZmqProxyServer::run, &server);
+		//server.run();
+
+		return qapp.exec();
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {

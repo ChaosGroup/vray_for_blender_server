@@ -62,7 +62,6 @@ public:
 	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false, bool checkHeartbeat = true);
 
 	void run();
-
 private:
 
 	void dispatcherThread();
