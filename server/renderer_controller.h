@@ -4,6 +4,15 @@
 #include <memory>
 #include <unordered_set>
 #include "zmq_wrapper.h"
+
+#ifdef _WIN32
+	#define WIN32_LEAN_AND_MEAN
+	#define NOMINMAX
+	#include <windows.h>
+#else
+	#include <dlfcn.h>
+#endif
+
 #include <vraysdk.hpp>
 
 class RendererController {
