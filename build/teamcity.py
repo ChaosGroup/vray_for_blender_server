@@ -28,6 +28,9 @@ def main(args):
     import sys
     import subprocess
 
+    sys.stdout.write('temacity args:\n%s\n' % str(args))
+    sys.stdout.flush()
+
     python_exe = sys.executable
 
     if sys.platform == 'win32':
@@ -87,16 +90,36 @@ def main(args):
         os.environ['LIB']     = ";".join(LIB)
         os.environ['LIBPATH'] = ";".join(LIBPATH)
 
+    source_path = args.teamcity_source_path
+    if source_path == '':
+        source_path = os.path.join('..', '..', os.path.realpath(__file__))
+        sys.stdout.write('No teamcity_source_path provided, using [%s]' % source_path)
+
     cmd = [python_exe]
-    cmd.append(os.path.join(args.teamcity_source_path, "vrayserverzmq/build/build.py"))
+    cmd.append(os.path.join(source_path, "vrayserverzmq/build/build.py"))
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
     cmd.append('--github-src-branch=%s' % args.teamcity_branch)
-    cmd.append('--dir_source=%s' % os.path.join(args.teamcity_source_path, "vrayserverzmq"))
-    cmd.append('--dir_build=%s' % os.path.join(args.teamcity_source_path, "vrayserverzmq-build-" + args.teamcity_branch_hash[:7]))
+    cmd.append('--dir_source=%s' % os.path.join(source_path, "vrayserverzmq"))
+    cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-build-" + args.teamcity_branch_hash[:7]))
 
-    cmd.append('--dir_install=%s' % args.teamcity_install_path)
-    cmd.append('--dir_release=%s' % args.teamcity_release_path)
+    # install path defaults
+    if args.teamcity_install_path != '':
+        cmd.append('--dir_install=%s' % args.teamcity_install_path)
+    else:
+        if sys.platform == 'win32':
+            cmd.append('--dir_install=H:/install/vray_for_blender')
+        else:
+        cmd.append('--dir_install=%s' % os.path.expanduser("~/install/vray_for_blender"))
+
+    #release path defaults
+    if args.teamcity_release_path != '':
+        cmd.append('--dir_release=%s' % args.teamcity_release_path)
+    else:
+        if sys.platform == 'win32':
+            cmd.append('--dir_release=H:/release/vray_for_blender')
+        else:
+            cmd.append('--dir_release=%s' % os.path.expanduser("~/release/vray_for_blender"))
 
     if sys.platform == 'win32':
         pass
@@ -106,6 +129,9 @@ def main(args):
         cmd.append('--gcc=gcc-4.9.3')
         cmd.append('--gxx=g++-4.9.3')
         cmd.append('--dev_static_libs')
+
+    sys.stdout.write('Calling builder:\n%s\n' % '\n\t'.join(cmd))
+    sys.stdout.flush()
 
     return subprocess.call(cmd, cwd=os.getcwd())
 
