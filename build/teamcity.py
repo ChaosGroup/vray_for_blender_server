@@ -110,7 +110,7 @@ def main(args):
         if sys.platform == 'win32':
             cmd.append('--dir_install=H:/install/vray_for_blender')
         else:
-        cmd.append('--dir_install=%s' % os.path.expanduser("~/install/vray_for_blender"))
+            cmd.append('--dir_install=%s' % os.path.expanduser("~/install/vray_for_blender"))
 
     #release path defaults
     if args.teamcity_release_path != '':
