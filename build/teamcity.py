@@ -129,8 +129,9 @@ def main(args):
     else:
         # No Cycles on TeamCity, failed to build some dependencies
         # cmd.append('--with_cycles')
-        cmd.append('--gcc=gcc-4.9.3')
-        cmd.append('--gxx=g++-4.9.3')
+        if sys.platform != 'darwin':
+            cmd.append('--gcc=gcc-4.9.3')
+            cmd.append('--gxx=g++-4.9.3')
         cmd.append('--dev_static_libs')
 
     sys.stdout.write('Calling builder:\n%s\n' % '\n\t'.join(cmd))
