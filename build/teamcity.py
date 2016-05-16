@@ -92,7 +92,7 @@ def main(args):
 
     source_path = args.teamcity_source_path
     if source_path == '':
-        source_path = os.path.join('..', '..', os.path.realpath(__file__))
+        source_path = os.path.join('..', '..', os.path.dirname(os.path.realpath(__file__)))
         sys.stdout.write('No teamcity_source_path provided, using [%s]' % source_path)
 
     cmd = [python_exe]
