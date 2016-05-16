@@ -39,7 +39,7 @@ class MacBuilder(Builder):
 
 
 	def compile(self):
-		cmake_build_dir = os.path.join(self.dir_source, "blender-cmake-build")
+		cmake_build_dir = self.dir_build
 		if os.path.exists(cmake_build_dir):
 			if self.build_clean:
 				utils.remove_directory(cmake_build_dir)
