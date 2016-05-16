@@ -52,20 +52,23 @@ class MacBuilder(Builder):
 		cmake.append("-G")
 		cmake.append("Ninja")
 
-		cmake.append("-DCMAKE_BUILD_TYPE=Release")
-		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install_path)
-		cmake.append("-DWITH_VRAY_FOR_BLENDER=ON")
+		if self.gcc:
+			cmake.append("-DCMAKE_C_COMPILER=%s" % self.gcc)
+		if self.gxx:
+			cmake.append("-DCMAKE_CXX_COMPILER=%s" % self.gxx)
 
-		cmake.append("-DWITH_GAMEENGINE=%s" % utils.GetCmakeOnOff(self.with_ge))
-		cmake.append("-DWITH_PLAYER=%s" % utils.GetCmakeOnOff(self.with_player))
-		cmake.append("-DWITH_LIBMV=%s" % utils.GetCmakeOnOff(self.with_tracker))
-		cmake.append("-DWITH_OPENCOLLADA=%s" % utils.GetCmakeOnOff(self.with_collada))
-		cmake.append("-DWITH_MOD_OCEANSIM=ON")
-		# TODO: cmake.append("-DWITH_OPENSUBDIV=ON")
-		cmake.append("-DWITH_FFTW3=ON")
-		cmake.append("-DPNG_LIBRARIES=png12")
+		cmake.append('-DCMAKE_BUILD_TYPE=%s' % os.environ['CGR_BUILD_TYPE'])
+		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install)
 
-		cmake.append("../blender")
+		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
+		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
+
+		if distr_info['short_name'] == 'centos' and distr_info['version'] == '6.7':
+			cmake.append('-DWITH_STATIC_LIBC=ON')
+
+		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_build, '..', 'blender-for-vray-libs'))
+
+		cmake.append("../vrayserverzmq")
 
 		res = subprocess.call(cmake)
 		if not res == 0:
