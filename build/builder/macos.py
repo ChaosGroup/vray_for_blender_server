@@ -47,6 +47,8 @@ class MacBuilder(Builder):
 			os.makedirs(cmake_build_dir)
 		os.chdir(cmake_build_dir)
 
+		distr_info = utils.get_linux_distribution()
+
 		cmake = ['cmake']
 
 		cmake.append("-G")
