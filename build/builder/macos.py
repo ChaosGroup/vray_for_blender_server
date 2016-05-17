@@ -87,27 +87,7 @@ class MacBuilder(Builder):
 			sys.exit(1)
 
 	def package(self):
-		subdir = "macos" + "/" + self.build_arch
+		releasePath = os.path.join(self.dir_install, 'V-Ray', 'VRayZmqServer', 'VRayZmqServer')
 
-		release_path = utils.path_join(self.dir_release, subdir)
-
-		if not self.mode_test:
-			utils.path_create(release_path)
-
-		# Example: vrayblender-2.60-42181-macos-10.6-x86_64.tar.bz2
-		archive_name = utils.GetPackageName(self)
-		archive_path = utils.path_join(release_path, archive_name)
-
-		sys.stdout.write("Generating archive: %s\n" % (archive_name))
-		sys.stdout.write("  in: %s\n" % (release_path))
-
-		cmd = "tar jcf %s %s" % (archive_path, self.dir_install_name)
-
-		sys.stdout.write("Calling: %s\n" % (cmd))
-		sys.stdout.write("  in: %s\n" % (self.dir_install))
-
-		if not self.mode_test:
-			os.chdir(self.dir_install)
-			os.system(cmd)
-
-		return subdir, archive_path
+		sys.stdout.write("##teamcity[setParameter name='env.ENV_ARTEFACT_FILES' value='%s']" % releasePath)
+		sys.stdout.flush()
