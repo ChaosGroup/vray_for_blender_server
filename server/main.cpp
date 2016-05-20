@@ -97,13 +97,6 @@ int main(int argc, char *argv[]) {
 		char *argv[1] = { nullptr };
 		QApplication qapp(argc, argv);
 
-		// keep this until appsdk gets fix for QT
-		{
-			VRay::RendererOptions opts;
-			opts.showFrameBuffer = false;
-			VRay::VRayRenderer r(opts);
-		}
-
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
 		std::thread serverRunner(&ZmqProxyServer::run, &server);
 		//server.run();
