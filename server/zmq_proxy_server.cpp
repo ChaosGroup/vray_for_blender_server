@@ -216,10 +216,9 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 }
 
 bool ZmqProxyServer::checkForHeartbeat(time_point now) {
-	auto active_heartbeats = 0;
-	for (const auto & p : workers) {
-		active_heartbeats += (p.second.clientType == ClientType::Heartbeat);
-	}
+	auto active_heartbeats = count_if(workers.begin(), workers.end(), [](const pair<const client_id_t, WorkerWrapper> & p) {
+		return p.second.clientType == ClientType::Heartbeat;
+	});
 
 	if (active_heartbeats != 0) {
 		lastHeartbeat = now;

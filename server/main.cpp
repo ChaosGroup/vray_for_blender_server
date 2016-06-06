@@ -87,7 +87,6 @@ int main(int argc, char *argv[]) {
 	if (!path) {
 		printf("Undefined %s, will try to load appsdk from LD_LIBRARY_PATH OR PATH\n", sdkPathName);
 	}
-	path = nullptr;
 
 	printInfo();
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
