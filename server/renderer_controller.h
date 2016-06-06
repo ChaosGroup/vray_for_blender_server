@@ -22,19 +22,8 @@ public:
 	RendererController(send_fn_t sendFn, bool showVFB);
 	~RendererController();
 
-	RendererController(RendererController && other) {
-		std::unique_lock<std::mutex> lk(other.rendererMtx);
-		sendFn = std::move(other.sendFn);
-		renderer = std::move(other.renderer);
-		elementsToSend = std::move(other.elementsToSend);
-		showVFB = other.showVFB;
-		type = other.type;
-		currentFrame = other.currentFrame;
-		jpegQuality = other.jpegQuality;
-		// rendererMtx = std::move(other.rendererMtx);
-	}
-	//RendererController(const RendererController &) = delete;
-	//RendererController & operator=(const RendererController &) = delete;
+	RendererController(const RendererController &) = delete;
+	RendererController & operator=(const RendererController &) = delete;
 
 	void handle(const VRayMessage & message);
 private:
