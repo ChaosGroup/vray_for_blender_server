@@ -11,7 +11,7 @@ RendererController::RendererController(send_fn_t fn, bool showVFB):
 	renderer(nullptr),
 	showVFB(showVFB),
 	sendFn(fn),
-	currentFrame(0),
+	currentFrame(-1000),
 	type(VRayMessage::RendererType::None),
 	jpegQuality(60) {
 }
@@ -631,7 +631,7 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 
 		sendFn(VRayMessage::createMessage(std::move(set)));
 
-		Logger::log(Logger::Debug, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
+		Logger::log(Logger::Info, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 	}
 }
 
