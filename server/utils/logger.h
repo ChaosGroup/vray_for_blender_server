@@ -15,7 +15,7 @@ public:
 	void setCallback(StringCb cb);
 
 	template <typename T, typename ... R>
-	static void log(Level lvl, const std::string & msg, const T & val, const R ... rest) {
+	static void log(Level lvl, const std::string & msg, const T & val, const R & ... rest) {
 		std::stringstream stream(msg, std::ios_base::ate | std::ios_base::in | std::ios_base::out);
 		stream << ' ' << val;
 		log(lvl, stream.str(), rest...);

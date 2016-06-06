@@ -22,6 +22,19 @@ class client_id_t {
 public:
 	client_id_t(uint64_t id): m_id(id) {}
 
+	client_id_t() = default;
+
+	client_id_t(const client_id_t &) = default;
+	client_id_t & operator=(const client_id_t &) = default;
+
+	client_id_t(client_id_t && o) {
+		std::swap(m_id, o.m_id);
+	}
+
+	client_id_t & operator=(client_id_t && o) {
+		std::swap(m_id, o.m_id);
+	}
+
 	operator const uint64_t() const {
 		return m_id;
 	}
@@ -48,14 +61,24 @@ class ZmqProxyServer {
 
 	// Wrapper struct for the renderer object
 	struct WorkerWrapper {
-		std::shared_ptr<RendererController> worker;
+		std::unique_ptr<RendererController> worker;
 		time_point lastKeepAlive;
 		client_id_t id;
 		ClientType clientType;
 		uint64_t appsdkWorkTimeMs;
 		uint64_t appsdkMaxTimeMs;
 
-		WorkerWrapper(std::shared_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType);
+		WorkerWrapper(const WorkerWrapper &) = delete;
+		WorkerWrapper & operator=(const WorkerWrapper &) = delete;
+		WorkerWrapper(WorkerWrapper && o): worker(std::move(o.worker)) {
+			lastKeepAlive = o.lastKeepAlive;
+			id = o.id;
+			clientType = o.clientType;
+			appsdkWorkTimeMs = o.appsdkWorkTimeMs;
+			appsdkMaxTimeMs = o.appsdkMaxTimeMs;
+		}
+
+		WorkerWrapper(std::unique_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType);
 	};
 
 public:

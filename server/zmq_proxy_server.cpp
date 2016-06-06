@@ -11,10 +11,10 @@ using namespace std;
 using namespace std::chrono;
 using namespace zmq;
 
-ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::shared_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType)
-    : worker(worker)
+ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::unique_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType)
+    : worker(move(worker))
     , lastKeepAlive(lastKeepAlive)
-    , id(id)
+    , id(std::move(id))
     , clientType(clType)
     , appsdkWorkTimeMs(0)
     , appsdkMaxTimeMs(0)
@@ -61,12 +61,10 @@ void ZmqProxyServer::dispatcherThread() {
 				if (worker->second.clientType != ClientType::Exporter) {
 					Logger::log(Logger::Error, "Message from non exporter client");
 				}
-
-				auto workerPtr = worker->second.worker;
 				workerLock.unlock();
 
 				auto beforeCall = chrono::high_resolution_clock::now();
-				workerPtr->handle(VRayMessage(item.second));
+				worker->second.worker->handle(VRayMessage(item.second));
 				uint64_t duration = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
 
 				workerLock.lock();
@@ -93,13 +91,13 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 	};
 
 	WorkerWrapper wrapper = {
-		shared_ptr<RendererController>(new RendererController(sendFn, showVFB)),
+		unique_ptr<RendererController>(new RendererController(sendFn, showVFB)),
 		now, clientId, ClientType::Exporter
 	};
 
 	{
 		lock_guard<std::mutex> workerLock(workersMutex);
-		auto res = workers.emplace(make_pair(clientId, wrapper));
+		auto res = workers.emplace(make_pair(clientId, std::move(wrapper)));
 		assert(res.second && "Failed to add worker!");
 	}
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
@@ -218,9 +216,10 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 }
 
 bool ZmqProxyServer::checkForHeartbeat(time_point now) {
-	auto active_heartbeats = count_if(workers.begin(), workers.end(), [](const pair<client_id_t, WorkerWrapper> & worker) {
-		return worker.second.clientType == ClientType::Heartbeat;
-	});
+	auto active_heartbeats = 0;
+	for (const auto & p : workers) {
+		active_heartbeats += (p.second.clientType == ClientType::Heartbeat);
+	}
 
 	if (active_heartbeats != 0) {
 		lastHeartbeat = now;

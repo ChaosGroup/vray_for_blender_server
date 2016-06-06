@@ -324,6 +324,10 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 }
 
 void RendererController::rendererMessage(const VRayMessage & message) {
+	std::lock_guard<std::mutex> l(rendererMtx);
+	if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
+		return;
+	}
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentTime:
@@ -354,7 +358,6 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 
 		break;
 	case VRayMessage::RendererAction::Stop:{
-		std::lock_guard<std::mutex> l(rendererMtx);
 		Logger::log(Logger::Info, "Renderer::stop");
 		renderer->stop();
 		break;
