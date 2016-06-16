@@ -352,8 +352,8 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		Logger::log(Logger::Info, "Renderer::start");
 
 		if (type == VRayMessage::RendererType::Animation) {
-			renderer->waitForImageReady();
-			imageDone(*renderer, nullptr);
+			//renderer->waitForImageReady();
+			//imageDone(*renderer, nullptr);
 		}
 
 		break;
