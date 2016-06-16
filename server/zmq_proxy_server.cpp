@@ -64,7 +64,8 @@ void ZmqProxyServer::dispatcherThread() {
 				workerLock.unlock();
 
 				auto beforeCall = chrono::high_resolution_clock::now();
-				worker->second.worker->handle(VRayMessage(item.second));
+				auto vrayMessage = VRayMessage(item.second);
+				worker->second.worker->handle(vrayMessage);
 				uint64_t duration = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
 
 				workerLock.lock();
@@ -75,6 +76,10 @@ void ZmqProxyServer::dispatcherThread() {
 					continue;
 				}
 
+				if (worker->second.appsdkMaxTimeMs < duration) {
+					worker->second.appsdkMaxTimeMs = duration;
+					worker->second.msg = {vrayMessage.getType(), vrayMessage.getPluginAction(), vrayMessage.getRendererAction()};
+				}
 				worker->second.appsdkMaxTimeMs = max(worker->second.appsdkMaxTimeMs, duration);
 				worker->second.appsdkWorkTimeMs += duration;
 			}
@@ -172,6 +177,11 @@ bool ZmqProxyServer::checkForTimeout(time_point now) {
 
 			if (inactiveTime > EXPORTER_TIMEOUT) {
 				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
+				auto type = workerIter->second.msg.type;
+				int subType = type == VRayMessage::Type::ChangePlugin ? static_cast<int>(workerIter->second.msg.pAction) :
+					          type == VRayMessage::Type::ChangeRenderer ? static_cast<int>(workerIter->second.msg.rAction) :
+					          -1;
+				Logger::log(Logger::Debug, "Longest appsdk wait:", static_cast<int>(type), subType);
 
 				// filter messages intended for the selected client
 				clearMessagesForClient(workerIter->first);

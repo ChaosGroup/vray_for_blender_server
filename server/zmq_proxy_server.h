@@ -67,6 +67,11 @@ class ZmqProxyServer {
 		ClientType clientType;
 		uint64_t appsdkWorkTimeMs;
 		uint64_t appsdkMaxTimeMs;
+		struct MessageInfo {
+			VRayMessage::Type type;
+			VRayMessage::PluginAction pAction;
+			VRayMessage::RendererAction rAction;
+		} msg;
 
 		WorkerWrapper(const WorkerWrapper &) = delete;
 		WorkerWrapper & operator=(const WorkerWrapper &) = delete;
