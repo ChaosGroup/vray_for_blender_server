@@ -316,7 +316,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				auto err = renderer->getLastError();
 				Logger::log(Logger::Error, err.toString());
 			}
-			Logger::log(Logger::Info, "Removed plugin", message.getPlugin());
+			Logger::log(Logger::Debug, "Removed plugin", message.getPlugin());
 		} else {
 			Logger::log(Logger::Warning, "Failed to find plugin to remove:", message.getPlugin());
 		}
