@@ -69,23 +69,23 @@ class LinuxBuilder(Builder):
 
 		cmake.append("../vrayserverzmq")
 
-		if self.mode_test:
-			print(" ".join(cmake))
+		sys.stdout.write('cmake args:\n%s\n' % '\n\t'.join(cmake))
+		sys.stdout.flush()
 
-		else:
-			res = subprocess.call(cmake)
-			if not res == 0:
-				sys.stderr.write("There was an error during configuration!\n")
-				sys.exit(1)
 
-			make = ['ninja']
-			make.append('-j%s' % self.build_jobs)
-			make.append('install')
+		res = subprocess.call(cmake)
+		if not res == 0:
+			sys.stderr.write("There was an error during configuration!\n")
+			sys.exit(1)
 
-			res = subprocess.call(make)
-			if not res == 0:
-				sys.stderr.write("There was an error during the compilation!\n")
-				sys.exit(1)
+		make = ['ninja']
+		make.append('-j%s' % self.build_jobs)
+		make.append('install')
+
+		res = subprocess.call(make)
+		if not res == 0:
+			sys.stderr.write("There was an error during the compilation!\n")
+			sys.exit(1)
 
 
 	def package(self):
