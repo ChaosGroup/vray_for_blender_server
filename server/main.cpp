@@ -77,6 +77,10 @@ int main(int argc, char *argv[]) {
 			case Logger::Info:
 				printf("ZMQ_INFO: %s\n", msg.c_str());
 				break;
+			case Logger::None:
+			default:
+				// nothing
+				break;
 			}
 		}
 	});

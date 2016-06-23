@@ -535,6 +535,8 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 					case VRay::RenderElement::PF_RGBA_FLOAT:
 						imgType = VRayBaseTypes::AttrImage::ImageType::RGBA_REAL;
 						break;
+					default:
+						imgType = VRayBaseTypes::AttrImage::ImageType::NONE;
 					}
 
 

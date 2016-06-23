@@ -33,6 +33,7 @@ public:
 
 	client_id_t & operator=(client_id_t && o) {
 		std::swap(m_id, o.m_id);
+		return *this;
 	}
 
 	operator const uint64_t() const {
