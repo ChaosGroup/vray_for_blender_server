@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
+	int retCode = 0;
 	try {
 		int argc = 0;
 		char *argv[1] = { nullptr };
@@ -100,14 +101,20 @@ int main(int argc, char *argv[]) {
 
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
 		std::thread serverRunner(&ZmqProxyServer::run, &server);
-		//server.run();
 
-		return qapp.exec();
+		retCode = qapp.exec();
+
+		if (serverRunner.joinable()) {
+			Logger::log(Logger::Debug, "Joining server thread.");
+			serverRunner.join();
+		}
+
 	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	}
 
-	return 0;
+	Logger::log(Logger::Debug, "Main thread stopping.");
+	return retCode;
 }

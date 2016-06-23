@@ -6,6 +6,7 @@
 #include <exception>
 
 #include <vraysdk.hpp>
+#include <qapplication.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -391,5 +392,6 @@ void ZmqProxyServer::run() {
 	}
 	routerSocket.release();
 	context.release();
-	Logger::log(Logger::Debug, "Main thread stopping.");
+	Logger::log(Logger::Debug, "Server thread stopping.");
+	qApp->quit();
 }
