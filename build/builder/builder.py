@@ -95,8 +95,8 @@ class Builder:
 			if not self.mode_test:
 				utils.path_create(self.dir_release)
 
-		self.dir_build        = utils.path_slashify(self.dir_build)
-		self.dir_source       = utils.path_slashify(self.dir_source)
+		self.dir_build   = utils.path_slashify(self.dir_build)
+		self.dir_source  = utils.path_slashify(self.dir_source)
 		self.dir_install = utils.path_slashify(self.dir_install)
 
 		if self.build_clean:
@@ -113,20 +113,6 @@ class Builder:
 
 	def compile_post(self):
 		pass
-	# 	if self.host_os == utils.WIN:
-	# 		runtimeDir = utils.path_join(self.dir_source, "build", "non-gpl", self.build_arch)
-	# 		files = []
-	# 		if self.vc2013:
-	# 			files.extend([
-	# 				"msvcp120.dll",
-	# 				"msvcr120.dll",
-	# 				"vcomp120.dll",
-	# 			])
-	# 		else:
-	# 			files.append("vcomp90.dll")
-	# 		for f in files:
-	# 			shutil.copy(utils.path_join(runtimeDir, f), self.dir_install)
-
 
 	def package(self):
 		"""
@@ -141,8 +127,13 @@ class Builder:
 
 		self.info()
 
-		if not self.export_only:
-			self.compile()
-			self.compile_post()
+		if self.build_clean and os.path.exists(cmake_build_dir):
+			utils.remove_directory(cmake_build_dir)
+		if not os.path.exists(cmake_build_dir):
+			os.makedirs(cmake_build_dir)
+		os.chdir(cmake_build_dir)
+
+		self.compile()
+		self.compile_post()
 
 		self.package()

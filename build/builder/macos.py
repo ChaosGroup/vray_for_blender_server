@@ -39,14 +39,6 @@ class MacBuilder(Builder):
 
 
 	def compile(self):
-		cmake_build_dir = self.dir_build
-		if os.path.exists(cmake_build_dir):
-			if self.build_clean:
-				utils.remove_directory(cmake_build_dir)
-		else:
-			os.makedirs(cmake_build_dir)
-		os.chdir(cmake_build_dir)
-
 		distr_info = utils.get_linux_distribution()
 
 		cmake = ['cmake']
