@@ -127,11 +127,11 @@ class Builder:
 
 		self.info()
 
-		if self.build_clean and os.path.exists(cmake_build_dir):
-			utils.remove_directory(cmake_build_dir)
-		if not os.path.exists(cmake_build_dir):
-			os.makedirs(cmake_build_dir)
-		os.chdir(cmake_build_dir)
+		if self.build_clean and os.path.exists(self.dir_build):
+			utils.remove_directory(self.dir_build)
+		if not os.path.exists(self.dir_build):
+			os.makedirs(self.dir_build)
+		os.chdir(self.dir_build)
 
 		self.compile()
 		self.compile_post()
