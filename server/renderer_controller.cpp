@@ -543,7 +543,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 					if (imgType == VRayBaseTypes::AttrImage::ImageType::NONE) {
 						Logger::log(Logger::Error, "Unsupported pixel format!", pixelFormat);
 					} else {
-						Logger::log(Logger::Error, "Render channel:", type, "Pixel format:", pixelFormat);
+						Logger::log(Logger::Debug, "Render channel:", type, "Pixel format:", pixelFormat);
 						VRay::VRayImage *img = element.getImage();
 
 						int width, height;
