@@ -90,21 +90,15 @@ def main(args):
         os.environ['LIB']     = ";".join(LIB)
         os.environ['LIBPATH'] = ";".join(LIBPATH)
 
-    source_path = args.teamcity_source_path
-    if source_path == '':
-        source_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..')
-        source_path = os.path.realpath(source_path)
-        sys.stdout.write('No teamcity_source_path provided, using [%s]' % source_path)
-    else:
-        source_path = os.path.realpath(source_path)
+    source_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..')
+    source_path = os.path.realpath(source_path)
 
     cmd = [python_exe]
     cmd.append(os.path.join(source_path, "vrayserverzmq/build/build.py"))
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
-    cmd.append('--github-src-branch=%s' % args.teamcity_branch)
     cmd.append('--dir_source=%s' % os.path.join(source_path, "vrayserverzmq"))
-    cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-build-" + args.teamcity_branch_hash[:7]))
+    cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-cmake-build"))
 
     # install path defaults
     if args.teamcity_install_path != '':
@@ -150,10 +144,6 @@ if __name__ == '__main__':
         default = ""
     )
 
-    parser.add_argument('--teamcity_branch',
-        default = "master",
-    )
-
     parser.add_argument('--teamcity_install_path',
         default = "",
     )
@@ -162,10 +152,6 @@ if __name__ == '__main__':
         default = "",
     )
 
-    parser.add_argument('--teamcity_source_path',
-        default = "",
-    )
 
     args = parser.parse_args()
-
     sys.exit(main(args))
