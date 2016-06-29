@@ -105,18 +105,18 @@ def main(args):
         cmd.append('--dir_install=%s' % args.teamcity_install_path)
     else:
         if sys.platform == 'win32':
-            cmd.append('--dir_install=H:/install/vray_for_blender')
+            cmd.append('--dir_install=H:/install/vrayserverzmq')
         else:
-            cmd.append('--dir_install=%s' % os.path.expanduser("~/install/vray_for_blender"))
+            cmd.append('--dir_install=%s' % os.path.expanduser("~/install/vrayserverzmq"))
 
     #release path defaults
     if args.teamcity_release_path != '':
         cmd.append('--dir_release=%s' % args.teamcity_release_path)
     else:
         if sys.platform == 'win32':
-            cmd.append('--dir_release=H:/release/vray_for_blender')
+            cmd.append('--dir_release=H:/release/vrayserverzmq')
         else:
-            cmd.append('--dir_release=%s' % os.path.expanduser("~/release/vray_for_blender"))
+            cmd.append('--dir_release=%s' % os.path.expanduser("~/release/vrayserverzmq"))
 
     if sys.platform == 'win32':
         pass
