@@ -1,4 +1,4 @@
-#define VRAY_RUNTIME_LOAD_PRIMARY
+#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "zmq_proxy_server.h"
 #include "utils/logger.h"
 #include <chrono>
@@ -27,15 +27,11 @@ ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool
     : port(port)
     , context(nullptr)
     , routerSocket(nullptr)
-    , vray(new VRay::VRayInit(appsdkPath))
     , dataTransfered(0)
     , showVFB(showVFB)
     , checkHeartbeat(checkHeartbeat)
     , dispatcherRunning(false)
 {
-	if (!vray) {
-		throw logic_error("Failed to instantiate vray!");
-	}
 }
 
 void ZmqProxyServer::dispatcherThread() {

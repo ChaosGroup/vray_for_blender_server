@@ -119,8 +119,6 @@ private:
 	std::unique_ptr<zmq::context_t> context;
 	std::unique_ptr<zmq::socket_t> routerSocket;
 
-	std::unique_ptr<VRay::VRayInit> vray;
-
 	// message queue for sending
 	std::deque<std::pair<client_id_t, VRayMessage>> sendQ;
 	// message queue for receieveing messages

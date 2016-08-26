@@ -1,5 +1,15 @@
+#define VRAY_RUNTIME_LOAD_PRIMARY
+#ifdef _WIN32
+	#define WIN32_LEAN_AND_MEAN
+	#define NOMINMAX
+	#include <windows.h>
+#else
+	#include <dlfcn.h>
+#endif
+
+#include <vraysdk.hpp>
+
 #include "zmq_proxy_server.h"
-#define VRAY_RUNTIME_LOAD_SECONDARY
 #include "utils/logger.h"
 #include "utils/version.h"
 #include <string>
@@ -85,17 +95,38 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
+#ifdef _WIN32
+	const char * os_pathsep = ";";
+#else
+	const char * os_pathsep = ":";
+#endif
 	const char * sdkPathName = "VRAY_ZMQSERVER_APPSDK_PATH";
 
 	const char * path = std::getenv(sdkPathName);
 	if (!path) {
 		printf("Undefined %s, will try to load appsdk from LD_LIBRARY_PATH OR PATH\n", sdkPathName);
+	} else {
+		// lets make sure we load all vray stuff from the same place
+		std::string vrayPath(path);
+		vrayPath = vrayPath.substr(0, vrayPath.find_last_of("/\\"));
+		Logger::log(Logger::Info, "Setting VRAY_PATH to", vrayPath);
+		// putenv requires valid memory until exit or variable unset
+		static char vrayPathBuf[1024] = {0, };
+		strncpy(vrayPathBuf, ("VRAY_PATH=" + vrayPath).c_str(), 1024);
+		putenv(vrayPathBuf);
+
+		auto userPath = getenv("PATH");
+		static char pathBuf[1024] = {0, };
+		strncpy(pathBuf, ("PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "")).c_str(), 1024);
+		putenv(pathBuf);
+		Logger::log(Logger::Info, "New PATH", pathBuf);
 	}
-	path = nullptr;
 
 	printInfo();
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
+
+	VRay::VRayInit init(path);
 
 	int retCode = 0;
 	try {
