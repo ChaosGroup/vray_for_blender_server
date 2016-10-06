@@ -33,7 +33,7 @@ def main(args):
 
     python_exe = sys.executable
 
-    if sys.platform == 'win32':
+    if sys.platform == 'win32' and not args.jenkins:
         # Setup Visual Studio 2013 variables for usage from command line
         # Assumes default installation path
         #
@@ -152,6 +152,9 @@ if __name__ == '__main__':
         default = "",
     )
 
+    parser.add_argument('--jenkins',
+        action = 'store_true',
+    )
 
     args = parser.parse_args()
     sys.exit(main(args))
