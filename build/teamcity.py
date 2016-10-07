@@ -98,7 +98,12 @@ def main(args):
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
     cmd.append('--dir_source=%s' % os.path.join(source_path, "vrayserverzmq"))
-    cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-cmake-build"))
+
+    if args.teamcity_build_path != '':
+        cmd.append('--dir_build=%s' % args.teamcity_build_path)
+    else:
+        cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-cmake-build"))
+
 
     # install path defaults
     if args.teamcity_install_path != '':
