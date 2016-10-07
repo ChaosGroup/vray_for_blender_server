@@ -157,6 +157,10 @@ if __name__ == '__main__':
         default = "",
     )
 
+    parser.add_argument('--teamcity_build_path',
+        default = "",
+    )
+
     parser.add_argument('--jenkins',
         action = 'store_true',
     )
