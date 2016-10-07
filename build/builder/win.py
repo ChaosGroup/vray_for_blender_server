@@ -50,7 +50,7 @@ class WindowsBuilder(Builder):
 		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
 
-		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_build, '..', 'blender-for-vray-libs'))
+		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_source, '..', 'blender-for-vray-libs'))
 
 		cmake.append("../vrayserverzmq")
 
