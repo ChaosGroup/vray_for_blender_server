@@ -32,12 +32,31 @@ endif()
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
 link_with_vray_appsdk(${PROJECT_NAME})
 
-find_package(Qt4 REQUIRED)
-include_directories(${Qt4_INCLUDE_DIRS})
-INCLUDE(${QT_USE_FILE})
+if (QT_ROOT)
+	set(QT_INCLUDES
+		${QT_ROOT}/include
+		${QT_ROOT}/include/QtCore
+		${QT_ROOT}/include/QtGui
+	)
+	set(QT_LIBPATH
+		${QT_ROOT}/lib/x64/vc101/
+	)
+	set(QT_LIB
+		QtCore4
+		QtGui4
+	)
 
+	include_directories(${QT_INCLUDES})
+	link_directories(${QT_LIBPATH})
+	target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtCore4.lib)
+	target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtGui4.lib)
+else()
+	find_package(Qt4 REQUIRED)
+	include_directories(${Qt4_INCLUDE_DIRS})
+	include(${QT_USE_FILE})
+	target_link_libraries(${PROJECT_NAME} ${QT_QTMAIN_LIBRARY} ${QT_LIBRARIES})
+endif()
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${QT_QTMAIN_LIBRARY} ${QT_LIBRARIES})
 
 set(SYSTEM_LIBS "")
 if(UNIX)

@@ -23,6 +23,7 @@ project(VRayServerZmq)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(LIBS_ROOT "" CACHE PATH "Custom libs root - zmq, sodium")
+set(QT_ROOT "" CACHE PATH "Optional QT4 path")
 
 include_directories(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/zmq/include)
 
