@@ -32,19 +32,55 @@ from .builder import Builder
 
 
 class WindowsBuilder(Builder):
+	def setup_msvc_2013(self, cgrepo):
+		env = {
+			'INCLUDE' : [
+				"{CGR_SDK}/msvs2013/PlatformSDK/Include/shared",
+				"{CGR_SDK}/msvs2013/PlatformSDK/Include/um",
+				"{CGR_SDK}/msvs2013/PlatformSDK/Include/winrt",
+				"{CGR_SDK}/msvs2013/PlatformSDK/Include/ucrt",
+				"{CGR_SDK}/msvs2013/include",
+				"{CGR_SDK}/msvs2013/atlmfc/include",
+			],
+
+			'LIB' : [
+				"{CGR_SDK}/msvs2013/PlatformSDK/Lib/winv6.3/um/x64",
+				"{CGR_SDK}/msvs2013/PlatformSDK/Lib/ucrt/x64",
+				"{CGR_SDK}/msvs2013/atlmfc/lib/amd64",
+				"{CGR_SDK}/msvs2013/lib/amd64",
+			],
+
+			'PATH' : [
+					"{CGR_SDK}/msvs2013/bin/amd64",
+					"{CGR_SDK}/msvs2013/bin",
+					"{CGR_SDK}/msvs2013/PlatformSDK/bin/x64",
+				] + os.environ['PATH'].split(';')
+			,
+		}
+		os.environ['__MS_VC_INSTALL_PATH'] = "{CGR_SDK}/msvs2013"
+		for var in env:
+			os.environ[var] = ";".join(env[var]).format(CGR_SDK=cgrepo)
+
 	def compile(self):
 		if self.mode_test:
 			return
 
-		cmake = ['cmake']
+		cmake = [cmake_path]
 
 		cmake.append("-G")
 		cmake.append("Ninja")
 
+		old_path = ''
 		if 'JENKINS_WIN_SDK_PATH' in os.environ:
+			for path in os.environ['PATH'].split(';'):
+				if path.endswith('cmake.exe'):
+					cmake[0] = path
+					break
+
+			old_path = os.environ['PATH']
+			os.environ['PATH'] = ''
+			self.setup_msvc_2013(os.environ['JENKINS_WIN_SDK_PATH'])
 			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'qt', '4.8.4'))
-			cmake.append("-DCMAKE_CXX_COMPILER=%s" % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
-			cmake.append("-DCMAKE_C_COMPILER=%s" % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
 
 		cmake.append('-DCMAKE_BUILD_TYPE=%s' % os.environ['CGR_BUILD_TYPE'])
 		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install)
@@ -56,6 +92,7 @@ class WindowsBuilder(Builder):
 
 		cmake.append(utils.path_join(self.dir_source, "vrayserverzmq"))
 
+		sys.stdout.write('PATH:\n\t%s\n' % '\n\t'.join(os.environ['PATH'].split(';')))
 		sys.stdout.write('cmake args:\n%s\n' % '\n\t'.join(cmake))
 		sys.stdout.flush()
 
@@ -66,7 +103,6 @@ class WindowsBuilder(Builder):
 
 		ninja = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools", "ninja.exe")
 
-
 		make = [ninja]
 		make.append('-j%s' % self.build_jobs)
 		make.append('install')
@@ -75,6 +111,9 @@ class WindowsBuilder(Builder):
 		if not res == 0:
 			sys.stderr.write("There was an error during the compilation!\n")
 			sys.exit(1)
+
+		if 'JENKINS_WIN_SDK_PATH' in os.environ:
+			os.environ['PATH'] = old_path
 
 
 	def config(self):
