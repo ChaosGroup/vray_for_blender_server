@@ -94,7 +94,7 @@ def main(args):
     source_path = os.path.realpath(source_path)
 
     cmd = [python_exe]
-    cmd.append(os.path.join(source_path, "vrayserverzmq/build/build.py"))
+    cmd.append(os.path.join(source_path, "vrayserverzmq", "build", "build.py"))
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
     cmd.append('--dir_source=%s' % os.path.join(source_path))

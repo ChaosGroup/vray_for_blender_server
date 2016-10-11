@@ -60,7 +60,7 @@ class MacBuilder(Builder):
 		if distr_info['short_name'] == 'centos' and distr_info['version'] == '6.7':
 			cmake.append('-DWITH_STATIC_LIBC=ON')
 
-		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_build, 'blender-for-vray-libs'))
+		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_source, 'blender-for-vray-libs'))
 
 		cmake.append(os.path.join(self.dir_source, "vrayserverzmq"))
 
