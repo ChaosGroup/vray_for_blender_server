@@ -65,7 +65,7 @@ class WindowsBuilder(Builder):
 		if self.mode_test:
 			return
 
-		cmake = [cmake_path]
+		cmake = ['cmake']
 
 		cmake.append("-G")
 		cmake.append("Ninja")
