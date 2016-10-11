@@ -65,6 +65,7 @@ class WindowsBuilder(Builder):
 		if self.mode_test:
 			return
 
+		ninja = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools", "ninja.exe")
 		cmake = ['cmake']
 
 		cmake.append("-G")
@@ -72,13 +73,9 @@ class WindowsBuilder(Builder):
 
 		old_path = ''
 		if 'JENKINS_WIN_SDK_PATH' in os.environ:
-			for path in os.environ['PATH'].split(';'):
-				if path.endswith('cmake.exe'):
-					cmake[0] = path
-					break
-
+			cmake[0] = utils._get_cmd_output('where cmake')
 			old_path = os.environ['PATH']
-			os.environ['PATH'] = ''
+			os.environ['PATH'] = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools")
 			self.setup_msvc_2013(os.environ['JENKINS_WIN_SDK_PATH'])
 			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'qt', '4.8.4'))
 
@@ -101,7 +98,6 @@ class WindowsBuilder(Builder):
 			sys.stderr.write("There was an error during configuration!\n")
 			sys.exit(1)
 
-		ninja = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools", "ninja.exe")
 
 		make = [ninja]
 		make.append('-j%s' % self.build_jobs)
