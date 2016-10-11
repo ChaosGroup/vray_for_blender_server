@@ -62,7 +62,7 @@ class WindowsBuilder(Builder):
 			sys.stderr.write("There was an error during configuration!\n")
 			sys.exit(1)
 
-		ninja = utils.path_join(self.dir_source, "build", "tools", "ninja.exe")
+		ninja = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools", "ninja.exe")
 
 
 		make = [ninja]
