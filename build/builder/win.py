@@ -42,9 +42,9 @@ class WindowsBuilder(Builder):
 		cmake.append("Ninja")
 
 		if 'JENKINS_WIN_SDK_PATH' in os.environ:
-			cmake.append('-DQT_ROOT=%s' % os.path.join(os.environ['JENKINS_WIN_SDK_PATH'], 'qt', '4.8.4'))
-			cmake.append("-DCMAKE_CXX_COMPILER=%s" % os.path.join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
-			cmake.append("-DCMAKE_C_COMPILER=%s" % os.path.join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
+			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'qt', '4.8.4'))
+			cmake.append("-DCMAKE_CXX_COMPILER=%s" % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
+			cmake.append("-DCMAKE_C_COMPILER=%s" % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'msvs2013', 'bin', 'cl.exe'))
 
 		cmake.append('-DCMAKE_BUILD_TYPE=%s' % os.environ['CGR_BUILD_TYPE'])
 		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install)
@@ -52,9 +52,9 @@ class WindowsBuilder(Builder):
 		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
 
-		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_source, 'blender-for-vray-libs'))
+		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_source, 'blender-for-vray-libs'))
 
-		cmake.append(os.path.join(self.dir_source, "vrayserverzmq"))
+		cmake.append(utils.path_join(self.dir_source, "vrayserverzmq"))
 
 		sys.stdout.write('cmake args:\n%s\n' % '\n\t'.join(cmake))
 		sys.stdout.flush()
