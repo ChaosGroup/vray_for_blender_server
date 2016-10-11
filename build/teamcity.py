@@ -97,7 +97,7 @@ def main(args):
     cmd.append(os.path.join(source_path, "vrayserverzmq/build/build.py"))
     cmd.append("--teamcity")
     cmd.append("--teamcity_branch_hash=%s" % args.teamcity_branch_hash)
-    cmd.append('--dir_source=%s' % os.path.join(source_path, "vrayserverzmq"))
+    cmd.append('--dir_source=%s' % os.path.join(source_path))
 
     if args.teamcity_build_path != '':
         cmd.append('--dir_build=%s' % args.teamcity_build_path)

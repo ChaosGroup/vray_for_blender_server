@@ -57,9 +57,9 @@ class LinuxBuilder(Builder):
 		if distr_info['short_name'] == 'centos' and distr_info['version'] == '6.7':
 			cmake.append('-DWITH_STATIC_LIBC=ON')
 
-		cmake.append('-DLIBS_ROOT=%s' % utils.path_join(self.dir_build, '..', 'blender-for-vray-libs'))
+		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_build, 'blender-for-vray-libs'))
 
-		cmake.append("../vrayserverzmq")
+		cmake.append(os.path.join(self.dir_source, "vrayserverzmq"))
 
 		sys.stdout.write('cmake args:\n%s\n' % '\n\t'.join(cmake))
 		sys.stdout.flush()
