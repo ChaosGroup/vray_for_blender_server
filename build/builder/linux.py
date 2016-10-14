@@ -58,6 +58,7 @@ class LinuxBuilder(Builder):
 			cmake.append('-DWITH_STATIC_LIBC=ON')
 
 		if 'jenkins_kdrive_path' in os.environ:
+			cmake[0] = os.path.join(os.environ['CI_ROOT'], 'cmake', 'cmake', 'bin', 'cmake')
 			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['jenkins_kdrive_path'], 'qt'))
 
 		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_source, 'blender-for-vray-libs'))
