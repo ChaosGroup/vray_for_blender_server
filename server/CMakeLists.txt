@@ -38,18 +38,26 @@ if (QT_ROOT)
 		${QT_ROOT}/include/QtCore
 		${QT_ROOT}/include/QtGui
 	)
-	set(QT_LIBPATH
-		${QT_ROOT}/lib/x64/vc101/
-	)
-	set(QT_LIB
-		QtCore4
-		QtGui4
-	)
+
+	if (WIN32)
+		set(QT_LIBPATH
+			${QT_ROOT}/lib/x64/vc101/
+		)
+	else()
+		set(QT_LIBPATH
+			${QT_ROOT}/lib/linux_x64/gcc-4.1
+		)
+	endif()
 
 	include_directories(${QT_INCLUDES})
 	link_directories(${QT_LIBPATH})
-	target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtCore4.lib)
-	target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtGui4.lib)
+	if (WIN32)
+		target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtCore4.lib)
+		target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/x64/vc101/QtGui4.lib)
+	else()
+		target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/linux_x64/gcc-4.1/libQtCore.so.4)
+		target_link_libraries(${PROJECT_NAME} ${QT_ROOT}/lib/linux_x64/gcc-4.1/libQtGui.so.4)
+	endif()
 else()
 	find_package(Qt4 REQUIRED)
 	include_directories(${Qt4_INCLUDE_DIRS})
