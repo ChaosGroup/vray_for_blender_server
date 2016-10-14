@@ -131,7 +131,7 @@ def main(args):
         # cmd.append('--with_cycles')
         if sys.platform != 'darwin':
             if args.jenkins:
-                cmd.append('--gcc=gcc492')
+                cmd.append('--gcc=gcc482')
                 cmd.append('--gxx=g++482')
             else:
                 cmd.append('--gcc=gcc-4.9.3')
