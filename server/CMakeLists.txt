@@ -117,10 +117,10 @@ if(WIN32)
 elseif(UNIX)
 
 	if(APPLE)
-		install(TARGETS ${PROJECT_NAME}
+		install(TARGETS ${PROJECT_NAME} RUNTIME
 					DESTINATION ${INSTALL_PREFIX})
 	else()
-		install(TARGETS ${PROJECT_NAME}
+		install(TARGETS ${PROJECT_NAME} RUNTIME
 					DESTINATION ${INSTALL_PREFIX})
 	endif()
 endif()
