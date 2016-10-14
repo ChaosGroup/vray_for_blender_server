@@ -27,6 +27,7 @@ def main(args):
     import os
     import sys
     import subprocess
+    from builder import utils
 
     sys.stdout.write('temacity args:\n%s\n' % str(args))
     sys.stdout.flush()
@@ -128,7 +129,7 @@ def main(args):
     else:
         # No Cycles on TeamCity, failed to build some dependencies
         # cmd.append('--with_cycles')
-        if sys.platform != 'darwin':
+        if sys.platform != 'darwin' and utils.which('gcc-4.9.3'):
             cmd.append('--gcc=gcc-4.9.3')
             cmd.append('--gxx=g++-4.9.3')
         cmd.append('--dev_static_libs')
