@@ -72,12 +72,12 @@ class WindowsBuilder(Builder):
 		cmake.append("Ninja")
 
 		old_path = ''
-		if 'JENKINS_WIN_SDK_PATH' in os.environ:
+		if 'jenkins_kdrive_path' in os.environ:
 			cmake[0] = utils.which('cmake')
 			old_path = os.environ['PATH']
 			os.environ['PATH'] = utils.path_join(self.dir_source, "vrayserverzmq", "build", "tools")
-			self.setup_msvc_2013(os.environ['JENKINS_WIN_SDK_PATH'])
-			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['JENKINS_WIN_SDK_PATH'], 'qt', '4.8.4'))
+			self.setup_msvc_2013(os.environ['jenkins_kdrive_path'])
+			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['jenkins_kdrive_path'], 'qt', '4.8.4'))
 
 		cmake.append('-DCMAKE_BUILD_TYPE=%s' % os.environ['CGR_BUILD_TYPE'])
 		cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % self.dir_install)

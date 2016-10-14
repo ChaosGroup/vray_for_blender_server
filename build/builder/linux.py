@@ -57,6 +57,9 @@ class LinuxBuilder(Builder):
 		if distr_info['short_name'] == 'centos' and distr_info['version'] == '6.7':
 			cmake.append('-DWITH_STATIC_LIBC=ON')
 
+		if 'jenkins_kdrive_path' in os.environ:
+			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['jenkins_kdrive_path'], 'qt'))
+
 		cmake.append('-DLIBS_ROOT=%s' % os.path.join(self.dir_source, 'blender-for-vray-libs'))
 
 		cmake.append(os.path.join(self.dir_source, "vrayserverzmq"))
