@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-project(VRayZmqServer)
-
 include(vfh_vrayappsdk)
 
 file(GLOB_RECURSE SOURCES "*.cpp")
