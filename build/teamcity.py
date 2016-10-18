@@ -27,6 +27,7 @@ def main(args):
     import os
     import sys
     import subprocess
+    import glob
     from builder import utils
 
     sys.stdout.write('temacity args:\n%s\n' % str(args))
