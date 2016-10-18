@@ -109,7 +109,7 @@ def main(args):
     if args.jenkins:
         filelist = glob.glob(os.path.join(args.teamcity_build_path, '*'))
         for filename in filelist:
-            sys.stdout.write("rm: [%s]\n")
+            sys.stdout.write("rm: [%s]\n" % filename)
             # os.remove(filename)
         sys.stdout.flush()
 
