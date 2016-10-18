@@ -105,6 +105,13 @@ def main(args):
     else:
         cmd.append('--dir_build=%s' % os.path.join(source_path, "vrayserverzmq-cmake-build"))
 
+    if args.jenkins:
+        filelist = glob.glob(os.path.join(args.teamcity_build_path, '*'))
+        for filename in filelist:
+            sys.stdout.write("rm: [%s]\n")
+            # os.remove(filename)
+        sys.stdout.flush()
+
 
     # install path defaults
     if args.teamcity_install_path != '':
