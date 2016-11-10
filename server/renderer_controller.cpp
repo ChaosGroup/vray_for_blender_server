@@ -480,7 +480,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		}
 		break;
 	case VRayMessage::RendererAction::SetVfbShow:
-		if (message.getValue<AttrSimpleType<bool>>()->m_Value && showVFB) {
+		if (message.getValue<AttrSimpleType<int>>()->m_Value && showVFB) {
 			renderer->vfb.show(true, false);
 		} else {
 			renderer->vfb.show(false, false);
