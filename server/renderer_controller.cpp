@@ -479,6 +479,12 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 			Logger::log(Logger::Warning, "Invalid CommitAction: ", message.getValue<AttrSimpleType<int>>()->m_Value);
 		}
 		break;
+	case VRayMessage::RendererAction::SetVfbShow:
+		if (message.getValue<AttrSimpleType<bool>>()->m_Value && showVFB) {
+			renderer->vfb.show(true, false);
+		} else {
+			renderer->vfb.show(false, false);
+		}
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
