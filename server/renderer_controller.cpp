@@ -382,11 +382,6 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			if (showVFB) {
-				renderer->vfb.show(true, true);
-			} else {
-				renderer->vfb.show(false, false);
-			}
 
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
 			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
@@ -482,9 +477,12 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 	case VRayMessage::RendererAction::SetVfbShow:
 		if (message.getValue<AttrSimpleType<int>>()->m_Value && showVFB) {
 			renderer->vfb.show(true, false);
+			Logger::log(Logger::Info, "Renderer::vfb::show(true, false)");
 		} else {
 			renderer->vfb.show(false, false);
+			Logger::log(Logger::Info, "Renderer::vfb::show(false, false)");
 		}
+		break;
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
