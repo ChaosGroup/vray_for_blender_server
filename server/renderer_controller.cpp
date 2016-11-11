@@ -443,7 +443,7 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		exportParams.useHexFormat = false;
 		exportParams.compressed = false;
 
-		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, &exportParams);
+		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, exportParams);
 
 		Logger::log(Logger::Info, "Renderer::exportScene", message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		break;
