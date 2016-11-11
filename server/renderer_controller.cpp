@@ -320,6 +320,19 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		} else {
 			Logger::log(Logger::Warning, "Failed to find plugin to remove:", message.getPlugin());
 		}
+	} else if (message.getPluginAction() == VRayMessage::PluginAction::Replace) {
+		VRay::Plugin oldPlugin = renderer->getPlugin(message.getPlugin());
+		VRay::Plugin newPlugin = renderer->getPlugin(message.getPluginNew());
+		if (oldPlugin && newPlugin) {
+			if (!renderer->replacePlugin(oldPlugin, newPlugin)) {
+				auto err = renderer->getLastError();
+				Logger::log(Logger::Error, "Failed to replace plugin:", message.getPlugin(), "With", message.getPluginNew(), " Error:", err.toString());
+			} else {
+				Logger::log(Logger::Debug, "Replaced plugin", message.getPlugin());
+			}
+		} else {
+			Logger::log(Logger::Warning, "Failed to find plugin/s to replace:", message.getPlugin(), message.getPluginNew());
+		}
 	}
 }
 
