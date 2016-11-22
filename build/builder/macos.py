@@ -57,6 +57,10 @@ class MacBuilder(Builder):
 		cmake.append('-DAPPSDK_PATH=%s' % os.environ['CGR_APPSDK_PATH'])
 		cmake.append('-DAPPSDK_VERSION=%s' % os.environ['CGR_APPSDK_VERSION'])
 
+		if 'jenkins_kdrive_path' in os.environ:
+			cmake[0] = os.path.join(os.environ['CI_ROOT'], 'cmake', 'cmake', 'bin', 'cmake')
+			cmake.append('-DQT_ROOT=%s' % utils.path_join(os.environ['jenkins_kdrive_path'], 'qt-4.8.5'))
+
 		if distr_info['short_name'] == 'centos' and distr_info['version'] == '6.7':
 			cmake.append('-DWITH_STATIC_LIBC=ON')
 
