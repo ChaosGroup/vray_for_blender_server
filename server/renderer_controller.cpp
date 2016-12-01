@@ -244,12 +244,8 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 			const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
 			VRay::VUtils::ValueRefList instancer(inst.data.getCount() + 1);
 			instancer[0] = VRay::VUtils::Value(inst.frameNumber);
-			// TODO: making multiple calls to logger means something can get between these calls
-			// find a way to fix this while still avoiding work if we arent logging Info level
 
-			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),"\").setValue(\"", message.getProperty(), "\",ValueList{Value(", inst.frameNumber, ")");
-
-			std::unordered_map<std::string, VRay::Plugin> instanceReferences;
+			Logger::log(Logger::Info, "{VUtils::ValueRefList i(", inst.data.getCount() + 1, ");i[0]=VUtils::Value(", inst.frameNumber, ");");
 
 			for (int i = 0; i < inst.data.getCount(); ++i) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
@@ -264,20 +260,15 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				instance[1].setTransform(*tm);
 				instance[2].setTransform(*vel);
 
-				Logger::log(Logger::Info, ",Value(ValueList{Value(", item.index, "),Value(", *tm, "),Value(", *vel, "), Value(\"", item.node.plugin, "\")})");
-
-				auto pluginIter = instanceReferences.find(item.node.plugin);
-				if (pluginIter == instanceReferences.end()) {
-					pluginIter = instanceReferences.insert(pluginIter, make_pair(item.node.plugin, renderer->getPlugin(item.node.plugin)));
-				}
-
-				auto & plugin = pluginIter->second;
+				auto plugin = renderer->getPlugin(item.node.plugin);
 				if (!plugin) {
 					Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
 					break;
 				}
 
 				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
+				Logger::log(Logger::Info, "{VUtils::ValueRefList in(4);in[0].setDouble(", item.index, ");in[1].setTransform(", *tm, ");in[2].setTransform(",
+					*vel, ");in[3].setObjectID(VUtils::ObjectID{", plugin.getId(), "});/*", item.node.plugin,"*/i[", i + 1, "].setList(in);}");
 
 				instance[3].setObjectID(pluginId);
 				instancer[i + 1].setList(instance);
@@ -288,7 +279,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				success = plugin.setValue(message.getProperty(), instancer);
 			}
 
-			Logger::log(Logger::Info, "}); // success == ", success);
+			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
 
 			break;
 		}
