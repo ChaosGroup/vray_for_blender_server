@@ -13,6 +13,8 @@
 #include "utils/logger.h"
 #include "utils/version.h"
 #include <string>
+#include <fstream>
+#include <chrono>
 
 #include <qapplication.h>
 
@@ -26,6 +28,7 @@ struct ArgvSettings {
 	std::string port;
 	bool showVFB;
 	bool checkHearbeat;
+	bool dumpInfoLog;
 	Logger::Level logLevel;
 };
 
@@ -43,6 +46,8 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			}
 		} else if (!strcmp(argv[c], "-noHeartbeat")) {
 			settings.checkHearbeat = false;
+		} else if (!strcmp(argv[c], "-dumpInfoLog")) {
+			settings.dumpInfoLog = true;
 		} else {
 			return false;
 		}
@@ -71,8 +76,31 @@ int main(int argc, char *argv[]) {
 		printHelp();
 		return 0;
 	}
+	std::ofstream infoDump;
+	auto lastLogTime = std::chrono::high_resolution_clock::now();
+	bool firstLog = true;
+	if (settings.dumpInfoLog) {
+		infoDump.open("dumpInfoLog.txt", std::ios::trunc | std::ios::ate);
+	}
+	Logger::getInstance().setForceInfoLog(settings.dumpInfoLog);
 
-	Logger::getInstance().setCallback([&settings](Logger::Level lvl, const std::string & msg) {
+
+	Logger::getInstance().setCallback([&settings, &infoDump, &lastLogTime, &firstLog] (Logger::Level lvl, const std::string & msg) {
+		using namespace std::chrono;
+		if (lvl == Logger::Info && settings.dumpInfoLog && infoDump) {
+			if (!firstLog) {
+				auto now = high_resolution_clock::now();
+				auto sleepTime = duration_cast<milliseconds>(now - lastLogTime).count();
+				if (sleepTime > 10) {
+					infoDump << "Sleep(" << sleepTime << ");\n";
+				}
+				lastLogTime = now;
+			}
+			firstLog = false;
+			infoDump.write(msg.c_str(), msg.length());
+			infoDump.write("\n", 1);
+			infoDump.flush();
+		}
 		if (lvl >= settings.logLevel - 1) {
 			switch (lvl) {
 			case Logger::Debug:
@@ -109,7 +137,7 @@ int main(int argc, char *argv[]) {
 		// lets make sure we load all vray stuff from the same place
 		std::string vrayPath(path);
 		vrayPath = vrayPath.substr(0, vrayPath.find_last_of("/\\"));
-		Logger::log(Logger::Info, "Setting VRAY_PATH to", vrayPath);
+		Logger::log(Logger::Debug, "Setting VRAY_PATH to", vrayPath);
 		// putenv requires valid memory until exit or variable unset
 		static char vrayPathBuf[1024] = {0, };
 		strncpy(vrayPathBuf, ("VRAY_PATH=" + vrayPath).c_str(), 1024);
@@ -119,7 +147,7 @@ int main(int argc, char *argv[]) {
 		static char pathBuf[1024] = {0, };
 		strncpy(pathBuf, ("PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "")).c_str(), 1024);
 		putenv(pathBuf);
-		Logger::log(Logger::Info, "New PATH", pathBuf);
+		Logger::log(Logger::Debug, "New PATH", pathBuf);
 	}
 
 	printInfo();
