@@ -155,6 +155,23 @@ private:
 		out << "}";
 	}
 
+	template <>
+	static void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::AttrPlugin> & arr) {
+		out << "ValueList{";
+		if (!arr.empty()) {
+			out << "Value(\"";
+			hookFormat(out, arr[0].plugin);
+			out << "\")";
+		}
+
+		for (int c = 1; c < arr.size(); ++c) {
+			out << ",Value(\"";
+			hookFormat(out, arr[c].plugin);
+			out << "\")";
+		}
+		out << "}";
+	}
+
 	bool     forceInfoLog;
 	Level    currentLevel;
 	StringCb scb;

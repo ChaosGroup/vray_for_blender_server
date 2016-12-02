@@ -166,7 +166,22 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		case VRayBaseTypes::ValueType::ValueTypeListPlugin:
 		{
 			const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
+#if 1 // enable this for ValueList
+			VRay::ValueList pluginList(plist.getCount());
+
+			for (int c = 0; c < plist.getCount(); ++c) {
+				const auto & messagePlugin = (*plist)[c];
+				const auto & vrayPlugin = renderer->getPlugin(messagePlugin.plugin);
+				pluginList[c] = VRay::Value(vrayPlugin);
+			}
+			success = plugin.setValue(message.getProperty(), pluginList);
+
+			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
+				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListPlugin>()->getData(), "); // success == ", success);
+#else
 			VRay::VUtils::ValueRefList pluginList(plist.getCount());
+
+			Logger::log(Logger::Info, "{VUtils::ValueRefList l(", plist.getCount(), ");");
 
 			for (int c = 0; c < plist.getCount(); ++c) {
 				const auto & messagePlugin = (*plist)[c];
@@ -178,18 +193,19 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				} else {
 					pluginId = {vrayPlugin.getId()};
 				}
+				Logger::log(Logger::Info, "l[", c, "].setObjectID(VUtils::ObjectID{renderer.getPlugin(\"", messagePlugin.plugin, "\").getId()});");
 
 				pluginList[c].setObjectID(pluginId);
 			}
-			plugin.setValue(message.getProperty(), pluginList);
-
-			// TODO: fix info log
-			//Logger::log(Logger::Info,
-			//	"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
-			//	plist.getCount(), "\nSuccess:", success);
+			success = plugin.setValue(message.getProperty(), pluginList);
+			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
+				"\").setValue(\"", message.getProperty(), "\",l);} // success == ", success);
+#endif
 			break;
+
 		}
 		case VRayBaseTypes::ValueType::ValueTypeListString:
+
 		{
 			const VRayBaseTypes::AttrListString & slist = *message.getValue<VRayBaseTypes::AttrListString>();
 			VRay::VUtils::CharStringRefList stringList(slist.getCount());
