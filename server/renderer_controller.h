@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <unordered_set>
-#include "zmq_wrapper.h"
+#include "zmq_wrapper.hpp"
 
 #ifdef _WIN32
 	#define WIN32_LEAN_AND_MEAN
