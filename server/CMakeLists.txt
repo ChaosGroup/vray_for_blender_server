@@ -38,7 +38,7 @@ if (QT_ROOT)
 	)
 
 	if (WIN32)
-		set(QT_LIBPATH ${QT_ROOT}/lib/x64/vc101/)
+		set(QT_LIBPATH ${QT_ROOT}/lib/)
 		set(QT_LIB_EXT "4.lib")
 		set(QT_LIB_PREFIX "")
 	else()
