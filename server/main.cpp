@@ -1,5 +1,6 @@
 #define VRAY_RUNTIME_LOAD_PRIMARY
 #ifdef _WIN32
+	#define _CRT_SECURE_NO_WARNINGS
 	#define WIN32_LEAN_AND_MEAN
 	#define NOMINMAX
 	#include <windows.h>
@@ -144,8 +145,10 @@ int main(int argc, char *argv[]) {
 		putenv(vrayPathBuf);
 
 		auto userPath = getenv("PATH");
-		static char pathBuf[1024] = {0, };
-		strncpy(pathBuf, ("PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "")).c_str(), 1024);
+		const int pathSize = 4096;
+		static char pathBuf[pathSize] = {0, };
+		const auto pathValue = "PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "");
+		strncpy(pathBuf, pathValue.c_str(), pathSize);
 		putenv(pathBuf);
 		Logger::log(Logger::Debug, "New PATH", pathBuf);
 	}
