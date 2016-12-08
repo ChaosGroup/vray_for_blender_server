@@ -20,12 +20,13 @@ namespace LoggerFormat {
 // Hook formatting so we log strings that are ready to be compiled
 
 template <typename T>
-static void hookFormat(std::ostream & out, const T & val) {
+void hookFormat(std::ostream & out, const T & val) {
 	out << val;
 }
 
+
 template <>
-static void hookFormat(std::ostream & out, const float & val) {
+inline void hookFormat(std::ostream & out, const float & val) {
 	if (std::fabs(std::roundf(val) - val) < 0.001f) {
 		out << static_cast<int>(std::roundf(val)) << '.';
 	} else {
@@ -35,7 +36,7 @@ static void hookFormat(std::ostream & out, const float & val) {
 }
 
 template <>
-static void hookFormat(std::ostream & out, const VRay::Color & val) {
+inline void hookFormat(std::ostream & out, const VRay::Color & val) {
 	out << "Color(";
 	hookFormat(out, val.r);
 	out << ',';
@@ -46,7 +47,7 @@ static void hookFormat(std::ostream & out, const VRay::Color & val) {
 }
 
 template <>
-static void hookFormat(std::ostream & out, const VRay::Vector & val) {
+inline void hookFormat(std::ostream & out, const VRay::Vector & val) {
 	out << "Vector(";
 	hookFormat(out, val.x);
 	out << ',';
@@ -57,12 +58,12 @@ static void hookFormat(std::ostream & out, const VRay::Vector & val) {
 }
 
 template <>
-static void hookFormat(std::ostream & out, const VRayBaseTypes::AttrVector & val) {
+inline void hookFormat(std::ostream & out, const VRayBaseTypes::AttrVector & val) {
 	hookFormat(out, *reinterpret_cast<const VRay::Vector*>(&val));
 }
 
 template <>
-static void hookFormat(std::ostream & out, const VRay::Matrix & val) {
+inline void hookFormat(std::ostream & out, const VRay::Matrix & val) {
 	out << "Matrix(";
 	hookFormat(out, val.v0);
 	out << ',';
@@ -73,7 +74,7 @@ static void hookFormat(std::ostream & out, const VRay::Matrix & val) {
 }
 
 template <>
-static void hookFormat(std::ostream & out, const VRay::Transform & val) {
+inline void hookFormat(std::ostream & out, const VRay::Transform & val) {
 	out << "Transform(";
 	hookFormat(out, val.matrix);
 	out << ',';
@@ -82,7 +83,7 @@ static void hookFormat(std::ostream & out, const VRay::Transform & val) {
 }
 
 template <typename Q>
-static void hookFormat(std::ostream & out, const std::vector<Q> & arr) {
+inline void hookFormat(std::ostream & out, const std::vector<Q> & arr) {
 	out << "ValueList{";
 	if (!arr.empty()) {
 		out << "Value(";
@@ -99,7 +100,7 @@ static void hookFormat(std::ostream & out, const std::vector<Q> & arr) {
 }
 
 template <>
-static void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::AttrPlugin> & arr) {
+inline void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::AttrPlugin> & arr) {
 	out << "ValueList{";
 	if (!arr.empty()) {
 		out << "Value(\"";
