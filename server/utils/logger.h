@@ -15,6 +15,107 @@
 #include <vraysdk.hpp>
 #include <base_types.h>
 
+namespace LoggerFormat {
+
+// Hook formatting so we log strings that are ready to be compiled
+
+template <typename T>
+static void hookFormat(std::ostream & out, const T & val) {
+	out << val;
+}
+
+template <>
+static void hookFormat(std::ostream & out, const float & val) {
+	if (std::fabs(std::roundf(val) - val) < 0.001f) {
+		out << static_cast<int>(std::roundf(val)) << '.';
+	} else {
+		out << val;
+	}
+	out << 'f';
+}
+
+template <>
+static void hookFormat(std::ostream & out, const VRay::Color & val) {
+	out << "Color(";
+	hookFormat(out, val.r);
+	out << ',';
+	hookFormat(out, val.g);
+	out << ',';
+	hookFormat(out, val.b);
+	out << ")";
+}
+
+template <>
+static void hookFormat(std::ostream & out, const VRay::Vector & val) {
+	out << "Vector(";
+	hookFormat(out, val.x);
+	out << ',';
+	hookFormat(out, val.y);
+	out << ',';
+	hookFormat(out, val.z);
+	out << ")";
+}
+
+template <>
+static void hookFormat(std::ostream & out, const VRayBaseTypes::AttrVector & val) {
+	hookFormat(out, *reinterpret_cast<const VRay::Vector*>(&val));
+}
+
+template <>
+static void hookFormat(std::ostream & out, const VRay::Matrix & val) {
+	out << "Matrix(";
+	hookFormat(out, val.v0);
+	out << ',';
+	hookFormat(out, val.v1);
+	out << ',';
+	hookFormat(out, val.v2);
+	out << ")";
+}
+
+template <>
+static void hookFormat(std::ostream & out, const VRay::Transform & val) {
+	out << "Transform(";
+	hookFormat(out, val.matrix);
+	out << ',';
+	hookFormat(out, val.offset);
+	out << ")";
+}
+
+template <typename Q>
+static void hookFormat(std::ostream & out, const std::vector<Q> & arr) {
+	out << "ValueList{";
+	if (!arr.empty()) {
+		out << "Value(";
+		hookFormat(out, arr[0]);
+		out << ')';
+	}
+
+	for (int c = 1; c < arr.size(); ++c) {
+		out << ",Value(";
+		hookFormat(out, arr[c]);
+		out << ')';
+	}
+	out << "}";
+}
+
+template <>
+static void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::AttrPlugin> & arr) {
+	out << "ValueList{";
+	if (!arr.empty()) {
+		out << "Value(\"";
+		hookFormat(out, arr[0].plugin);
+		out << "\")";
+	}
+
+	for (int c = 1; c < arr.size(); ++c) {
+		out << ",Value(\"";
+		hookFormat(out, arr[c].plugin);
+		out << "\")";
+	}
+	out << "}";
+}
+} // namespace LoggerFormat
+
 class Logger {
 public:
 	enum Level {
@@ -67,110 +168,11 @@ private:
 		if (lvl != Info) {
 			stream << ' ';
 		}
-		hookFormat(stream, val);
+		LoggerFormat::hookFormat(stream, val);
 		logImpl(lvl, stream, rest...);
 	}
 
 	static void logImpl(Level lvl, std::stringstream & msg);
-
-
-	// Hook formatting so we log strings that are ready to be compiled
-
-	template <typename T>
-	static void hookFormat(std::ostream & out, const T & val) {
-		out << val;
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const float & val) {
-		if (std::fabs(std::roundf(val) - val) < 0.001f) {
-			out << static_cast<int>(std::roundf(val)) << '.';
-		} else {
-			out << val;
-		}
-		out << 'f';
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const VRay::Color & val) {
-		out << "Color(";
-		hookFormat(out, val.r);
-		out << ',';
-		hookFormat(out, val.g);
-		out << ',';
-		hookFormat(out, val.b);
-		out << ")";
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const VRay::Vector & val) {
-		out << "Vector(";
-		hookFormat(out, val.x);
-		out << ',';
-		hookFormat(out, val.y);
-		out << ',';
-		hookFormat(out, val.z);
-		out << ")";
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const VRayBaseTypes::AttrVector & val) {
-		hookFormat(out, *reinterpret_cast<const VRay::Vector*>(&val));
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const VRay::Matrix & val) {
-		out << "Matrix(";
-		hookFormat(out, val.v0);
-		out << ',';
-		hookFormat(out, val.v1);
-		out << ',';
-		hookFormat(out, val.v2);
-		out << ")";
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const VRay::Transform & val) {
-		out << "Transform(";
-		hookFormat(out, val.matrix);
-		out << ',';
-		hookFormat(out, val.offset);
-		out << ")";
-	}
-
-	template <typename Q>
-	static void hookFormat(std::ostream & out, const std::vector<Q> & arr) {
-		out << "ValueList{";
-		if (!arr.empty()) {
-			out << "Value(";
-			hookFormat(out, arr[0]);
-			out << ')';
-		}
-
-		for (int c = 1; c < arr.size(); ++c) {
-			out << ",Value(";
-			hookFormat(out, arr[c]);
-			out << ')';
-		}
-		out << "}";
-	}
-
-	template <>
-	static void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::AttrPlugin> & arr) {
-		out << "ValueList{";
-		if (!arr.empty()) {
-			out << "Value(\"";
-			hookFormat(out, arr[0].plugin);
-			out << "\")";
-		}
-
-		for (int c = 1; c < arr.size(); ++c) {
-			out << ",Value(\"";
-			hookFormat(out, arr[c].plugin);
-			out << "\")";
-		}
-		out << "}";
-	}
 
 	bool     forceInfoLog;
 	Level    currentLevel;
