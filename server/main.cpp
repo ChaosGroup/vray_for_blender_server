@@ -24,6 +24,7 @@ struct ArgvSettings {
 	    : port("")
 	    , showVFB(false)
 	    , checkHearbeat(true)
+	    , dumpInfoLog(false)
 	    , logLevel(Logger::Warning)
 	{}
 	std::string port;
