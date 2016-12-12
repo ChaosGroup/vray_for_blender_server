@@ -133,22 +133,13 @@ public:
 	bool getForceInfoLog() const { return forceInfoLog;  }
 
 	template <typename ... R>
-	static void log(Level lvl, const std::string & msg, const R & ... rest) {
+	static void log(Level lvl, const R & ... rest) {
 		if (lvl == Info && getInstance().currentLevel != Info && !getInstance().forceInfoLog) {
 			// skip Info if not required
 			return;
 		}
-		std::stringstream stream(msg, std::ios_base::ate | std::ios_base::in | std::ios_base::out);
+		std::stringstream stream("", std::ios_base::ate | std::ios_base::in | std::ios_base::out);
 		logImpl(lvl, stream, rest...);
-	}
-
-	static void log(Level lvl, const std::string & msg) {
-		if (lvl == Info && getInstance().currentLevel != Info && !getInstance().forceInfoLog) {
-			// skip Info if not required
-			return;
-		}
-		std::stringstream stream(msg, std::ios_base::ate | std::ios_base::in | std::ios_base::out);
-		logImpl(lvl, stream, msg);
 	}
 
 	/// default Level::Debug
