@@ -277,6 +277,7 @@ bool ZmqProxyServer::reportStats(time_point now) {
 
 void ZmqProxyServer::run() {
 	if (!initZmq()) {
+		qApp->quit();
 		return;
 	}
 
