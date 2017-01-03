@@ -590,7 +590,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 		}
 	}
 
-	sendFn(VRayMessage::createMessage(std::move(set)));
+	sendFn(VRayMessage::msgImageSet(std::move(set)));
 }
 
 
@@ -632,8 +632,8 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 			sendImages(img, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, VRayBaseTypes::ImageSourceType::ImageReady);
 		}
 
-		VRayMessage::RendererStatus status = renderer->isAborted() ? VRayMessage::RendererStatus::Abort : VRayMessage::RendererStatus::Continue;
-		sendFn(VRayMessage::createMessage(status, this->currentFrame));
+		VRayMessage::RendererState state = renderer->isAborted() ? VRayMessage::RendererState::Abort : VRayMessage::RendererState::Continue;
+		sendFn(VRayMessage::msgRendererState(state, this->currentFrame));
 
 		if (type == VRayMessage::RendererType::Animation) {
 			Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
@@ -657,7 +657,7 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 		size *= sizeof(VRay::AColor);
 		set.images.emplace(VRayBaseTypes::RenderChannelType::RenderChannelTypeNone, VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height, x, y));
 
-		sendFn(VRayMessage::createMessage(std::move(set)));
+		sendFn(VRayMessage::msgImageSet(std::move(set)));
 
 		Logger::log(Logger::Debug, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 	}
@@ -675,5 +675,5 @@ void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char
 		Logger::log(Logger::Debug, "VRAY:", msg);
 	}
 
-	sendFn(VRayMessage::createMessage(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
+	sendFn(VRayMessage::msgSingleValue(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
 }
