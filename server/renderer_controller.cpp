@@ -249,10 +249,8 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 
 			success = plugin.setValue(message.getProperty(), map_channels);
 
-			// TODO: fix info log
-			//Logger::log(Logger::Info,
-			//	"Setting", message.getProperty(), "for plugin", message.getPlugin(), "size:",
-			//	channelMap.data.size(), "\nSuccess:", success);
+			// TODO: maybe implement - tricky as it usually contains alot of data
+			Logger::log(Logger::Info, "// AttrMapChannels unimplemented log success == ", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeInstancer:
@@ -376,12 +374,6 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 	case VRayMessage::RendererAction::Start:
 		renderer->startSync();
 		Logger::log(Logger::Info, "renderer.startSync();");
-
-		if (type == VRayMessage::RendererType::Animation) {
-			//renderer->waitForImageReady();
-			//imageDone(*renderer, nullptr);
-		}
-
 		break;
 	case VRayMessage::RendererAction::Stop:{
 		Logger::log(Logger::Info, "renderer.stop();");
@@ -389,7 +381,6 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		break;
 	}
 	case VRayMessage::RendererAction::Free:
-		Logger::log(Logger::Info, "renderer.stop(); // free");
 		stopRenderer();
 		elementsToSend.clear();
 
@@ -605,19 +596,18 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 
 void RendererController::stopRenderer() {
 	Logger::log(Logger::Debug, "Freeing renderer object");
-	Logger::log(Logger::Info, "renderer.vfb.show(false, false);renderer.stop();");
 
 	std::lock_guard<std::mutex> l(rendererMtx);
 	if (renderer) {
-
 		renderer->setOnRTImageUpdated(nullptr);
 		renderer->setOnImageReady(nullptr);
 		renderer->setOnBucketReady(nullptr);
 		renderer->setOnDumpMessage(nullptr);
+		Logger::log(Logger::Info, "renderer.vfb.show(false, false);");
 		renderer->vfb.show(false, false);
 
+		Logger::log(Logger::Info, "renderer.stop();");
 		renderer->stop();
-		//renderer->reset();
 		renderer.release();
 	}
 }

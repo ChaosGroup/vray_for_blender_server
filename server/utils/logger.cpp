@@ -2,16 +2,16 @@
 #include <algorithm>
 
 Logger::Logger()
-	: forceInfoLog(false)
-	, currentLevel(Debug) {}
+	: currentLevel(Debug) {}
 
 void Logger::setCallback(Logger::StringCb cb) {
 	scb = cb;
 }
 
+/// Base case for the logImpl - calls the callback with the generated string and Level
 void Logger::logImpl(Logger::Level lvl, std::stringstream & stream) {
 	auto & inst = getInstance();
-	if (lvl == Info && inst.currentLevel != Info && !inst.forceInfoLog) {
+	if (lvl == Info && inst.currentLevel != Info) {
 		return;
 	}
 	auto msg = stream.str();

@@ -71,7 +71,7 @@ void printHelp() {
 	puts("-log <level>\t1-4, 1 beeing the most verbose");
 }
 
-
+/// Parse command line arguments, initialize logger, initialize server and start it
 int main(int argc, char *argv[]) {
 	ArgvSettings settings;
 	if (!parseArgv(settings, argc, argv)) {
@@ -82,9 +82,10 @@ int main(int argc, char *argv[]) {
 	auto lastLogTime = std::chrono::high_resolution_clock::now();
 	bool firstLog = true;
 	if (settings.dumpInfoLog) {
+		settings.logLevel = Logger::Info;
 		infoDump.open("dumpInfoLog.txt", std::ios::trunc | std::ios::ate);
 	}
-	Logger::getInstance().setForceInfoLog(settings.dumpInfoLog);
+	Logger::getInstance().setCurrentlevel(settings.logLevel);
 
 
 	Logger::getInstance().setCallback([&settings, &infoDump, &lastLogTime, &firstLog] (Logger::Level lvl, const std::string & msg) {
@@ -115,7 +116,10 @@ int main(int argc, char *argv[]) {
 				printf("ZMQ_ERROR: %s\n", msg.c_str());
 				break;
 			case Logger::Info:
-				printf("ZMQ_INFO: %s\n", msg.c_str());
+				if (!settings.dumpInfoLog) {
+					// only print info to console if it is not dumped in file
+					printf("ZMQ_INFO: %s\n", msg.c_str());
+				}
 				break;
 			case Logger::None:
 			default:
@@ -125,6 +129,7 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
+	// fix paths in order to load correct appsdk with matching vray and plugins
 #ifdef _WIN32
 	const char * os_pathsep = ";";
 #else
@@ -169,6 +174,7 @@ int main(int argc, char *argv[]) {
 		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
 		std::thread serverRunner(&ZmqProxyServer::run, &server);
 
+		// blocks until qApp->quit() is called
 		retCode = qapp.exec();
 
 		if (serverRunner.joinable()) {

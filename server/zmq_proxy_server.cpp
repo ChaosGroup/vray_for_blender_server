@@ -105,7 +105,7 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
 }
 
-uint64_t ZmqProxyServer::sendOutMessages() {
+uint64_t ZmqProxyServer::sendOutMessages(int maxSend) {
 	if (sendQ.empty()) {
 		return 0;
 	}
@@ -113,7 +113,6 @@ uint64_t ZmqProxyServer::sendOutMessages() {
 	uint64_t transferred = 0;
 
 	lock_guard<mutex> l(sendQMutex);
-	int maxSend = 10;
 	while (sendQ.size() && --maxSend) {
 		auto & p = sendQ.front();
 		transferred += p.second.getMessage().size();

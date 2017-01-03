@@ -17,7 +17,8 @@
 #include <vraysdk.hpp>
 #include "renderer_controller.h"
 
-// minimal implemetation required for the project
+/// Wrapper class over uint64_t to enable custom printing in Logger
+/// Contains minimal implemetation required
 class client_id_t {
 public:
 	client_id_t(uint64_t id): m_id(id) {}
@@ -44,11 +45,13 @@ private:
 	uint64_t m_id;
 };
 
+/// Print only 3 digits of the client ID
 inline std::ostream & operator<<(std::ostream & strm, const client_id_t & id) {
 	return strm << std::setfill('0') << std::setw(3) << (uint64_t)id % 1000;
 }
 
 namespace std {
+	/// Hash-er for the client ID wrapper
 	template <>
 	struct hash<client_id_t> {
 		size_t operator()(const client_id_t & el) const {
@@ -57,22 +60,27 @@ namespace std {
 	};
 }
 
+/// Server that manages clients and renderers
+/// Instantiated a RendererController for each 'Renderer' and maintains heartbeat connection with
+/// each instance of Blender that is running
 class ZmqProxyServer {
 	typedef std::chrono::high_resolution_clock::time_point time_point;
 
-	// Wrapper struct for the renderer object
+	/// Context for a singe Renderer
 	struct WorkerWrapper {
-		std::unique_ptr<RendererController> worker;
-		time_point lastKeepAlive;
-		client_id_t id;
-		ClientType clientType;
-		uint64_t appsdkWorkTimeMs;
-		uint64_t appsdkMaxTimeMs;
 		struct MessageInfo {
 			VRayMessage::Type type;
 			VRayMessage::PluginAction pAction;
 			VRayMessage::RendererAction rAction;
-		} msg;
+		};
+
+		std::unique_ptr<RendererController> worker; ///< Pointer to the RendererController
+		time_point                          lastKeepAlive; ///< Last time we got message from this client
+		client_id_t                         id; ///< The associated client ID, used for message routing
+		ClientType                          clientType; ///< Either heartbeat or exporter
+		uint64_t                            appsdkWorkTimeMs; ///< Total time this client spent waiting for appsdk calls
+		uint64_t                            appsdkMaxTimeMs; ///< The slowest appsdk call
+		MessageInfo                         msg; ///< Info for the slowest appsdk call
 
 		WorkerWrapper(const WorkerWrapper &) = delete;
 		WorkerWrapper & operator=(const WorkerWrapper &) = delete;
@@ -88,48 +96,75 @@ class ZmqProxyServer {
 	};
 
 public:
+	/// Create new server
+	/// @port - the listening port
+	/// @appsdkPath - full path to the appsdk that will be passet to VRay::Init
+	/// @showVFB - flag passed to VRay::Init to enable/disable UI
+	/// @checkHeartbeat - if true server will remain active until there are heartbeat clients and shutdown if all disconnect
 	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false, bool checkHeartbeat = true);
 
+	/// Starts serving requests until there are active clients (heartbeat or exporter)
 	void run();
 private:
 
+	/// Base function for thread that relays received messages to appropriate RendererController
 	void dispatcherThread();
 
+	/// Create a Renderer for a given client
+	/// @clientId - the ID of the client
+	/// @now - current time
 	void addWorker(client_id_t clientId, time_point now);
-	uint64_t sendOutMessages();
+
+	/// Send out queued messaged, but no more that maxSend
+	/// @maxSend - upper limit of messages to send
+	/// @return - bytes sent
+	uint64_t sendOutMessages(int maxSend = 10);
+
+	/// Initialize ZMQ
+	/// @return - false on fail
 	bool initZmq();
+
+	/// Use Logger::log to print stats, does nothing if called more often that once a second
+	/// @now - current time
+	/// @return - true if actually printed
 	bool reportStats(time_point now);
 
-	// this will return true if there is no client for more than SHUTDOWN_TIMEOUT
+	/// Check if all heartbeat clients are inactive
+	/// Used to stop server if @checkHeartbeat is true and this returns true
+	/// @now - current time
+	/// @return - true if there are no heartbeat clients
 	bool checkForHeartbeat(time_point now);
+
+	/// Check and disconnects any inactive clients
+	/// @now - current time
+	/// @return	- true if some work was done, false if called more frequent than 100ms or no clients in server
 	bool checkForTimeout(time_point now);
 
+	/// Clear all pending messages for a client
+	/// @client - the ID of the client
 	void clearMessagesForClient(const client_id_t & client);
 
 private:
-	const bool checkHeartbeat;
-	bool showVFB;
-	bool dispatcherRunning;
-	std::string port;
+	const bool  checkHeartbeat; ///< If true server stops itself if there are no active clients
+	bool        showVFB; ///< Flag for appsdk UI
+	std::string port; ///< Listening port
 
-	// active workers
-	std::unordered_map<client_id_t, WorkerWrapper> workers;
-	std::mutex workersMutex;
+	std::unordered_map<client_id_t, WorkerWrapper> workers; ///< Map of all active clients
+	std::mutex workersMutex; ///< Lock for @workers
 
-	std::unique_ptr<zmq::context_t> context;
-	std::unique_ptr<zmq::socket_t> routerSocket;
+	std::unique_ptr<zmq::context_t> context; ///< The ZMQ context
+	std::unique_ptr<zmq::socket_t> routerSocket; ///< The ZMQ socket
 
-	// message queue for sending
-	std::deque<std::pair<client_id_t, VRayMessage>> sendQ;
-	// message queue for receieveing messages
-	std::queue<std::pair<client_id_t, zmq::message_t>> dispatcherQ;
-	std::mutex sendQMutex, dispatchQMutex;
+	std::deque<std::pair<client_id_t, VRayMessage>> sendQ; ///< Message queue for sending
+	std::mutex sendQMutex; ///< Lock for @sendQ
+	std::queue<std::pair<client_id_t, zmq::message_t>> dispatcherQ; ///< Message queue for receieved messages
+	std::mutex dispatchQMutex; ///< Lock for @dispatcherQ
+	bool dispatcherRunning; ///< Flag for dispatcher thread
 
-
-	time_point lastDataCheck;
-	time_point lastTimeoutCheck;
-	time_point lastHeartbeat;
-	uint64_t dataTransfered;
+	time_point lastDataCheck; ///< Last time @reportStats did work
+	time_point lastTimeoutCheck; ///< Last time @checkForTimeout did work
+	time_point lastHeartbeat; ///< Last time a heartbeat client sent data
+	uint64_t dataTransfered; ///< Total bytes send and receieved
 };
 
 #endif // _ZMQ_PROXY_SERVER_H_

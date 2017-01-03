@@ -17,8 +17,8 @@
 
 namespace LoggerFormat {
 
-// Hook formatting so we log strings that are ready to be compiled
 
+// All hookFormat functions are used to print various values in form that could be used for compilation
 template <typename T>
 void hookFormat(std::ostream & out, const T & val) {
 	out << val;
@@ -117,24 +117,34 @@ inline void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::Attr
 }
 } // namespace LoggerFormat
 
+/// Global singleton class used for logging
+/// All logged messages have a Logger::Level asociated with them that is printed as text in the output
+/// One exceptions is Level::Info which is used to dump compilable code of what the exported did with appsdk
 class Logger {
 public:
 	enum Level {
 		Info, Debug, Warning, Error, None
 	};
+
+	/// Callback for each constructed message by the logger
 	typedef std::function<void(Level, const std::string &)> StringCb;
 
+	/// Set the current callback
 	void setCallback(StringCb cb);
 
+	/// Set current level - used to filter Level::Info if not required
+	/// @lvl - the desiered Level
 	void setCurrentlevel(Level lvl) { currentLevel = lvl; }
+
+	/// Return the current log level
 	Level getCurrentLevel() const { return currentLevel; }
 
-	void setForceInfoLog(bool flag) { forceInfoLog = flag; }
-	bool getForceInfoLog() const { return forceInfoLog;  }
-
+	/// Multiple argument function used to conviniently join different type of arguments in one message
+	/// @lvl - the level for this particular log message
+	/// @rest ... - parts of the message
 	template <typename ... R>
 	static void log(Level lvl, const R & ... rest) {
-		if (lvl == Info && getInstance().currentLevel != Info && !getInstance().forceInfoLog) {
+		if (lvl == Info && getInstance().currentLevel != Info) {
 			// skip Info if not required
 			return;
 		}
@@ -142,18 +152,20 @@ public:
 		logImpl(lvl, stream, rest...);
 	}
 
-	/// default Level::Debug
+	/// Log message with default Debug level
 	static void log(const std::string & msg) {
 		log(Debug, msg);
 	}
 
+	/// Get the Logger instace
 	static Logger & getInstance();
 private:
 	Logger();
 
+	/// Implementation of Logger::log without any copies of it's arguments
 	template <typename T, typename ... R>
 	static void logImpl(Level lvl, std::stringstream & stream, const T & val, const R & ... rest) {
-		if (lvl == Info && getInstance().currentLevel != Info && !getInstance().forceInfoLog) {
+		if (lvl == Info && getInstance().currentLevel != Info) {
 			// skip Info if not required
 			return;
 		}
@@ -164,10 +176,12 @@ private:
 		logImpl(lvl, stream, rest...);
 	}
 
+	/// Base case for logImpl
 	static void logImpl(Level lvl, std::stringstream & msg);
 
-	bool     forceInfoLog;
+	/// Current log Level
 	Level    currentLevel;
+	/// Current callback
 	StringCb scb;
 };
 
