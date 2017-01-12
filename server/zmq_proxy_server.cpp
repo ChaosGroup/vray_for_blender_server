@@ -69,8 +69,12 @@ void ZmqProxyServer::dispatcherThread() {
 
 				worker = workers.find(item.first);
 				if (worker == workers.end()) {
-					Logger::log(Logger::Warning, "Renderer disconnected while handling message for", duration, "ms");
+					Logger::log(Logger::Error, "Renderer disconnected while handling message for", duration, "ms");
 					continue;
+				}
+
+				if (duration > 75) {
+					Logger::log(Logger::Info, "/*", duration, "*/");
 				}
 
 				if (worker->second.appsdkMaxTimeMs < duration) {
