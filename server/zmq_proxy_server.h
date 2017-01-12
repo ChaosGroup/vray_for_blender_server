@@ -68,10 +68,11 @@ class ZmqProxyServer {
 
 	/// Context for a singe Renderer
 	struct WorkerWrapper {
+		/// Metadata for a single message, used to track slowest appsdk calls
 		struct MessageInfo {
-			VRayMessage::Type type;
-			VRayMessage::PluginAction pAction;
-			VRayMessage::RendererAction rAction;
+			VRayMessage::Type           type; ///< Type of message
+			VRayMessage::PluginAction   pAction; ///< Plugin action if applicable
+			VRayMessage::RendererAction rAction; ///< Renderer action if applicable
 		};
 
 		std::unique_ptr<RendererController> worker; ///< Pointer to the RendererController
