@@ -148,14 +148,21 @@ int main(int argc, char *argv[]) {
 		// putenv requires valid memory until exit or variable unset
 		static char vrayPathBuf[1024] = {0, };
 		strncpy(vrayPathBuf, ("VRAY_PATH=" + vrayPath).c_str(), 1024);
+#ifdef _WIN32
+		_putenv(vrayPathBuf);
+#else
 		putenv(vrayPathBuf);
-
+#endif
 		auto userPath = getenv("PATH");
 		const int pathSize = 4096;
 		static char pathBuf[pathSize] = {0, };
 		const auto pathValue = "PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "");
 		strncpy(pathBuf, pathValue.c_str(), pathSize);
+		#ifdef _WIN32
+		_putenv(pathBuf);
+#else
 		putenv(pathBuf);
+#endif
 		Logger::log(Logger::Debug, "New PATH", pathBuf);
 	}
 
@@ -171,7 +178,7 @@ int main(int argc, char *argv[]) {
 		char *argv[1] = { nullptr };
 		QApplication qapp(argc, argv);
 
-		ZmqProxyServer server(settings.port, path, settings.showVFB, settings.checkHearbeat);
+		ZmqProxyServer server(settings.port, settings.showVFB, settings.checkHearbeat);
 		std::thread serverRunner(&ZmqProxyServer::run, &server);
 
 		// blocks until qApp->quit() is called

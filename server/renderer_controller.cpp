@@ -643,7 +643,7 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 	}
 }
 
-void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const char * host, VRay::VRayImage * img, void * arg) {
+void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const char *, VRay::VRayImage * img, void * arg) {
 	(void)arg;
 	std::lock_guard<std::mutex> l(rendererMtx);
 
@@ -664,8 +664,7 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 }
 
 
-void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void * arg) {
-	RendererController * rc = reinterpret_cast<RendererController*>(arg);
+void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void *) {
 
 	if (level <= VRay::MessageError) {
 		Logger::log(Logger::Error, "VRAY:", msg);

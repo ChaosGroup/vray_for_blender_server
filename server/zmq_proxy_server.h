@@ -102,7 +102,7 @@ public:
 	/// @appsdkPath - full path to the appsdk that will be passet to VRay::Init
 	/// @showVFB - flag passed to VRay::Init to enable/disable UI
 	/// @checkHeartbeat - if true server will remain active until there are heartbeat clients and shutdown if all disconnect
-	ZmqProxyServer(const std::string &port, const char *appsdkPath, bool showVFB = false, bool checkHeartbeat = true);
+	ZmqProxyServer(const std::string &port, bool showVFB = false, bool checkHeartbeat = true);
 
 	/// Starts serving requests until there are active clients (heartbeat or exporter)
 	void run();

@@ -23,7 +23,7 @@ ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::unique_ptr<RendererController>
 
 }
 
-ZmqProxyServer::ZmqProxyServer(const string & port, const char *appsdkPath, bool showVFB, bool checkHeartbeat)
+ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB, bool checkHeartbeat)
     : port(port)
     , context(nullptr)
     , routerSocket(nullptr)
@@ -340,8 +340,6 @@ void ZmqProxyServer::run() {
 			assert(payload.size() && "Unexpected empty frame");
 
 			const client_id_t messageIdentity = *reinterpret_cast<client_id_t*>(identity.data());
-
-			uint64_t receiverId = 0;
 
 			auto worker = workers.find(messageIdentity);
 
