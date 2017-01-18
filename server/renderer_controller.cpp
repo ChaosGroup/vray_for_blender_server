@@ -576,6 +576,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 						size *= sizeof(VRay::AColor);
 
 						set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), VRayBaseTypes::AttrImage(data, size, imgType, width, height));
+						delete img;
 					}
 				}
 			} catch (VRay::InvalidRenderElementErr &e) {
@@ -630,6 +631,7 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 		if (!renderer->isAborted()) {
 			VRay::VRayImage * img = renderer->getImage();
 			sendImages(img, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, VRayBaseTypes::ImageSourceType::ImageReady);
+			delete img;
 		}
 
 		VRayMessage::RendererState state = renderer->isAborted() ? VRayMessage::RendererState::Abort : VRayMessage::RendererState::Continue;
