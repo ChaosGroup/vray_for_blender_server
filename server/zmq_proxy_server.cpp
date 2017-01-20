@@ -114,7 +114,7 @@ void ZmqProxyServer::run() {
 		backend.bind("inproc://backend");
 		frontend.bind((string("tcp://*:") + port).c_str());
 	} catch (zmq::error_t & ex) {
-		Logger::log(Logger::Error, ex.what());
+		Logger::log(Logger::Error, "While initializing server:", ex.what());
 		qApp->quit();
 		return;
 	}
@@ -137,7 +137,7 @@ void ZmqProxyServer::run() {
 		try {
 			pollResult = zmq::poll(pollItems, 2, 100);
 		} catch (zmq::error_t & ex) {
-			Logger::log(Logger::Error, ex.what());
+			Logger::log(Logger::Error, "zmq::poll:", ex.what());
 			qApp->quit();
 			return;
 		}
@@ -152,7 +152,7 @@ void ZmqProxyServer::run() {
 					recv = recv && frontend.recv(&ctrlMsg);
 					recv = recv && frontend.recv(&payloadMsg);
 				} catch (zmq::error_t & ex) {
-					Logger::log(Logger::Error, ex.what());
+					Logger::log(Logger::Error, "zmq::socket_t::recv:", ex.what());
 					break;
 				}
 
@@ -200,7 +200,7 @@ void ZmqProxyServer::run() {
 				try {
 					frontend.getsockopt(ZMQ_RCVMORE, &more, &more_size);
 				} catch (zmq::error_t & ex) {
-					Logger::log(Logger::Error, ex.what());
+					Logger::log(Logger::Error, "zmq::socket_t::getsockopt:", ex.what());
 					break;
 				}
 				if (!more) {
@@ -237,13 +237,11 @@ void ZmqProxyServer::run() {
 					frontend.send(payloadMsg);
 				} catch (zmq::error_t & ex) {
 					if (ex.num() == EHOSTUNREACH) {
-						Logger::log(Logger::Warning, "Renderer sending data to disconnected client - stopping it!");
 						auto workerIter = workers.find(clId);
 						if (workerIter != workers.end()) {
+							Logger::log(Logger::Warning, "Renderer sending data to disconnected client - stopping it!");
 							workerIter->second.worker->stop();
 							workers.erase(workerIter);
-						} else {
-							Logger::log(Logger::Warning, "Received message from renderer that is not in server's map");
 						}
 					} else {
 						Logger::log(Logger::Error, "Error while handling renderer (", clId ,") message: ", ex.what());

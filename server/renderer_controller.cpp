@@ -698,7 +698,6 @@ void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char
 
 void RendererController::stop() {
 	if (runState != RUNNING) {
-		assert(runState == RUNNING && "Invalid state transition");
 		return;
 	}
 	transitionState(RUNNING, IDLE);
@@ -767,10 +766,11 @@ void RendererController::run() {
 		transitionState(STARTING, IDLE);
 		return;
 	}
-
 	zmq::pollitem_t backEndPoll = {zmqRendererSocket, 0, ZMQ_POLLIN | ZMQ_POLLOUT, 0};
 
 	bool sendHB = false;
+
+	transitionState(STARTING, RUNNING);
 	while (runState == RUNNING) {
 		int pollRes = 0;
 		try {
@@ -790,7 +790,8 @@ void RendererController::run() {
 				assert(recv && "Failed recv for payload while poll returned ZMQ_POLLIN event.");
 			} catch (zmq::error_t & ex) {
 				Logger::log(Logger::Error, "Error while renderer is receiving message:", ex.what());
-				break;
+				transitionState(RUNNING, IDLE);
+				return;
 			}
 
 			ControlFrame frame(ctrlMsg);
@@ -814,14 +815,15 @@ void RendererController::run() {
 					assert(sent && "Failed sending empty frame for PONG.");
 				} catch (zmq::error_t & ex) {
 					Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
-					break;
+					transitionState(RUNNING, IDLE);
+					return;
 				}
 				sendHB = sent;
 			}
 
 			if (!outstandingMessages.empty()) {
 				lock_guard<mutex> lock(messageMtx);
-				for (int c = 0; c < MAX_CONSEQ_MESSAGES && !outstandingMessages.empty(); ++c) {
+				for (int c = 0; c < MAX_CONSEQ_MESSAGES && !outstandingMessages.empty() && runState == RUNNING; ++c) {
 					bool sent = false;
 					try {
 						sent = zmqRendererSocket.send(ControlFrame::make(clType), ZMQ_SNDMORE);
@@ -830,7 +832,8 @@ void RendererController::run() {
 						}
 					} catch (zmq::error_t & ex) {
 						Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
-						break;
+						transitionState(RUNNING, IDLE);
+						return;
 					}
 					if (!sent) {
 						break;
@@ -841,7 +844,5 @@ void RendererController::run() {
 		}
 
 	}
-
-	transitionState(RUNNING, IDLE);
 }
 
