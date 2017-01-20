@@ -5,12 +5,15 @@
 #include "utils/logger.h"
 
 using namespace VRayBaseTypes;
+using namespace std;
 
-
-RendererController::RendererController(send_fn_t fn, bool showVFB):
+RendererController::RendererController(zmq::context_t & zmqContext, uint64_t clientId, ClientType type, bool showVFB):
+	runState(IDLE),
+	clType(type),
+	clientId(clientId),
+	zmqContext(zmqContext),
 	renderer(nullptr),
 	showVFB(showVFB),
-	sendFn(fn),
 	currentFrame(-1000),
 	type(VRayMessage::RendererType::None),
 	jpegQuality(60) {
@@ -53,9 +56,10 @@ void RendererController::handle(const VRayMessage & message) {
 			Logger::getInstance().log(Logger::Error, "Unknown message type");
 			return;
 		}
-	} catch (std::exception & e) {
-		Logger::getInstance().log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {
+		Logger::getInstance().log(Logger::Error, e.what());
+		transitionState(runState, IDLE);
+	} catch (std::exception & e) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	}
 }
@@ -591,7 +595,10 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 		}
 	}
 
-	sendFn(VRayMessage::msgImageSet(std::move(set)));
+	{
+		lock_guard<mutex> lock(messageMtx);
+		outstandingMessages.push(VRayMessage::msgImageSet(std::move(set)));
+	}
 }
 
 
@@ -635,7 +642,10 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 		}
 
 		VRayMessage::RendererState state = renderer->isAborted() ? VRayMessage::RendererState::Abort : VRayMessage::RendererState::Continue;
-		sendFn(VRayMessage::msgRendererState(state, this->currentFrame));
+		{
+			lock_guard<mutex> lock(messageMtx);
+			outstandingMessages.push(VRayMessage::msgRendererState(state, this->currentFrame));
+		}
 
 		if (type == VRayMessage::RendererType::Animation) {
 			Logger::log(Logger::Debug, "Animation frame completed ", currentFrame);
@@ -659,7 +669,10 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 		size *= sizeof(VRay::AColor);
 		set.images.emplace(VRayBaseTypes::RenderChannelType::RenderChannelTypeNone, VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height, x, y));
 
-		sendFn(VRayMessage::msgImageSet(std::move(set)));
+		{
+			lock_guard<mutex> lock(messageMtx);
+			outstandingMessages.push(VRayMessage::msgImageSet(std::move(set)));
+		}
 
 		Logger::log(Logger::Debug, "Sending bucket bucket", x, "->", width + x, ":", y, "->", height + y);
 	}
@@ -676,5 +689,158 @@ void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char
 		Logger::log(Logger::Debug, "VRAY:", msg);
 	}
 
-	sendFn(VRayMessage::msgSingleValue(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
+	{
+		lock_guard<mutex> lock(messageMtx);
+		outstandingMessages.push(VRayMessage::msgSingleValue(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
+	}
 }
+
+void RendererController::stop() {
+	if (runState != RUNNING) {
+		assert(runState == RUNNING && "Invalid state transition");
+		return;
+	}
+	transitionState(RUNNING, IDLE);
+
+	assert(runnerThread.joinable() && "Missmatch between runState and actual thread state.");
+	if (runnerThread.joinable()) {
+		runnerThread.join();
+	}
+
+	{
+		unique_lock<mutex> l(stateMtx);
+		stateCond.wait(l, [this]() { return this->runState == IDLE; });
+	}
+}
+
+bool RendererController::start() {
+	if (runState != IDLE) {
+		assert(runState == IDLE && "Invalid state transition");
+		return runState == RUNNING;
+	}
+	transitionState(IDLE, STARTING);
+
+	runnerThread = thread(&RendererController::run, this);
+
+	{
+		unique_lock<mutex> l(stateMtx);
+		stateCond.wait(l, [this]() { return this->runState == RUNNING || this->runState == IDLE; });
+	}
+	return runState == RUNNING;
+}
+
+bool RendererController::isRunning() const {
+	return runState == RUNNING;
+}
+
+void RendererController::transitionState(RunState current, RunState newState) {
+	{
+		lock_guard<mutex> l(stateMtx);
+		assert(current == runState && "Unexpected state transition!");
+		runState = newState;
+	}
+	stateCond.notify_all();
+}
+
+void RendererController::run() {
+	zmq::socket_t zmqRendererSocket(zmqContext, ZMQ_DEALER);
+	zmq::message_t emtpyFrame(0);
+
+	try {
+		int wait = EXPORTER_TIMEOUT * 2;
+		zmqRendererSocket.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
+		wait = EXPORTER_TIMEOUT * 2;
+		zmqRendererSocket.setsockopt(ZMQ_RCVTIMEO, &wait, sizeof(wait));
+
+		zmqRendererSocket.setsockopt(ZMQ_IDENTITY, clientId);
+		zmqRendererSocket.connect("inproc://backend");
+		// send handshake
+		if (clType == ClientType::Exporter) {
+			zmqRendererSocket.send(ControlFrame::make(ClientType::Exporter, ControlMessage::RENDERER_CREATE_MSG), ZMQ_SNDMORE);
+		} else {
+			zmqRendererSocket.send(ControlFrame::make(ClientType::Heartbeat, ControlMessage::HEARTBEAT_CREATE_MSG), ZMQ_SNDMORE);
+		}
+		zmqRendererSocket.send(emtpyFrame);
+	} catch (zmq::error_t & ex) {
+		Logger::log(Logger::Error, "Error while creating worker:", ex.what());
+		transitionState(STARTING, IDLE);
+		return;
+	}
+
+	zmq::pollitem_t backEndPoll = {zmqRendererSocket, 0, ZMQ_POLLIN | ZMQ_POLLOUT, 0};
+
+	bool sendHB = false;
+	while (runState == RUNNING) {
+		int pollRes = 0;
+		try {
+			pollRes = zmq::poll(&backEndPoll, 1, 10);
+		} catch (zmq::error_t & ex) {
+			Logger::log(Logger::Error, "Error while polling for messages:", ex.what());
+			break;
+		}
+
+		if (backEndPoll.revents & ZMQ_POLLIN) {
+			zmq::message_t ctrlMsg, payloadMsg;
+			bool recv = false;
+			try {
+				recv = zmqRendererSocket.recv(&ctrlMsg);
+				assert(recv && "Failed recv for ControlFrame while poll returned ZMQ_POLLIN event.");
+				recv = zmqRendererSocket.recv(&payloadMsg);
+				assert(recv && "Failed recv for payload while poll returned ZMQ_POLLIN event.");
+			} catch (zmq::error_t & ex) {
+				Logger::log(Logger::Error, "Error while renderer is receiving message:", ex.what());
+				break;
+			}
+
+			ControlFrame frame(ctrlMsg);
+
+			assert(!!frame && "Client sent malformed control frame");
+
+			if (frame.control == ControlMessage::DATA_MSG) {
+				handle(VRayMessage(payloadMsg));
+			} else if (frame.control == ControlMessage::PING_MSG) {
+				sendHB = true;
+			}
+		}
+
+		if (backEndPoll.revents & ZMQ_POLLOUT) {
+			if (sendHB) {
+				bool sent = false;
+				try {
+					sent = zmqRendererSocket.send(ControlFrame::make(clType, ControlMessage::PONG_MSG), ZMQ_SNDMORE);
+					assert(sent && "Failed sending ControlFrame for PONG.");
+					sent = zmqRendererSocket.send(emtpyFrame);
+					assert(sent && "Failed sending empty frame for PONG.");
+				} catch (zmq::error_t & ex) {
+					Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+					break;
+				}
+				sendHB = sent;
+			}
+
+			if (!outstandingMessages.empty()) {
+				lock_guard<mutex> lock(messageMtx);
+				for (int c = 0; c < MAX_CONSEQ_MESSAGES && !outstandingMessages.empty(); ++c) {
+					bool sent = false;
+					try {
+						sent = zmqRendererSocket.send(ControlFrame::make(clType), ZMQ_SNDMORE);
+						if (sent) {
+							zmqRendererSocket.send(outstandingMessages.front().getMessage());
+						}
+					} catch (zmq::error_t & ex) {
+						Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+						break;
+					}
+					if (!sent) {
+						break;
+					}
+					outstandingMessages.pop();
+				}
+			}
+		}
+
+	}
+
+	transitionState(RUNNING, IDLE);
+}
+
