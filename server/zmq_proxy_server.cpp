@@ -38,11 +38,8 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now, ClientType 
 		now, clientId, type
 	};
 	wrapper.worker->start();
-	{
-		lock_guard<mutex> workerLock(workersMutex);
-		auto res = workers.emplace(make_pair(clientId, move(wrapper)));
-		assert(res.second && "Failed to add worker!");
-	}
+	auto res = workers.emplace(make_pair(clientId, move(wrapper)));
+	assert(res.second && "Failed to add worker!");
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
 }
 
@@ -64,7 +61,6 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 		if (inactiveTime > maxInactive || !workerIter->second.worker->isRunning()) {
 			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
 			workerIter->second.worker->stop();
-			lock_guard<mutex> workerLock(workersMutex);
 			workerIter = workers.erase(workerIter);
 		} else {
 			++workerIter;
@@ -245,7 +241,6 @@ void ZmqProxyServer::run() {
 						auto workerIter = workers.find(clId);
 						if (workerIter != workers.end()) {
 							workerIter->second.worker->stop();
-							lock_guard<mutex> workerLock(workersMutex);
 							workers.erase(workerIter);
 						} else {
 							Logger::log(Logger::Warning, "Received message from renderer that is not in server's map");
@@ -287,10 +282,11 @@ void ZmqProxyServer::run() {
 	}
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
-	{
-		lock_guard<mutex> workrsLock(workersMutex);
-		workers.clear();
+	for (auto & w : workers) {
+		w.second.worker->stop();
 	}
+	workers.clear();
+
 	frontend.close();
 	backend.close();
 	Logger::log(Logger::Debug, "Server thread stopping.");

@@ -118,8 +118,6 @@ private:
 	std::string port; ///< Listening port
 
 	std::unordered_map<client_id_t, WorkerWrapper> workers; ///< Map of all active clients
-	std::mutex workersMutex; ///< Lock for @workers
-
 	zmq::context_t context; ///< The ZMQ context
 
 	time_point lastDataCheck; ///< Last time @reportStats did work

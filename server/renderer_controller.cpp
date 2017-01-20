@@ -20,6 +20,7 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 }
 
 RendererController::~RendererController() {
+	stop();
 	stopRenderer();
 }
 
