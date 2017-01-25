@@ -20,8 +20,8 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 }
 
 RendererController::~RendererController() {
-	stop();
 	stopRenderer();
+	stop();
 }
 
 void RendererController::handle(const VRayMessage & message) {
@@ -850,7 +850,19 @@ void RendererController::run() {
 				this_thread::sleep_for(chrono::milliseconds(1));
 			}
 		}
+	}
 
+	if (clType == ClientType::Exporter) {
+		try {
+			Logger::log(Logger::Debug, "Renderer stopping, sending abort message to client.");
+			// lets try fast cleanup
+			int wait = EXPORTER_TIMEOUT / 2;
+			zmqRendererSocket.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
+			zmqRendererSocket.send(ControlFrame::make(), ZMQ_SNDMORE);
+			zmqRendererSocket.send(VRayMessage::msgRendererState(VRayMessage::RendererState::Abort, currentFrame).getMessage());
+		} catch (zmq::error_t & ex) {
+			Logger::log(Logger::Error, "Error while renderer is sending cleanup message:", ex.what());
+		}
 	}
 }
 

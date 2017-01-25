@@ -149,8 +149,11 @@ void ZmqProxyServer::run() {
 				bool recv = true;
 				try {
 					recv = recv && frontend.recv(&idMsg);
+					assert(idMsg.more() && "Missing control frame and payload from client's message!");
 					recv = recv && frontend.recv(&ctrlMsg);
+					assert(ctrlMsg.more() && "Missing payload from client's message!");
 					recv = recv && frontend.recv(&payloadMsg);
+					assert(!payloadMsg.more() && "Unexpected parts after client's payload!");
 				} catch (zmq::error_t & ex) {
 					Logger::log(Logger::Error, "zmq::socket_t::recv:", ex.what());
 					break;
@@ -216,8 +219,11 @@ void ZmqProxyServer::run() {
 
 				try {
 					backend.recv(&idMsg);
+					assert(idMsg.more() && "Missing control frame and payload from render's message!");
 					backend.recv(&ctrlMsg);
+					assert(ctrlMsg.more() && "Missing payload from render's message!");
 					backend.recv(&payloadMsg);
+					assert(!payloadMsg.more() && "Unexpected parts after renderer's payload!");
 				} catch (zmq::error_t & ex) {
 					Logger::log(Logger::Error, ex.what());
 					break;
@@ -280,13 +286,15 @@ void ZmqProxyServer::run() {
 	}
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
+
+	frontend.close();
+	backend.close();
+	context.close();
 	for (auto & w : workers) {
 		w.second.worker->stop();
 	}
 	workers.clear();
 
-	frontend.close();
-	backend.close();
 	Logger::log(Logger::Debug, "Server thread stopping.");
 	qApp->quit();
 }
