@@ -822,7 +822,6 @@ void RendererController::run() {
 					return;
 				}
 				sendHB = !sent;
-				puts("SENT PONG");
 			}
 
 			if (!outstandingMessages.empty()) {
