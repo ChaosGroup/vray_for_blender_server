@@ -772,6 +772,7 @@ void RendererController::run() {
 
 	transitionState(STARTING, RUNNING);
 	while (runState == RUNNING) {
+		bool diWork = false;
 		int pollRes = 0;
 		try {
 			pollRes = zmq::poll(&backEndPoll, 1, 10);
@@ -781,6 +782,7 @@ void RendererController::run() {
 		}
 
 		if (backEndPoll.revents & ZMQ_POLLIN) {
+			diWork = true;
 			zmq::message_t ctrlMsg, payloadMsg;
 			bool recv = false;
 			try {
@@ -808,6 +810,7 @@ void RendererController::run() {
 		if (backEndPoll.revents & ZMQ_POLLOUT) {
 			if (sendHB) {
 				bool sent = false;
+				diWork = true;
 				try {
 					sent = zmqRendererSocket.send(ControlFrame::make(clType, ControlMessage::PONG_MSG), ZMQ_SNDMORE);
 					assert(sent && "Failed sending ControlFrame for PONG.");
@@ -818,12 +821,14 @@ void RendererController::run() {
 					transitionState(RUNNING, IDLE);
 					return;
 				}
-				sendHB = sent;
+				sendHB = !sent;
+				puts("SENT PONG");
 			}
 
 			if (!outstandingMessages.empty()) {
 				lock_guard<mutex> lock(messageMtx);
 				for (int c = 0; c < MAX_CONSEQ_MESSAGES && !outstandingMessages.empty() && runState == RUNNING; ++c) {
+					diWork = true;
 					bool sent = false;
 					try {
 						sent = zmqRendererSocket.send(ControlFrame::make(clType), ZMQ_SNDMORE);
@@ -840,6 +845,9 @@ void RendererController::run() {
 					}
 					outstandingMessages.pop();
 				}
+			}
+			if (!diWork) {
+				this_thread::sleep_for(chrono::milliseconds(1));
 			}
 		}
 
