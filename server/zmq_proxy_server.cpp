@@ -8,6 +8,8 @@
 #include <vraysdk.hpp>
 #include <qapplication.h>
 
+#include <cassert>
+
 using namespace std;
 using namespace std::chrono;
 using namespace zmq;
@@ -17,239 +19,54 @@ ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::unique_ptr<RendererController>
     , lastKeepAlive(lastKeepAlive)
     , id(std::move(id))
     , clientType(clType)
-    , appsdkWorkTimeMs(0)
-    , appsdkMaxTimeMs(0)
 {
 
 }
 
 ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB, bool checkHeartbeat)
     : port(port)
-    , context(nullptr)
-    , routerSocket(nullptr)
+    , context(1)
     , dataTransfered(0)
     , showVFB(showVFB)
     , checkHeartbeat(checkHeartbeat)
-    , dispatcherRunning(false)
 {
 }
 
-void ZmqProxyServer::dispatcherThread() {
-	while (dispatcherRunning) {
-		if (!dispatcherQ.empty()) {
-			unique_lock<mutex> lock(dispatchQMutex);
-			if (dispatcherQ.empty()) {
-				continue;
-			}
-			auto item = move(dispatcherQ.front());
-			dispatcherQ.pop();
-
-			// explicitly unlock at this point to allow main thread to use the Q sooner
-			lock.unlock();
-
-			unique_lock<mutex> workerLock(workersMutex);
-			auto worker = this->workers.find(item.first);
-
-			if (!dispatcherRunning) {
-				return;
-			}
-
-			if (worker != this->workers.end()) {
-				if (worker->second.clientType != ClientType::Exporter) {
-					Logger::log(Logger::Error, "Message from non exporter client");
-				}
-				workerLock.unlock();
-
-				auto beforeCall = chrono::high_resolution_clock::now();
-				auto vrayMessage = VRayMessage(item.second);
-				worker->second.worker->handle(vrayMessage);
-				uint64_t duration = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - beforeCall).count();
-
-				workerLock.lock();
-
-				worker = workers.find(item.first);
-				if (worker == workers.end()) {
-					Logger::log(Logger::Error, "Renderer disconnected while handling message for", duration, "ms");
-					continue;
-				}
-
-				if (duration > 75) {
-					Logger::log(Logger::Info, "/*", duration, "*/");
-				}
-
-				if (worker->second.appsdkMaxTimeMs < duration) {
-					worker->second.appsdkMaxTimeMs = duration;
-					worker->second.msg = {vrayMessage.getType(), vrayMessage.getPluginAction(), vrayMessage.getRendererAction()};
-				}
-				worker->second.appsdkMaxTimeMs = max(worker->second.appsdkMaxTimeMs, duration);
-				worker->second.appsdkWorkTimeMs += duration;
-			}
-		} else {
-			this_thread::sleep_for(chrono::milliseconds(1));
-		}
-	}
-}
-
-void ZmqProxyServer::addWorker(client_id_t clientId, time_point now) {
-	auto sendFn = [this, clientId](VRayMessage && msg) {
-		lock_guard<mutex> l(this->sendQMutex);
-		this->sendQ.emplace_back(make_pair(clientId, move(msg)));
-	};
-
+void ZmqProxyServer::addWorker(client_id_t clientId, time_point now, ClientType type) {
 	WorkerWrapper wrapper = {
-		unique_ptr<RendererController>(new RendererController(sendFn, showVFB)),
-		now, clientId, ClientType::Exporter
+		unique_ptr<RendererController>(new RendererController(context, clientId, type, showVFB)),
+		now, clientId, type
 	};
-
-	{
-		lock_guard<std::mutex> workerLock(workersMutex);
-		auto res = workers.emplace(make_pair(clientId, std::move(wrapper)));
-		assert(res.second && "Failed to add worker!");
-	}
+	wrapper.worker->start();
+	auto res = workers.emplace(make_pair(clientId, move(wrapper)));
+	assert(res.second && "Failed to add worker!");
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
 }
 
-uint64_t ZmqProxyServer::sendOutMessages(int maxSend) {
-	if (sendQ.empty()) {
-		return 0;
-	}
 
-	uint64_t transferred = 0;
-
-	lock_guard<mutex> l(sendQMutex);
-	while (sendQ.size() && --maxSend) {
-		auto & p = sendQ.front();
-		transferred += p.second.getMessage().size();
-
-		{
-			lock_guard<mutex> workerLock(workersMutex);
-			auto worker = workers.find(p.first);
-			if (worker != workers.end() && worker->second.clientType == ClientType::Heartbeat) {
-				Logger::log(Logger::Debug, "Responding to heartbeat to (", p.first, ")");
-			}
-		}
-
-		message_t id(sizeof(client_id_t));
-		memcpy(id.data(), &p.first, sizeof(client_id_t));
-		routerSocket->send(id, ZMQ_SNDMORE);
-		routerSocket->send("", 0, ZMQ_SNDMORE);
-		routerSocket->send(p.second.getMessage());
-
-		sendQ.pop_front();
-	}
-
-	return transferred;
-}
-
-void ZmqProxyServer::clearMessagesForClient(const client_id_t & cl) {
-	lock_guard<mutex> qLock(dispatchQMutex);
-
-	auto size = dispatcherQ.size();
-	for (auto c = size; c < size; c++) {
-		auto item = move(dispatcherQ.front());
-		dispatcherQ.pop();
-
-		if (dispatcherQ.front().first != cl) {
-			dispatcherQ.emplace(move(item));
-		} else {
-			--size;
-		}
-	}
-}
-
-bool ZmqProxyServer::checkForTimeout(time_point now) {
+bool ZmqProxyServer::checkForTimeouts(time_point now) {
 	if (duration_cast<milliseconds>(now - lastTimeoutCheck).count() <= 100 || workers.empty()) {
 		return false;
 	}
 
 	lastTimeoutCheck = now;
-	// count how many exporters are active in the last HEARBEAT_TIMEOUT ms
-	// if none - then we will check heartbeat clients also
-	int activeExporterHeartbeats = 0;
-
 	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
+		auto maxInactive = HEARBEAT_TIMEOUT;
 
 		if (workerIter->second.clientType == ClientType::Exporter) {
-			if (inactiveTime <= HEARBEAT_TIMEOUT) {
-				++activeExporterHeartbeats;
-			}
+			maxInactive = EXPORTER_TIMEOUT;
+		}
 
-			if (inactiveTime > EXPORTER_TIMEOUT) {
-				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
-				auto type = workerIter->second.msg.type;
-				int subType = type == VRayMessage::Type::ChangePlugin ? static_cast<int>(workerIter->second.msg.pAction) :
-					          type == VRayMessage::Type::ChangeRenderer ? static_cast<int>(workerIter->second.msg.rAction) :
-					          -1;
-				Logger::log(Logger::Debug, "Longest appsdk wait:", static_cast<int>(type), subType);
-
-				// filter messages intended for the selected client
-				clearMessagesForClient(workerIter->first);
-
-				{
-					lock_guard<mutex> workerLock(workersMutex);
-					workerIter = workers.erase(workerIter);
-				}
-			} else {
-				++workerIter;
-			}
+		if (inactiveTime > maxInactive || !workerIter->second.worker->isRunning()) {
+			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
+			workerIter->second.worker->stop();
+			workerIter = workers.erase(workerIter);
 		} else {
 			++workerIter;
 		}
 	}
 
-	// check all heartbeat clients
-	if (activeExporterHeartbeats == 0) {
-		Logger::log(Logger::Debug, "Checking heartbeat clients for timeouts.");
-		for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
-			if (workerIter->second.clientType == ClientType::Heartbeat) {
-				auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
-
-				if (inactiveTime > HEARBEAT_TIMEOUT) {
-					Logger::log(Logger::Debug, "Blender instance heartbeat (", workerIter->first, ") timed out");
-
-					clearMessagesForClient(workerIter->first);
-					{
-						lock_guard<mutex> workerLock(workersMutex);
-						workerIter = workers.erase(workerIter);
-					}
-				} else {
-					++workerIter;
-				}
-			} else {
-				++workerIter;
-			}
-		}
-	}
-
-	return true;
-}
-
-bool ZmqProxyServer::checkForHeartbeat(time_point now) {
-	auto active_heartbeats = count_if(workers.begin(), workers.end(), [](const pair<const client_id_t, WorkerWrapper> & p) {
-		return p.second.clientType == ClientType::Heartbeat;
-	});
-
-	if (active_heartbeats != 0) {
-		lastHeartbeat = now;
-		return false;
-	} else {
-		return duration_cast<milliseconds>(now - lastHeartbeat).count() > HEARBEAT_TIMEOUT;
-	}
-}
-
-bool ZmqProxyServer::initZmq() {
-	try {
-		context = unique_ptr<context_t>(new context_t(1));
-		routerSocket = unique_ptr<socket_t>(new socket_t(*context, ZMQ_ROUTER));
-
-		Logger::log(Logger::Debug, "Binding to tcp://*:", port);
-
-		routerSocket->bind((string("tcp://*:") + port).c_str());
-	} catch (zmq::error_t & e) {
-		Logger::log(Logger::Error, "ZMQ exception during init:", e.what());
-		return false;
-	}
 	return true;
 }
 
@@ -268,8 +85,6 @@ bool ZmqProxyServer::reportStats(time_point now) {
 	for (const auto & worker : workers) {
 		if (worker.second.clientType == ClientType::Exporter) {
 			++exporterCount;
-			Logger::log(Logger::Debug, "Client (", worker.second.id, ") total appsdk time:", worker.second.appsdkWorkTimeMs, 
-			    "ms, max appsdk time:", worker.second.appsdkMaxTimeMs, "ms");
 		}
 	}
 
@@ -279,117 +94,207 @@ bool ZmqProxyServer::reportStats(time_point now) {
 }
 
 void ZmqProxyServer::run() {
-	if (!initZmq()) {
+	zmq::socket_t backend(context, ZMQ_ROUTER);
+	zmq::socket_t frontend(context, ZMQ_ROUTER);
+
+	try {
+		backend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
+		frontend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
+
+		int wait = EXPORTER_TIMEOUT * 2;
+		frontend.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
+		wait = EXPORTER_TIMEOUT * 2;
+		frontend.setsockopt(ZMQ_RCVTIMEO, &wait, sizeof(wait));
+
+		wait = EXPORTER_TIMEOUT * 2;
+		backend.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
+		wait = EXPORTER_TIMEOUT * 2;
+		backend.setsockopt(ZMQ_RCVTIMEO, &wait, sizeof(wait));
+
+		backend.bind("inproc://backend");
+		frontend.bind((string("tcp://*:") + port).c_str());
+	} catch (zmq::error_t & ex) {
+		Logger::log(Logger::Error, "While initializing server:", ex.what());
 		qApp->quit();
 		return;
 	}
 
-	dispatcherRunning = true;
-	auto dispacther = thread(&ZmqProxyServer::dispatcherThread, this);
-
-	auto stopDispatcher = [this](thread *th) {
-		dispatcherRunning = false;
-		if (th->joinable()) {
-			th->join();
-		} else {
-			th->detach();
-		}
+	zmq::pollitem_t pollItems[] = {
+		{frontend, 0, ZMQ_POLLIN, 0},
+		{backend, 0, ZMQ_POLLIN, 0}
 	};
-
-	unique_ptr<thread, decltype(stopDispatcher)> wrapper(&dispacther, stopDispatcher);
 
 	auto now = high_resolution_clock::now();
 	lastTimeoutCheck = now;
 	lastDataCheck = now;
 	lastHeartbeat = now;
 
-	try {
-		while (true) {
-			bool didWork = false;
-			now = high_resolution_clock::now();
+	while (true) {
+		bool didWork = false;
+		now = high_resolution_clock::now();
 
-			didWork = didWork || reportStats(now);
-			didWork = didWork || checkForTimeout(now);
+		int pollResult = 0;
+		try {
+			pollResult = zmq::poll(pollItems, 2, 100);
+		} catch (zmq::error_t & ex) {
+			Logger::log(Logger::Error, "zmq::poll:", ex.what());
+			qApp->quit();
+			return;
+		}
 
-			if (checkForHeartbeat(now)) {
-				if (checkHeartbeat) {
-					Logger::log(Logger::Error, "No active blender instaces for more than", HEARBEAT_TIMEOUT, "ms Shutting down");
+		if (pollItems[0].revents & ZMQ_POLLIN) {
+			didWork = true;
+			while (true) {
+				zmq::message_t idMsg, ctrlMsg, payloadMsg;
+				bool recv = true;
+				try {
+					recv = recv && frontend.recv(&idMsg);
+					assert(idMsg.more() && "Missing control frame and payload from client's message!");
+					recv = recv && frontend.recv(&ctrlMsg);
+					assert(ctrlMsg.more() && "Missing payload from client's message!");
+					recv = recv && frontend.recv(&payloadMsg);
+					assert(!payloadMsg.more() && "Unexpected parts after client's payload!");
+				} catch (zmq::error_t & ex) {
+					Logger::log(Logger::Error, "zmq::socket_t::recv:", ex.what());
+					break;
+				}
+
+				if (!recv) {
+					Logger::log(Logger::Warning, "Timeout recv");
+				}
+
+				ControlFrame frame(ctrlMsg);
+
+				assert(!!frame && "Client sent malformed control frame");
+				assert(idMsg.size() == sizeof(client_id_t) && "ID frame with unexpected size");
+
+				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
+
+				auto workerIter = workers.find(clId);
+
+				if (workerIter == workers.end()) {
+					if (frame.type == ClientType::Exporter) {
+						assert(frame.control == ControlMessage::EXPORTER_CONNECT_MSG && "Exporter did not send correct handshake");
+					} else if (frame.type == ClientType::Heartbeat) {
+						assert(frame.control == ControlMessage::HEARTBEAT_CONNECT_MSG && "Heartbeat did not send correct handshake");
+					}
+					assert(payloadMsg.size() == 0 && "Missing empty frame after handshake!");
+					addWorker(clId, now, frame.type);
+				} else {
+					workerIter->second.lastKeepAlive = now;
+					lastHeartbeat = std::max(lastHeartbeat, now);
+					try {
+						backend.send(idMsg, ZMQ_SNDMORE);
+						backend.send(ctrlMsg, ZMQ_SNDMORE);
+						backend.send(payloadMsg);
+					} catch (zmq::error_t & ex) {
+						if (ex.num() == EHOSTUNREACH) {
+							assert(!"Client sending data to inexistent renderer");
+						} else {
+							Logger::log(Logger::Error, "Error while handling client (", clId ,") message: ", ex.what());
+						}
+					}
+				}
+
+				dataTransfered += sizeof(client_id_t) + payloadMsg.size();
+
+				int more = 0;
+				size_t more_size = sizeof (more);
+				try {
+					frontend.getsockopt(ZMQ_RCVMORE, &more, &more_size);
+				} catch (zmq::error_t & ex) {
+					Logger::log(Logger::Error, "zmq::socket_t::getsockopt:", ex.what());
+					break;
+				}
+				if (!more) {
 					break;
 				}
 			}
-
-			if (auto transfer = sendOutMessages()) {
-				didWork = true;
-				dataTransfered += transfer;
-			}
-
-			message_t identity;
-			if (!routerSocket->recv(&identity, ZMQ_NOBLOCK)) {
-				if (!didWork) {
-					this_thread::sleep_for(chrono::milliseconds(1));
-				}
-				continue;
-			}
-
-			message_t e, payload;
-			routerSocket->recv(&e);
-			routerSocket->recv(&payload);
-			dataTransfered += payload.size();
-
-			assert(!e.size() && "No empty frame!");
-			assert(payload.size() && "Unexpected empty frame");
-
-			const client_id_t messageIdentity = *reinterpret_cast<client_id_t*>(identity.data());
-
-			auto worker = workers.find(messageIdentity);
-
-			// add worker for new client
-			if (worker == workers.end()) {
-				addWorker(messageIdentity, now);
-				worker = workers.find(messageIdentity);
-				if (worker == workers.end()) {
-					Logger::log(Logger::Error, "Failed to create worker for client (", messageIdentity, ")");
-				}
-			}
-
-
-			if (payload.size() == sizeof(ClientType)) {
-				const ClientType * type = reinterpret_cast<ClientType *>(payload.data());
-				worker->second.clientType = *type;
-				if (*type != ClientType::Heartbeat && *type != ClientType::Exporter) {
-					Logger::log(Logger::Error, "Unexpected client type", static_cast<int>(*type), "Disconnecting client", worker->first);
-					clearMessagesForClient(worker->first);
-					workers.erase(worker);
-				} else {
-					// respond to heartbeat
-					lock_guard<mutex> l(this->sendQMutex);
-					VRayMessage msg(sizeof(ClientType));
-					memcpy(msg.getMessage().data(), type, sizeof(ClientType));
-					// answer to hearbeat with priority - put it first
-					sendQ.emplace_front(make_pair(messageIdentity, move(msg)));
-				}
-			} else {
-				lock_guard<mutex> l(dispatchQMutex);
-				dispatcherQ.push(make_pair(messageIdentity, move(payload)));
-			}
-
-			worker->second.lastKeepAlive = high_resolution_clock::now();
 		}
-	} catch (zmq::error_t & e) {
-		Logger::log(Logger::Error, "Zmq exception in server: ", e.what());
+
+		if (pollItems[1].revents & ZMQ_POLLIN) {
+			didWork = true;
+			while (true) {
+				zmq::message_t idMsg, ctrlMsg, payloadMsg;
+
+				try {
+					backend.recv(&idMsg);
+					assert(idMsg.more() && "Missing control frame and payload from render's message!");
+					backend.recv(&ctrlMsg);
+					assert(ctrlMsg.more() && "Missing payload from render's message!");
+					backend.recv(&payloadMsg);
+					assert(!payloadMsg.more() && "Unexpected parts after renderer's payload!");
+				} catch (zmq::error_t & ex) {
+					Logger::log(Logger::Error, ex.what());
+					break;
+				}
+
+				ControlFrame frame(ctrlMsg);
+
+				assert(idMsg.size() == sizeof(client_id_t) && "ID frame with unexpected size");
+				assert(!!frame && "Malformed frame sent from renderer/heartbeat");
+
+				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
+
+				// check for routing here
+				try {
+					frontend.send(idMsg, ZMQ_SNDMORE);
+					frontend.send(ctrlMsg, ZMQ_SNDMORE);
+					frontend.send(payloadMsg);
+				} catch (zmq::error_t & ex) {
+					if (ex.num() == EHOSTUNREACH) {
+						auto workerIter = workers.find(clId);
+						if (workerIter != workers.end()) {
+							Logger::log(Logger::Warning, "Renderer sending data to disconnected client - stopping it!");
+							workerIter->second.worker->stop();
+							workers.erase(workerIter);
+						}
+					} else {
+						Logger::log(Logger::Error, "Error while handling renderer (", clId ,") message: ", ex.what());
+					}
+				}
+
+				dataTransfered += sizeof(client_id_t) + payloadMsg.size();
+
+				int more = 0;
+				size_t more_size = sizeof (more);
+				try {
+					backend.getsockopt(ZMQ_RCVMORE, &more, &more_size);
+				} catch (zmq::error_t & ex) {
+					Logger::log(Logger::Error, ex.what());
+					break;
+				}
+				if (!more) {
+					break;
+				}
+			}
+		}
+
+		didWork = didWork || reportStats(now);
+		didWork = didWork || checkForTimeouts(now);
+
+		if (checkHeartbeat) {
+			if (duration_cast<milliseconds>(now - lastHeartbeat).count() > EXPORTER_TIMEOUT) {
+				Logger::log(Logger::Error, "No active blender instaces for more than", HEARBEAT_TIMEOUT, "ms Shutting down");
+				break;
+			}
+		}
+
+		if (pollResult == 0 && !didWork) {
+			this_thread::sleep_for(chrono::milliseconds(1));
+		}
 	}
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
 
-	dispatcherRunning = false;
-	Logger::log(Logger::Debug, "Waiting for dispatcher thread to stop.");
-	wrapper.reset();
-	{
-		lock_guard<std::mutex> workrsLock(workersMutex);
-		workers.clear();
+	frontend.close();
+	backend.close();
+	context.close();
+	for (auto & w : workers) {
+		w.second.worker->stop();
 	}
-	routerSocket.release();
-	context.release();
+	workers.clear();
+
 	Logger::log(Logger::Debug, "Server thread stopping.");
 	qApp->quit();
 }

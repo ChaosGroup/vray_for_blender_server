@@ -1,8 +1,6 @@
 #ifndef RENDERER_CONTROLLER_H
 #define RENDERER_CONTROLLER_H
 
-#include <memory>
-#include <unordered_set>
 #include "zmq_wrapper.hpp"
 
 #ifdef _WIN32
@@ -14,16 +12,24 @@
 #endif
 
 #include <vraysdk.hpp>
+#include <queue>
+#include <memory>
+#include <unordered_set>
 
 /// Wrapper over VRay::VRayRenderer to process incomming messages
 class RendererController {
+	enum RunState {
+		IDLE,
+		STARTING,
+		RUNNING,
+		STOPPING,
+	};
 public:
-	typedef std::function<void(VRayMessage && msg)> send_fn_t;
 
 	/// Create a wrapper
 	/// @sendFn - function called when data needs to be sent back to client (image or message)
 	/// @showVFB - enable/disable vfb
-	RendererController(send_fn_t sendFn, bool showVFB);
+	RendererController(zmq::context_t & zmqContext, uint64_t clId, ClientType type, bool showVFB);
 	~RendererController();
 
 	RendererController(const RendererController &) = delete;
@@ -32,6 +38,16 @@ public:
 	/// Handle an incomming message - calls appropriate @pluginMessage or @rendererMessage and handles errors
 	/// @message - the message
 	void handle(const VRayMessage & message);
+
+	/// Stop serving messages
+	void stop();
+
+	/// Start serving messages
+	/// @return true - thread started
+	bool start();
+
+	/// Check if currently this controller is serving messages
+	bool isRunning() const;
 private:
 	/// Cleany stop amd free the renderer
 	void stopRenderer();
@@ -59,9 +75,27 @@ private:
 
 	/// Update renderer state from message data
 	void rendererMessage(const VRayMessage & message);
+
+	/// Starts serving messages
+	void run();
+
+	/// Change current state in thread safe way and also signal the cond var for the state
+	/// @current - the supposed current state - if this->runState != current then nothing happens
+	/// @newState - the state after the transition
+	void transitionState(RunState current, RunState newState);
 private:
 
-	send_fn_t sendFn; ///< Callback to be used for sending data back to client
+	RunState runState;  ///< Internal state to make correct transitions
+	ClientType clType; ///< Either exporter or heartbeat
+	std::mutex stateMtx; ///< Lock protecting runState
+	std::condition_variable stateCond; ///< Condition variable for run state change signals
+	std::thread runnerThread; ///< Thread processing messages from client
+
+	uint64_t clientId; ///< Our id
+	zmq::context_t & zmqContext; ///< The zmq context to pass to socket
+	std::mutex messageMtx; ///< Lock protecting the queue for sending
+	std::queue<VRayMessage> outstandingMessages; ///< Queue for messages to be sent
+
 	std::unique_ptr<VRay::VRayRenderer> renderer; ///< Pointer to VRayRenderer
 	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elementsToSend; ///< Renderer elements to send to client when sending images
 	bool showVFB; ///< Enable/disable vfb

@@ -69,20 +69,10 @@ class ZmqProxyServer {
 
 	/// Context for a singe Renderer
 	struct WorkerWrapper {
-		/// Metadata for a single message, used to track slowest appsdk calls
-		struct MessageInfo {
-			VRayMessage::Type           type; ///< Type of message
-			VRayMessage::PluginAction   pAction; ///< Plugin action if applicable
-			VRayMessage::RendererAction rAction; ///< Renderer action if applicable
-		};
-
 		std::unique_ptr<RendererController> worker; ///< Pointer to the RendererController
 		time_point                          lastKeepAlive; ///< Last time we got message from this client
 		client_id_t                         id; ///< The associated client ID, used for message routing
 		ClientType                          clientType; ///< Either heartbeat or exporter
-		uint64_t                            appsdkWorkTimeMs; ///< Total time this client spent waiting for appsdk calls
-		uint64_t                            appsdkMaxTimeMs; ///< The slowest appsdk call
-		MessageInfo                         msg; ///< Info for the slowest appsdk call
 
 		WorkerWrapper(const WorkerWrapper &) = delete;
 		WorkerWrapper & operator=(const WorkerWrapper &) = delete;
@@ -90,8 +80,6 @@ class ZmqProxyServer {
 			lastKeepAlive = o.lastKeepAlive;
 			id = o.id;
 			clientType = o.clientType;
-			appsdkWorkTimeMs = o.appsdkWorkTimeMs;
-			appsdkMaxTimeMs = o.appsdkMaxTimeMs;
 		}
 
 		WorkerWrapper(std::unique_ptr<RendererController> worker, time_point lastKeepAlive, client_id_t id, ClientType clType);
@@ -109,22 +97,10 @@ public:
 	void run();
 private:
 
-	/// Base function for thread that relays received messages to appropriate RendererController
-	void dispatcherThread();
-
 	/// Create a Renderer for a given client
 	/// @clientId - the ID of the client
 	/// @now - current time
-	void addWorker(client_id_t clientId, time_point now);
-
-	/// Send out queued messaged, but no more that maxSend
-	/// @maxSend - upper limit of messages to send
-	/// @return - bytes sent
-	uint64_t sendOutMessages(int maxSend = 10);
-
-	/// Initialize ZMQ
-	/// @return - false on fail
-	bool initZmq();
+	void addWorker(client_id_t clientId, time_point now, ClientType type);
 
 	/// Use Logger::log to print stats, does nothing if called more often that once a second
 	/// @now - current time
@@ -135,33 +111,14 @@ private:
 	/// Used to stop server if @checkHeartbeat is true and this returns true
 	/// @now - current time
 	/// @return - true if there are no heartbeat clients
-	bool checkForHeartbeat(time_point now);
-
-	/// Check and disconnects any inactive clients
-	/// @now - current time
-	/// @return	- true if some work was done, false if called more frequent than 100ms or no clients in server
-	bool checkForTimeout(time_point now);
-
-	/// Clear all pending messages for a client
-	/// @client - the ID of the client
-	void clearMessagesForClient(const client_id_t & client);
-
+	bool checkForTimeouts(time_point now);
 private:
 	const bool  checkHeartbeat; ///< If true server stops itself if there are no active clients
 	bool        showVFB; ///< Flag for appsdk UI
 	std::string port; ///< Listening port
 
 	std::unordered_map<client_id_t, WorkerWrapper> workers; ///< Map of all active clients
-	std::mutex workersMutex; ///< Lock for @workers
-
-	std::unique_ptr<zmq::context_t> context; ///< The ZMQ context
-	std::unique_ptr<zmq::socket_t> routerSocket; ///< The ZMQ socket
-
-	std::deque<std::pair<client_id_t, VRayMessage>> sendQ; ///< Message queue for sending
-	std::mutex sendQMutex; ///< Lock for @sendQ
-	std::queue<std::pair<client_id_t, zmq::message_t>> dispatcherQ; ///< Message queue for receieved messages
-	std::mutex dispatchQMutex; ///< Lock for @dispatcherQ
-	bool dispatcherRunning; ///< Flag for dispatcher thread
+	zmq::context_t context; ///< The ZMQ context
 
 	time_point lastDataCheck; ///< Last time @reportStats did work
 	time_point lastTimeoutCheck; ///< Last time @checkForTimeout did work
