@@ -24,7 +24,8 @@ RendererController::~RendererController() {
 	stop();
 }
 
-void RendererController::handle(const VRayMessage & message) {
+void RendererController::handle(VRayMessage & message) {
+	bool success = false;
 	try {
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
@@ -65,14 +66,14 @@ void RendererController::handle(const VRayMessage & message) {
 	}
 }
 
-void RendererController::pluginMessage(const VRayMessage & message) {
+void RendererController::pluginMessage(VRayMessage & message) {
+	bool success = true;
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
 		if (!plugin) {
 			Logger::getInstance().log(Logger::Warning, "Failed to load plugin: ", message.getPlugin());
 			return;
 		}
-		bool success = true;
 
 		switch (message.getValueType()) {
 		case VRayBaseTypes::ValueType::ValueTypeTransform:
@@ -260,6 +261,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		}
 		case VRayBaseTypes::ValueType::ValueTypeInstancer:
 		{
+			bool delayed = false;
 			const VRayBaseTypes::AttrInstancer & inst = *message.getValue<VRayBaseTypes::AttrInstancer>();
 			VRay::VUtils::ValueRefList instancer(inst.data.getCount() + 1);
 			instancer[0] = VRay::VUtils::Value(inst.frameNumber);
@@ -281,7 +283,9 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 
 				auto plugin = renderer->getPlugin(item.node.plugin);
 				if (!plugin) {
-					Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
+					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", item.node.plugin, ") which is not yet exported - delaying.");
+					delayedMessages[item.node.plugin].push_back(std::move(message));
+					delayed = true;
 					break;
 				}
 
@@ -293,12 +297,13 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 				instancer[i + 1].setList(instance);
 			}
 
+			if (!delayed) {
+				if (instancer.size() == inst.data.getCount() + 1) {
+					success = plugin.setValue(message.getProperty(), instancer);
+				}
 
-			if (instancer.size() == inst.data.getCount() + 1) {
-				success = plugin.setValue(message.getProperty(), instancer);
+				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
 			}
-
-			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
 
 			break;
 		}
@@ -314,6 +319,15 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 		const bool created = renderer->getOrCreatePlugin(message.getPlugin(), message.getPluginType());
 		if (!created) {
 			Logger::log(Logger::Warning, "Failed to create plugin:", message.getPlugin());
+		} else {
+			auto toInsert = delayedMessages.find(message.getPlugin());
+			if (toInsert != delayedMessages.end()) {
+				for (auto & msg : toInsert->second) {
+					Logger::log(Logger::Debug, "Inserting delayed plugin [", msg.getPlugin(), "] referencing (", toInsert->first, ").");
+					handle(msg);
+				}
+				delayedMessages.erase(toInsert);
+			}
 		}
 		Logger::log(Logger::Info, "renderer.getOrCreatePlugin(\"", message.getPlugin(), "\",\"", message.getPluginType(), "\"); // success == ", created);
 	} else if (message.getPluginAction() == VRayMessage::PluginAction::Remove) {
@@ -352,7 +366,7 @@ void RendererController::pluginMessage(const VRayMessage & message) {
 	}
 }
 
-void RendererController::rendererMessage(const VRayMessage & message) {
+void RendererController::rendererMessage(VRayMessage & message) {
 	std::lock_guard<std::mutex> l(rendererMtx);
 	if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
 		return;
@@ -427,10 +441,6 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 
 		Logger::log(Logger::Info, "renderer.setImageSize(", width, ",", height, "); // success == ", completed);
 		break;
-	case VRayMessage::RendererAction::Commit:
-		completed = renderer->commit();
-		Logger::log(Logger::Info, "renderer.commit(); // success == ", completed);
-		break;
 	case VRayMessage::RendererAction::AddHosts:
 		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		Logger::log(Logger::Info, "renderer.addHosts(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
@@ -476,15 +486,18 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		Logger::log(Logger::Info, "renderer.setCamera(renderer.getPlugin(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\")); // success == ", completed);
 		break;
 	}
-	case VRayMessage::RendererAction::SetCommitAction:
+	case VRayMessage::RendererAction::SetCommitAction: {
+		bool isFlush = false;
 		switch (static_cast<CommitAction>(message.getValue<AttrSimpleType<int>>()->m_Value)) {
 		case CommitAction::CommitNow:
 			renderer->commit(false);
 			Logger::log(Logger::Info, "renderer.commit(false);");
+			isFlush = true;
 			break;
 		case CommitAction::CommitNowForce:
 			renderer->commit(true);
 			Logger::log(Logger::Info, "renderer.commit(true);");
+			isFlush = true;
 			break;
 		case CommitAction::CommitAutoOn:
 			renderer->setAutoCommit(true);
@@ -497,6 +510,17 @@ void RendererController::rendererMessage(const VRayMessage & message) {
 		default:
 			Logger::log(Logger::Warning, "Invalid CommitAction: ", message.getValue<AttrSimpleType<int>>()->m_Value);
 		}
+
+		if (isFlush) {
+			for (const auto & ref : delayedMessages) {
+				for (const auto & plg : ref.second) {
+					Logger::log(Logger::Error, "Plugin [", plg.getPlugin(), "] references (", ref.first, ")");
+				}
+			}
+			delayedMessages.clear();
+		}
+
+	}
 		break;
 	case VRayMessage::RendererAction::SetVfbShow:
 		if (message.getValue<AttrSimpleType<int>>()->m_Value && showVFB) {
@@ -801,7 +825,8 @@ void RendererController::run() {
 			assert(!!frame && "Client sent malformed control frame");
 
 			if (frame.control == ControlMessage::DATA_MSG) {
-				handle(VRayMessage(payloadMsg));
+				VRayMessage vmsg(payloadMsg);
+				handle(vmsg);
 			} else if (frame.control == ControlMessage::PING_MSG) {
 				sendHB = true;
 			}

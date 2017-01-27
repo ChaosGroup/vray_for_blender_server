@@ -37,7 +37,7 @@ public:
 
 	/// Handle an incomming message - calls appropriate @pluginMessage or @rendererMessage and handles errors
 	/// @message - the message
-	void handle(const VRayMessage & message);
+	void handle(VRayMessage & message);
 
 	/// Stop serving messages
 	void stop();
@@ -71,10 +71,10 @@ private:
 	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType);
 
 	/// Update plugin in current renderer from message data
-	void pluginMessage(const VRayMessage & message);
+	void pluginMessage(VRayMessage & message);
 
 	/// Update renderer state from message data
-	void rendererMessage(const VRayMessage & message);
+	void rendererMessage(VRayMessage & message);
 
 	/// Starts serving messages
 	void run();
@@ -95,6 +95,11 @@ private:
 	zmq::context_t & zmqContext; ///< The zmq context to pass to socket
 	std::mutex messageMtx; ///< Lock protecting the queue for sending
 	std::queue<VRayMessage> outstandingMessages; ///< Queue for messages to be sent
+
+	/// Hash map that stores plugins that reference other plugins that are not yet exported
+	/// When creating a new plugin, this map is checked to see if some other plugin is waiting for the new one
+	/// This is flushed on every commit action
+	std::unordered_map<std::string, std::vector<VRayMessage>> delayedMessages;
 
 	std::unique_ptr<VRay::VRayRenderer> renderer; ///< Pointer to VRayRenderer
 	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elementsToSend; ///< Renderer elements to send to client when sending images
