@@ -16,6 +16,8 @@
 #include <memory>
 #include <unordered_set>
 
+#include "utils/logger.h"
+
 /// Wrapper over VRay::VRayRenderer to process incomming messages
 class RendererController {
 	enum RunState {
@@ -98,8 +100,8 @@ private:
 
 	/// Hash map that stores plugins that reference other plugins that are not yet exported
 	/// When creating a new plugin, this map is checked to see if some other plugin is waiting for the new one
-	/// This is flushed on every commit action
-	std::unordered_map<std::string, std::vector<VRayMessage>> delayedMessages;
+	/// When commit action comes this is flushed and the storred error messages (in Logger object) are also displayed
+	std::unordered_map<std::string, std::vector<std::pair<VRayMessage, Logger>>> delayedMessages;
 
 	std::unique_ptr<VRay::VRayRenderer> renderer; ///< Pointer to VRayRenderer
 	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elementsToSend; ///< Renderer elements to send to client when sending images

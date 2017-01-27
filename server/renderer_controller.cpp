@@ -108,7 +108,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			} else {
 				if (!renderer->getPlugin(attrPlugin.plugin)) {
 					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (",  attrPlugin.plugin, ") which is not yet exported - delaying.");
-					delayedMessages[attrPlugin.plugin].push_back(std::move(message));
+
+					// save message and it's error if it is not processed before commit
+					auto buffLog = Logger::getInstance().makeBuffered();
+					buffLog.log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
+
+					delayedMessages[attrPlugin.plugin].emplace_back(std::move(message), std::move(buffLog));
 				} else {
 					success = plugin.setValueAsString(message.getProperty(), pluginData);
 
@@ -181,8 +186,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				const auto vrayPlugin = renderer->getPlugin(messagePlugin.plugin);
 				if (!vrayPlugin) {
 					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", messagePlugin.plugin, ") which is not yet exported - delaying.");
+
+					auto buffLog = Logger::getInstance().makeBuffered();
+					buffLog.log(Logger::Error, "Failed setting:", message.getProperty(), "=", messagePlugin.plugin, "for plugin", message.getPlugin());
+
 					delayed = true;
-					delayedMessages[messagePlugin.plugin].push_back(std::move(message));
+					delayedMessages[messagePlugin.plugin].emplace_back(std::move(message), std::move(buffLog));
 					break;
 				}
 				pluginList[c] = VRay::Value(vrayPlugin);
@@ -275,7 +284,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			VRay::VUtils::ValueRefList instancer(inst.data.getCount() + 1);
 			instancer[0] = VRay::VUtils::Value(inst.frameNumber);
 
-			Logger::log(Logger::Info, "{VUtils::ValueRefList i(", inst.data.getCount() + 1, ");i[0]=VUtils::Value(", inst.frameNumber, ");");
+			auto logBuff = Logger::getInstance().makeBuffered();
+
+			logBuff.log(Logger::Info, "{VUtils::ValueRefList i(", inst.data.getCount() + 1, ");i[0]=VUtils::Value(", inst.frameNumber, ");");
 
 			for (int i = 0; i < inst.data.getCount(); ++i) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
@@ -293,13 +304,17 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				auto plugin = renderer->getPlugin(item.node.plugin);
 				if (!plugin) {
 					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", item.node.plugin, ") which is not yet exported - delaying.");
-					delayedMessages[item.node.plugin].push_back(std::move(message));
+
+					auto buffLog = Logger::getInstance().makeBuffered();
+					buffLog.log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
+
+					delayedMessages[item.node.plugin].emplace_back(std::move(message), std::move(buffLog));
 					delayed = true;
 					break;
 				}
 
 				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
-				Logger::log(Logger::Info, "{VUtils::ValueRefList in(4);in[0].setDouble(", item.index, ");in[1].setTransform(", *tm, ");in[2].setTransform(",
+				logBuff.log(Logger::Info, "{VUtils::ValueRefList in(4);in[0].setDouble(", item.index, ");in[1].setTransform(", *tm, ");in[2].setTransform(",
 					*vel, ");in[3].setObjectID(VUtils::ObjectID{", plugin.getId(), "});/*", item.node.plugin,"*/i[", i + 1, "].setList(in);}");
 
 				instance[3].setObjectID(pluginId);
@@ -311,7 +326,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
 					success = plugin.setValue(message.getProperty(), instancer);
 				}
 
-				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
+				logBuff.log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
+
+				Logger::getInstance().log(logBuff); // dump buff
 			}
 
 			break;
@@ -332,8 +349,8 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			auto toInsert = delayedMessages.find(message.getPlugin());
 			if (toInsert != delayedMessages.end()) {
 				for (auto & msg : toInsert->second) {
-					Logger::log(Logger::Debug, "Inserting delayed plugin [", msg.getPlugin(), "] referencing (", toInsert->first, ").");
-					handle(msg);
+					Logger::log(Logger::Debug, "Inserting delayed plugin [", msg.first.getPlugin(), "] referencing (", toInsert->first, ").");
+					handle(msg.first);
 				}
 				delayedMessages.erase(toInsert);
 			}
@@ -489,7 +506,11 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		if (!cameraPlugin) {
 			// lets try to delay, maybe out of order export
 			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", message.getValue<AttrSimpleType<std::string>>()->m_Value, ") which is not yet exported - delaying.");
-			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->m_Value].push_back(std::move(message));
+
+			auto buffLog = Logger::getInstance().makeBuffered();
+			buffLog.log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->m_Value, "to set as current camera.");
+
+			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->m_Value].emplace_back(std::move(message), std::move(buffLog));
 		} else {
 			completed = renderer->setCamera(cameraPlugin);
 		}
@@ -524,7 +545,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		if (isFlush) {
 			for (const auto & ref : delayedMessages) {
 				for (const auto & plg : ref.second) {
-					Logger::log(Logger::Error, "Plugin [", plg.getPlugin(), "] references (", ref.first, ")");
+					Logger::getInstance().log(plg.second);
 				}
 			}
 			delayedMessages.clear();

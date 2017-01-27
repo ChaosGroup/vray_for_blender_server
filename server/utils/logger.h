@@ -157,6 +157,15 @@ public:
 		log(Debug, msg);
 	}
 
+	Logger(Logger && other)
+		: isBuffered(other.isBuffered)
+		, bufferedMessages(std::move(other.bufferedMessages))
+		, currentLevel(other.currentLevel)
+		, msgCallback(other.msgCallback) {}
+
+	void log(const Logger & buffered);
+	Logger makeBuffered();
+
 	/// Get the Logger instace
 	static Logger & getInstance();
 private:
@@ -179,10 +188,10 @@ private:
 	/// Base case for logImpl
 	static void logImpl(Level lvl, std::stringstream & msg);
 
-	/// Current log Level
-	Level    currentLevel;
-	/// Current callback
-	StringCb scb;
+	bool isBuffered; ///< If set to true all messages will be buffered in instance
+	std::vector<std::pair<Level, std::string>> bufferedMessages; ///< Serves as alternative destination for messages (instead of callback)
+	Level currentLevel; ///< Current log Level
+	StringCb msgCallback; ///< Current callback
 };
 
 
