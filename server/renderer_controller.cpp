@@ -107,7 +107,8 @@ void RendererController::pluginMessage(VRayMessage & message) {
 					"\").setValue(\"", message.getProperty(), "\", \"NULL\"); // success == ", success);
 			} else {
 				if (!renderer->getPlugin(attrPlugin.plugin)) {
-					Logger::log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginData, "for plugin", message.getPlugin());
+					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (",  attrPlugin.plugin, ") which is not yet exported - delaying.");
+					delayedMessages[attrPlugin.plugin].push_back(std::move(message));
 				} else {
 					success = plugin.setValueAsString(message.getProperty(), pluginData);
 
@@ -174,16 +175,24 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			const VRayBaseTypes::AttrListPlugin & plist = *message.getValue<VRayBaseTypes::AttrListPlugin>();
 #if 1 // enable this for ValueList
 			VRay::ValueList pluginList(plist.getCount());
-
+			bool delayed = false;
 			for (int c = 0; c < plist.getCount(); ++c) {
 				const auto & messagePlugin = (*plist)[c];
-				const auto & vrayPlugin = renderer->getPlugin(messagePlugin.plugin);
+				const auto vrayPlugin = renderer->getPlugin(messagePlugin.plugin);
+				if (!vrayPlugin) {
+					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", messagePlugin.plugin, ") which is not yet exported - delaying.");
+					delayed = true;
+					delayedMessages[messagePlugin.plugin].push_back(std::move(message));
+					break;
+				}
 				pluginList[c] = VRay::Value(vrayPlugin);
 			}
-			success = plugin.setValue(message.getProperty(), pluginList);
+			if (!delayed) {
+				success = plugin.setValue(message.getProperty(), pluginList);
 
-			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListPlugin>()->getData(), "); // success == ", success);
+				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
+					"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListPlugin>()->getData(), "); // success == ", success);
+			}
 #else
 			VRay::VUtils::ValueRefList pluginList(plist.getCount());
 
@@ -478,8 +487,9 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	case VRayMessage::RendererAction::SetCurrentCamera: {
 		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->m_Value);
 		if (!cameraPlugin) {
-			Logger::log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->m_Value, "to set as current camera.");
-			completed = false;
+			// lets try to delay, maybe out of order export
+			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", message.getValue<AttrSimpleType<std::string>>()->m_Value, ") which is not yet exported - delaying.");
+			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->m_Value].push_back(std::move(message));
 		} else {
 			completed = renderer->setCamera(cameraPlugin);
 		}
