@@ -446,6 +446,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 			completed = renderer->setRenderMode(mode);
 			Logger::log(Logger::Info, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, ")); // success == ", completed);
 
+			renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
 			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
 			renderer->setOnBucketReady<RendererController, &RendererController::bucketReady>(*this);
@@ -663,6 +664,7 @@ void RendererController::stopRenderer() {
 
 	std::lock_guard<std::mutex> l(rendererMtx);
 	if (renderer) {
+		renderer->setOnProgress(nullptr);
 		renderer->setOnRTImageUpdated(nullptr);
 		renderer->setOnImageReady(nullptr);
 		renderer->setOnBucketReady(nullptr);
@@ -677,8 +679,20 @@ void RendererController::stopRenderer() {
 }
 
 
+void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void *) {
+	float progress = static_cast<float>(elementNumber) / elementsCount;
+	{
+		lock_guard<mutex> lock(messageMtx);
+		if (msg && *msg) {
+			outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::ProgressMessage, std::string(msg)));
+		}
+		outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::Progress, progress));
+		Logger::log(Logger::Error, "Progress: ", progress);
+	}
+}
+
+
 void RendererController::imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
-	(void)arg;
 	std::lock_guard<std::mutex> l(rendererMtx);
 	if (renderer && !renderer->isAborted()) {
 		sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG, VRayBaseTypes::ImageSourceType::RtImageUpdate);

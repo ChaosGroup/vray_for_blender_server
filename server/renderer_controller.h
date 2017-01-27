@@ -54,6 +54,9 @@ private:
 	/// Cleany stop amd free the renderer
 	void stopRenderer();
 
+	/// Callback for VRayRenderer::setOnProgress, sends message and progress in [0,1]
+	void onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void * arg);
+
 	/// Callback for VRayRenderer::setOnRTImageUpdated, sends image to client
 	void imageUpdate(VRay::VRayRenderer & renderer, VRay::VRayImage * img, void * arg);
 
