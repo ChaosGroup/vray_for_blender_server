@@ -144,6 +144,7 @@ void ZmqProxyServer::run() {
 
 		if (pollItems[0].revents & ZMQ_POLLIN) {
 			didWork = true;
+			bool stopServing = false;
 			while (true) {
 				zmq::message_t idMsg, ctrlMsg, payloadMsg;
 				bool recv = true;
@@ -167,6 +168,11 @@ void ZmqProxyServer::run() {
 
 				assert(!!frame && "Client sent malformed control frame");
 				assert(idMsg.size() == sizeof(client_id_t) && "ID frame with unexpected size");
+
+				if (frame.control == ControlMessage::STOP_MSG) {
+					Logger::log(Logger::Debug, "Client requested server to stop!");
+					stopServing = true;
+				}
 
 				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
 
@@ -209,6 +215,10 @@ void ZmqProxyServer::run() {
 				if (!more) {
 					break;
 				}
+			}
+
+			if (stopServing) {
+				break;
 			}
 		}
 
@@ -270,8 +280,12 @@ void ZmqProxyServer::run() {
 			}
 		}
 
-		didWork = didWork || reportStats(now);
-		didWork = didWork || checkForTimeouts(now);
+		if (reportStats(now)) {
+			didWork = true;
+		}
+		if (checkForTimeouts(now)) {
+			didWork = true;
+		}
 
 		if (checkHeartbeat) {
 			if (duration_cast<milliseconds>(now - lastHeartbeat).count() > EXPORTER_TIMEOUT) {

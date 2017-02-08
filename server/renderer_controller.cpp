@@ -846,7 +846,9 @@ void RendererController::run() {
 		try {
 			pollRes = zmq::poll(&backEndPoll, 1, 10);
 		} catch (zmq::error_t & ex) {
-			Logger::log(Logger::Error, "Error while polling for messages:", ex.what());
+			if (ex.num() != ETERM) {
+				Logger::log(Logger::Error, "Error while polling for messages:", ex.what());
+			}
 			break;
 		}
 
@@ -860,7 +862,9 @@ void RendererController::run() {
 				recv = zmqRendererSocket.recv(&payloadMsg);
 				assert(recv && "Failed recv for payload while poll returned ZMQ_POLLIN event.");
 			} catch (zmq::error_t & ex) {
-				Logger::log(Logger::Error, "Error while renderer is receiving message:", ex.what());
+				if (ex.num() != ETERM) {
+					Logger::log(Logger::Error, "Error while renderer is receiving message:", ex.what());
+				}
 				transitionState(RUNNING, IDLE);
 				return;
 			}
@@ -887,7 +891,9 @@ void RendererController::run() {
 					sent = zmqRendererSocket.send(emtpyFrame);
 					assert(sent && "Failed sending empty frame for PONG.");
 				} catch (zmq::error_t & ex) {
-					Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+					if (ex.num() != ETERM) {
+						Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+					}
 					transitionState(RUNNING, IDLE);
 					return;
 				}
@@ -905,7 +911,9 @@ void RendererController::run() {
 							zmqRendererSocket.send(outstandingMessages.front().getMessage());
 						}
 					} catch (zmq::error_t & ex) {
-						Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+						if (ex.num() != ETERM) {
+							Logger::log(Logger::Error, "Error while renderer is sending message:", ex.what());
+						}
 						transitionState(RUNNING, IDLE);
 						return;
 					}
@@ -930,7 +938,9 @@ void RendererController::run() {
 			zmqRendererSocket.send(ControlFrame::make(), ZMQ_SNDMORE);
 			zmqRendererSocket.send(VRayMessage::msgRendererState(VRayMessage::RendererState::Abort, currentFrame).getMessage());
 		} catch (zmq::error_t & ex) {
-			Logger::log(Logger::Error, "Error while renderer is sending cleanup message:", ex.what());
+			if (ex.num() != ETERM) {
+				Logger::log(Logger::Error, "Error while renderer is sending cleanup message:", ex.what());
+			}
 		}
 	}
 }
