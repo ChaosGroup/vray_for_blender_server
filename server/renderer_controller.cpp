@@ -77,20 +77,20 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 		switch (message.getValueType()) {
 		case VRayBaseTypes::ValueType::ValueTypeTransform:
-			success = plugin.setValue(message.getProperty(), *message.getValue<const VRay::Transform>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<const VRay::Transform>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<const VRay::Transform>(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<const VRay::Transform>(), ", ", currentFrame, "); // success == ", success);
 
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeInt:
-			success = plugin.setValue(message.getProperty(), *message.getValue<int>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<int>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<int>(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<int>(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeFloat:
-			success = plugin.setValue(message.getProperty(), *message.getValue<float>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<float>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<float>(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<float>(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypePlugin:
 		{
@@ -102,9 +102,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			}
 
 			if (attrPlugin.plugin == "NULL") {
-				success = plugin.setValue(message.getProperty(), VRay::Plugin());
+				success = plugin.setValueAtTime(message.getProperty(), VRay::Plugin(), currentFrame);
 				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValue(\"", message.getProperty(), "\", \"NULL\"); // success == ", success);
+					"\").setValueAtTime(\"", message.getProperty(), "\", \"NULL\", ", currentFrame, "); // success == ", success);
 			} else {
 				if (!renderer->getPlugin(attrPlugin.plugin)) {
 					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (",  attrPlugin.plugin, ") which is not yet exported - delaying.");
@@ -115,65 +115,65 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 					delayedMessages[attrPlugin.plugin].emplace_back(std::move(message), std::move(buffLog));
 				} else {
-					success = plugin.setValueAsString(message.getProperty(), pluginData);
+					success = plugin.setValueAsStringAtTime(message.getProperty(), pluginData, currentFrame);
 
 					Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-						"\").setValueAsString(\"", message.getProperty(), "\",\"", pluginData, "\"); // success == ", success);
+						"\").setValueAsStringAtTime(\"", message.getProperty(), "\",\"", pluginData, "\", ", currentFrame, "); // success == ", success);
 				}
 			}
 
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeVector:
-			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Vector>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<VRay::Vector>(), currentFrame);
 
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRay::Vector>(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRay::Vector>(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeString:
 			if (message.getValueSetter() == VRayMessage::ValueSetter::AsString) {
-				success = plugin.setValueAsString(message.getProperty(), *message.getValue<std::string>());
+				success = plugin.setValueAsStringAtTime(message.getProperty(), *message.getValue<std::string>(), currentFrame);
 				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValueAsString(\"", message.getProperty(), ",", *message.getValue<std::string>(), "\"); // success == ", success);
+					"\").setValueAsStringAtTime(\"", message.getProperty(), ",", *message.getValue<std::string>(), "\", ", currentFrame, "); // success == ", success);
 			} else {
-				success = plugin.setValue(message.getProperty(), *message.getValue<std::string>());
+				success = plugin.setValueAtTime(message.getProperty(), *message.getValue<std::string>(), currentFrame);
 				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValue(\"", message.getProperty(), "\",\"", *message.getValue<std::string>(), "\"); // success == ", success);
+					"\").setValueAtTime(\"", message.getProperty(), "\",\"", *message.getValue<std::string>(), "\", ", currentFrame, "); // success == ", success);
 			}
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeColor:
-			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::Color>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<VRay::Color>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRay::Color>(), "); // success == ", success);
+					"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRay::Color>(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeAColor:
-			success = plugin.setValue(message.getProperty(), *message.getValue<VRay::AColor>());
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<VRay::AColor>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRay::AColor>(), "); // success == ", success);
+					"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRay::AColor>(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListInt:
-			success = plugin.setValue(message.getProperty(),
+			success = plugin.setValueAtTime(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListInt>(),
-				message.getValue<VRayBaseTypes::AttrListInt>()->getBytesCount());
+				message.getValue<VRayBaseTypes::AttrListInt>()->getBytesCount(), currentFrame);
 
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListInt>()->getData(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListInt>()->getData(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListFloat:
-			success = plugin.setValue(message.getProperty(),
+			success = plugin.setValueAtTime(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListFloat>(),
-				message.getValue<VRayBaseTypes::AttrListFloat>()->getBytesCount());
+				message.getValue<VRayBaseTypes::AttrListFloat>()->getBytesCount(), currentFrame);
 
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListFloat>()->getData(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListFloat>()->getData(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListVector:
-			success = plugin.setValue(message.getProperty(),
+			success = plugin.setValueAtTime(message.getProperty(),
 				**message.getValue<VRayBaseTypes::AttrListVector>(),
-				message.getValue<VRayBaseTypes::AttrListVector>()->getBytesCount());
+				message.getValue<VRayBaseTypes::AttrListVector>()->getBytesCount(), currentFrame);
 
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListVector>()->getData(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListVector>()->getData(), ", ", currentFrame, "); // success == ", success);
 			break;
 		case VRayBaseTypes::ValueType::ValueTypeListPlugin:
 		{
@@ -197,10 +197,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				pluginList[c] = VRay::Value(vrayPlugin);
 			}
 			if (!delayed) {
-				success = plugin.setValue(message.getProperty(), pluginList);
+				success = plugin.setValueAtTime(message.getProperty(), pluginList, currentFrame);
 
 				Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-					"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListPlugin>()->getData(), "); // success == ", success);
+					"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListPlugin>()->getData(), ", ", currentFrame, "); // success == ", success);
 			}
 #else
 			VRay::VUtils::ValueRefList pluginList(plist.getCount());
@@ -221,9 +221,9 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 				pluginList[c].setObjectID(pluginId);
 			}
-			success = plugin.setValue(message.getProperty(), pluginList);
+			success = plugin.setValueAtTime(message.getProperty(), pluginList, currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",l);} // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",l, ", currentFrame, ");} // success == ", success);
 #endif
 			break;
 
@@ -237,10 +237,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			for (int c = 0; c < slist.getCount(); ++c) {
 				stringList[c].set((*slist)[c].c_str());
 			}
-			success = plugin.setValue(message.getProperty(), stringList);
+			success = plugin.setValueAtTime(message.getProperty(), stringList, currentFrame);
 
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
-				"\").setValue(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListString>()->getData(), "); // success == ", success);
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListString>()->getData(), ", ", currentFrame, "); // success == ", success);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:
@@ -271,7 +271,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				map_channels[i++].setList(map_channel);
 			}
 
-			success = plugin.setValue(message.getProperty(), map_channels);
+			success = plugin.setValueAtTime(message.getProperty(), map_channels, currentFrame);
 
 			// TODO: maybe implement - tricky as it usually contains alot of data
 			Logger::log(Logger::Info, "// AttrMapChannels unimplemented log success == ", success);
@@ -323,10 +323,10 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 			if (!delayed) {
 				if (instancer.size() == inst.data.getCount() + 1) {
-					success = plugin.setValue(message.getProperty(), instancer);
+					success = plugin.setValueAtTime(message.getProperty(), instancer, currentFrame);
 				}
 
-				logBuff.log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValue(\"", message.getProperty(), "\",i);} // success == ", success);
+				logBuff.log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValueAtTime(\"", message.getProperty(), "\",i, ", currentFrame, ");} // success == ", success);
 
 				Logger::getInstance().log(logBuff); // dump buff
 			}
@@ -393,12 +393,17 @@ void RendererController::pluginMessage(VRayMessage & message) {
 }
 
 void RendererController::rendererMessage(VRayMessage & message) {
-	std::lock_guard<std::mutex> l(rendererMtx);
+	std::unique_lock<std::mutex> rendLock(rendererMtx);
 	if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
 		return;
 	}
 	bool completed = true;
 	switch (message.getRendererAction()) {
+	case VRayMessage::RendererAction::SetCurrentFrame:
+		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
+		renderer->setCurrentFrame(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::Info, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
+		break;
 	case VRayMessage::RendererAction::SetCurrentTime:
 		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
 		renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
@@ -426,7 +431,9 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		break;
 	}
 	case VRayMessage::RendererAction::Free:
+		rendLock.unlock();
 		stopRenderer();
+		rendLock.lock();
 		elementsToSend.clear();
 
 		break;
@@ -444,7 +451,8 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			Logger::log(Logger::Info, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, ")); // success == ", completed);
+			renderer->useAnimatedValues(false);
+			Logger::log(Logger::Info, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, "));renderer.useAnimatedValues(true); // success == ", completed);
 
 			renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
