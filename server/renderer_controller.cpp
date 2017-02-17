@@ -689,14 +689,12 @@ void RendererController::stopRenderer() {
 
 void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void *) {
 	float progress = static_cast<float>(elementNumber) / elementsCount;
-	{
-		lock_guard<mutex> lock(messageMtx);
-		if (msg && *msg) {
-			outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::ProgressMessage, std::string(msg)));
-		}
-		outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::Progress, progress));
-		Logger::log(Logger::Error, "Progress: ", progress);
+
+	lock_guard<mutex> lock(messageMtx);
+	if (msg && *msg) {
+		outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::ProgressMessage, std::string(msg)));
 	}
+	outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::Progress, progress));
 }
 
 
