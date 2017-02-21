@@ -451,8 +451,9 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		} else {
 			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
 			completed = renderer->setRenderMode(mode);
-			renderer->useAnimatedValues(false);
-			Logger::log(Logger::Info, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, "));renderer.useAnimatedValues(true); // success == ", completed);
+			const bool useAnimatedValues = false;
+			renderer->useAnimatedValues(useAnimatedValues);
+			Logger::log(Logger::Info, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, "));\nrenderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
 
 			renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
