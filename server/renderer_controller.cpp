@@ -76,6 +76,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 		}
 
 		switch (message.getValueType()) {
+		case VRayBaseTypes::ValueType::ValueTypeMatrix:
+			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<const VRay::Matrix>(), currentFrame);
+			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
+				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<const VRay::Matrix>(), ", ", currentFrame, "); // success == ", success);
+
+			break;
 		case VRayBaseTypes::ValueType::ValueTypeTransform:
 			success = plugin.setValueAtTime(message.getProperty(), *message.getValue<const VRay::Transform>(), currentFrame);
 			Logger::log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(),
