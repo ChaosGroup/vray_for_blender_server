@@ -292,7 +292,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 			auto logBuff = Logger::getInstance().makeBuffered();
 
-			logBuff.log(Logger::Info, "{VUtils::ValueRefList i(", inst.data.getCount() + 1, ");i[0]=VUtils::Value(", inst.frameNumber, ");");
+			logBuff.log(Logger::Info, "{\n\tVUtils::ValueRefList i(", inst.data.getCount() + 1, ");\n\ti[0]=VUtils::Value(", inst.frameNumber, ");");
 
 			for (int i = 0; i < inst.data.getCount(); ++i) {
 				const VRayBaseTypes::AttrInstancer::Item &item = (*inst.data)[i];
@@ -320,8 +320,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				}
 
 				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
-				logBuff.log(Logger::Info, "{VUtils::ValueRefList in(4);in[0].setDouble(", item.index, ");in[1].setTransform(", *tm, ");in[2].setTransform(",
-					*vel, ");in[3].setObjectID(VUtils::ObjectID{", plugin.getId(), "});/*", item.node.plugin,"*/i[", i + 1, "].setList(in);}");
+				logBuff.log(Logger::Info, "\t{\n\t\tVUtils::ValueRefList in(4);");
+				logBuff.log(Logger::Info, "\t\tin[0].setDouble(", item.index, ");");
+				logBuff.log(Logger::Info, "\t\tin[1].setTransform(", *tm, ");");
+				logBuff.log(Logger::Info, "\t\tin[2].setTransform(", *vel, ");");
+				logBuff.log(Logger::Info, "\t\tin[3].setObjectID(VUtils::ObjectID{", plugin.getId(), "});/*", item.node.plugin, "*/");
+				logBuff.log(Logger::Info, "\t\ti[", i + 1, "].setList(in);\n\t}");
 
 				instance[3].setObjectID(pluginId);
 				instancer[i + 1].setList(instance);
@@ -332,7 +336,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 					success = plugin.setValueAtTime(message.getProperty(), instancer, currentFrame);
 				}
 
-				logBuff.log(Logger::Info, "renderer.getPlugin(\"", message.getPlugin(), "\").setValueAtTime(\"", message.getProperty(), "\",i, ", currentFrame, ");} // success == ", success);
+				logBuff.log(Logger::Info, "\trenderer.getPlugin(\"", message.getPlugin(), "\").setValueAtTime(\"", message.getProperty(), "\",i, ", currentFrame, ");\n} // success == ", success);
 
 				Logger::getInstance().log(logBuff); // dump buff
 			}
@@ -406,30 +410,30 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentFrame:
+		Logger::log(Logger::Info, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
 		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
 		renderer->setCurrentFrame(message.getValue<AttrSimpleType<float>>()->m_Value);
-		Logger::log(Logger::Info, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
 		break;
 	case VRayMessage::RendererAction::SetCurrentTime:
+		Logger::log(Logger::Info, "renderer.setCurrentTime(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
 		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
 		renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
-		Logger::log(Logger::Info, "renderer.setCurrentTime(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
 		break;
 	case VRayMessage::RendererAction::ClearFrameValues:
-		completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
 		Logger::log(Logger::Info, "renderer.clearAllPropertyValuesUpToTime(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
+		completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
 		break;
 	case VRayMessage::RendererAction::Pause:
-		completed = renderer->pause();
 		Logger::log(Logger::Info, "renderer.pause();");
+		completed = renderer->pause();
 		break;
 	case VRayMessage::RendererAction::Resume:
-		completed = renderer->resume();
 		Logger::log(Logger::Info, "renderer.resume()");
+		completed = renderer->resume();
 		break;
 	case VRayMessage::RendererAction::Start:
-		renderer->startSync();
 		Logger::log(Logger::Info, "renderer.startSync();");
+		renderer->startSync();
 		break;
 	case VRayMessage::RendererAction::Stop:{
 		Logger::log(Logger::Info, "renderer.stop();");
@@ -449,6 +453,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		options.noDR = true;
 		options.showFrameBuffer = showVFB;
+		Logger::log(Logger::Info, "RendererOptions o;o.keepRTRunning=", type == VRayMessage::RendererType::RT, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
 		renderer.reset(new VRay::VRayRenderer(options));
 		Logger::log(Logger::Info, "RendererOptions o;o.keepRTRunning=", type == VRayMessage::RendererType::RT,
 			";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");

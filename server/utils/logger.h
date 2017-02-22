@@ -48,7 +48,7 @@ inline void hookFormat(std::ostream & out, const VRay::Color & val) {
 
 template <>
 inline void hookFormat(std::ostream & out, const VRay::AColor & val) {
-	out << "Color(";
+	out << "AColor(";
 	hookFormat(out, val.color.r);
 	out << ',';
 	hookFormat(out, val.color.g);
