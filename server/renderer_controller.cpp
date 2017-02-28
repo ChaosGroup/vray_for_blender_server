@@ -694,7 +694,7 @@ void RendererController::stopRenderer() {
 
 		Logger::log(Logger::Info, "renderer.stop();");
 		renderer->stop();
-		renderer.release();
+		renderer.reset();
 	}
 }
 
