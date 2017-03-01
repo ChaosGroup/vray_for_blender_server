@@ -25,12 +25,14 @@ struct ArgvSettings {
 	    , showVFB(false)
 	    , checkHearbeat(true)
 	    , dumpInfoLog(false)
+	    , showProfileLog(false)
 	    , logLevel(Logger::Warning)
 	{}
 	std::string port;
 	bool showVFB;
 	bool checkHearbeat;
 	bool dumpInfoLog;
+	bool showProfileLog;
 	Logger::Level logLevel;
 };
 
@@ -44,12 +46,29 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 			std::stringstream strm(argv[++c]);
 			int lvl;
 			if (strm >> lvl) {
-				settings.logLevel = static_cast<Logger::Level>((lvl > Logger::None ? Logger::None : lvl < Logger::Info ? Logger::Info : lvl));
+				switch (lvl) {
+				case 1:
+					settings.logLevel = Logger::Info;
+					break;
+				case 2:
+					settings.logLevel = Logger::Debug;
+					break;
+				case 3:
+					settings.logLevel = Logger::Warning;
+					break;
+				case 4:
+					/* fall-trough */
+				default:
+					settings.logLevel = Logger::Error;
+					break;
+				}
 			}
 		} else if (!strcmp(argv[c], "-noHeartbeat")) {
 			settings.checkHearbeat = false;
 		} else if (!strcmp(argv[c], "-dumpInfoLog")) {
 			settings.dumpInfoLog = true;
+		} else if (!strcmp(argv[c], "-showProfile")) {
+			settings.showProfileLog = true;
 		} else {
 			return false;
 		}
@@ -68,7 +87,7 @@ void printHelp() {
 	puts("Arguments:");
 	puts("-p <port-num>\tPort number to listen on");
 	puts("-vfb\t\tSet show VFB option");
-	puts("-log <level>\t1-4, 1 beeing the most verbose");
+	puts("-log <level>\t1-4, 1 = Info, 2 = Debug, 3 = Warning, 4 = Error");
 }
 
 /// Parse command line arguments, initialize logger, initialize server and start it
@@ -79,7 +98,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 	std::ofstream infoDump;
-	auto lastLogTime = std::chrono::high_resolution_clock::now();
+
 	bool firstLog = true;
 	if (settings.dumpInfoLog) {
 		settings.logLevel = Logger::Info;
@@ -87,45 +106,44 @@ int main(int argc, char *argv[]) {
 	}
 	Logger::getInstance().setCurrentlevel(settings.logLevel);
 
+	const auto begin = std::chrono::high_resolution_clock::now();
+	auto lastProfileTime = begin;
+	auto lastLogTime = begin;
 
-	Logger::getInstance().setCallback([&settings, &infoDump, &lastLogTime, &firstLog] (Logger::Level lvl, const std::string & msg) {
+	Logger::getInstance().setCallback([&settings, &infoDump, &lastLogTime, &firstLog, &lastProfileTime] (Logger::Level lvl, const std::string & msg) {
+		using namespace std;
 		using namespace std::chrono;
-		if (lvl == Logger::Info && settings.dumpInfoLog && infoDump) {
-			if (!firstLog) {
-				auto now = high_resolution_clock::now();
-				auto sleepTime = duration_cast<milliseconds>(now - lastLogTime).count();
-				if (sleepTime > 10) {
-					infoDump << "Sleep(" << sleepTime << ");\n";
+		if (settings.logLevel <= Logger::Info && lvl == Logger::Info) {
+			printf("ZMQ_INFO: %s\n", msg.c_str());
+		} else if (settings.logLevel <= Logger::Debug && lvl == Logger::Debug) {
+			printf("ZMQ_DEBUG: %s\n", msg.c_str());
+		} else if (settings.logLevel <= Logger::Warning && lvl == Logger::Warning) {
+			printf("ZMQ_WARNING: %s\n", msg.c_str());
+		} else if (settings.logLevel <= Logger::Error && lvl == Logger::Error) {
+			printf("ZMQ_ERROR: %s\n", msg.c_str());
+		} else if (lvl == Logger::Info && settings.dumpInfoLog) {
+			if (settings.dumpInfoLog && infoDump) {
+				if (!firstLog) {
+					const auto now = high_resolution_clock::now();
+					const auto sleepTime = duration_cast<milliseconds>(now - lastLogTime).count();
+					if (sleepTime > 10) {
+						infoDump << "Sleep(" << sleepTime << ");\n";
+					}
+					lastLogTime = now;
 				}
-				lastLogTime = now;
+				firstLog = false;
+				infoDump.write(msg.c_str(), msg.length());
+				infoDump.write("\n", 1);
+				infoDump.flush();
 			}
-			firstLog = false;
-			infoDump.write(msg.c_str(), msg.length());
-			infoDump.write("\n", 1);
-			infoDump.flush();
-		}
-		if (lvl >= settings.logLevel - 1) {
-			switch (lvl) {
-			case Logger::Debug:
-				printf("ZMQ_DEBUG: %s\n", msg.c_str());
-				break;
-			case Logger::Warning:
-				printf("ZMQ_WARNING: %s\n", msg.c_str());
-				break;
-			case Logger::Error:
-				printf("ZMQ_ERROR: %s\n", msg.c_str());
-				break;
-			case Logger::Info:
-				if (!settings.dumpInfoLog) {
-					// only print info to console if it is not dumped in file
-					printf("ZMQ_INFO: %s\n", msg.c_str());
-				}
-				break;
-			case Logger::None:
-			default:
-				// nothing
-				break;
-			}
+		} else if (lvl == Logger::Profile && settings.showProfileLog) {
+			const auto now = high_resolution_clock::now();
+			const auto passed = now - lastProfileTime;
+			lastProfileTime = now;
+			const int minutes = duration_cast<chrono::minutes>(passed).count() % 60;
+			const int seconds = duration_cast<chrono::seconds>(passed).count() % 60;
+			const int milliseconds = duration_cast<chrono::milliseconds>(passed).count() % 1000;
+			printf("[%2d:%2d:%4d]\t%s\n", minutes, seconds, milliseconds, msg.c_str());
 		}
 	});
 

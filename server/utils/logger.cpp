@@ -11,7 +11,7 @@ void Logger::setCallback(Logger::StringCb cb) {
 /// Base case for the logImpl - calls the callback with the generated string and Level
 void Logger::logImpl(Logger::Level lvl, std::stringstream & stream) {
 	auto & inst = getInstance();
-	if (lvl == Info && inst.currentLevel != Info) {
+	if (lvl == APIDump && inst.currentLevel != APIDump) {
 		return;
 	}
 	auto msg = stream.str();

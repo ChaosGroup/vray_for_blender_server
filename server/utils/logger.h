@@ -136,7 +136,13 @@ inline void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::Attr
 class Logger {
 public:
 	enum Level {
-		Info, Debug, Warning, Error, None
+		Info,
+		APIDump,
+		Profile,
+		Debug,
+		Warning,
+		Error,
+		None
 	};
 
 	/// Callback for each constructed message by the logger
@@ -157,7 +163,7 @@ public:
 	/// @rest ... - parts of the message
 	template <typename ... R>
 	static void log(Level lvl, const R & ... rest) {
-		if (lvl == Info && getInstance().currentLevel != Info) {
+		if (lvl == APIDump && getInstance().currentLevel != APIDump) {
 			// skip Info if not required
 			return;
 		}
@@ -187,11 +193,11 @@ private:
 	/// Implementation of Logger::log without any copies of it's arguments
 	template <typename T, typename ... R>
 	static void logImpl(Level lvl, std::stringstream & stream, const T & val, const R & ... rest) {
-		if (lvl == Info && getInstance().currentLevel != Info) {
-			// skip Info if not required
+		if (lvl == APIDump && getInstance().currentLevel != APIDump) {
+			// skip APIDump if not required
 			return;
 		}
-		if (lvl != Info) {
+		if (lvl != APIDump) {
 			stream << ' ';
 		}
 		LoggerFormat::hookFormat(stream, val);
