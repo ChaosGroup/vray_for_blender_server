@@ -96,6 +96,13 @@ public:
 	/// Starts serving requests until there are active clients (heartbeat or exporter)
 	void run();
 private:
+	/// Get an option from a socket
+	/// @socket - the socket to read option from
+	/// @option - the option value/name (eg. ZMQ_RCVMORE)
+	/// @return - pair of int and bool
+	///           int - the returned option value
+	///           bool - flag set to true if exception occured
+	std::pair<int, bool> checkSocketOpt(zmq::socket_t & socket, int option);
 
 	/// Create a Renderer for a given client
 	/// @clientId - the ID of the client
@@ -112,6 +119,9 @@ private:
 	/// @now - current time
 	/// @return - true if there are no heartbeat clients
 	bool checkForTimeouts(time_point now);
+
+	/// Thread base for reaper thread
+	void reaperThreadBase();
 private:
 	const bool  checkHeartbeat; ///< If true server stops itself if there are no active clients
 	bool        showVFB; ///< Flag for appsdk UI
@@ -124,6 +134,12 @@ private:
 	time_point lastTimeoutCheck; ///< Last time @checkForTimeout did work
 	time_point lastHeartbeat; ///< Last time a heartbeat client sent data
 	uint64_t dataTransfered; ///< Total bytes send and receieved
+
+	std::vector<WorkerWrapper> deadRenderers; ///< Free-ing renderer object is slow, so we dont do it on main thread and instead push here
+	std::thread reaperThread; ///< Thread that will free any WorkerWrappers put inside @deadRenderers
+	std::condition_variable reaperCond; ///< Cond var to signal thread that will reap renderers
+	std::mutex reaperMtx; ///< Mutex protecting @deadRenderers
+	volatile bool reaperRunning; ///< Flag to stop repaer thread
 };
 
 #endif // _ZMQ_PROXY_SERVER_H_

@@ -38,6 +38,7 @@ void ZmqProxyServer::addWorker(client_id_t clientId, time_point now, ClientType 
 		now, clientId, type
 	};
 	wrapper.worker->start();
+	Logger::log(Logger::Info, "workers.emplace(make_pair(clientId, move(wrapper)))");
 	auto res = workers.emplace(make_pair(clientId, move(wrapper)));
 	assert(res.second && "Failed to add worker!");
 	Logger::log(Logger::Debug, "New client (", clientId, ") connected.");
@@ -60,8 +61,11 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 
 		if (inactiveTime > maxInactive || !workerIter->second.worker->isRunning()) {
 			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
-			workerIter->second.worker->stop();
-			workerIter = workers.erase(workerIter);
+			{
+				lock_guard<mutex> lk(reaperMtx);
+				deadRenderers.emplace_back(move(workerIter->second));
+				workerIter = workers.erase(workerIter); // should be no-op since worker is moved in dead que
+			}
 		} else {
 			++workerIter;
 		}
@@ -75,6 +79,14 @@ bool ZmqProxyServer::reportStats(time_point now) {
 	if (dataReportDiff <= 1000) {
 		return false;
 	}
+
+	const int toFree = deadRenderers.size();
+	if (toFree > 20) {
+		Logger::log(Logger::Error, "Failing to free renderers fast enough:", toFree);
+	} else if (toFree > 10) {
+		Logger::log(Logger::Warning, "Failing to free renderers fast enough:", toFree);
+	}
+
 	lastDataCheck = now;
 	if (dataTransfered / 1024 > 1) {
 		Logger::log(Logger::Debug, "Data transfered", dataTransfered / 1024., "KB for", dataReportDiff, "ms");
@@ -93,6 +105,46 @@ bool ZmqProxyServer::reportStats(time_point now) {
 	return true;
 }
 
+std::pair<int, bool> ZmqProxyServer::checkSocketOpt(zmq::socket_t & socket, int option) {
+	std::pair<int, bool> result;
+	size_t more_size = sizeof (result.first);
+	try {
+		Logger::log(Logger::Info, "frontend.getsockopt(", option,", &result, &size)");
+		socket.getsockopt(option, &result.first, &more_size);
+	} catch (zmq::error_t & ex) {
+		result.second = true;
+		Logger::log(Logger::Error, "zmq::socket_t::getsockopt:", ex.what());
+	}
+	return result;
+}
+
+void ZmqProxyServer::reaperThreadBase() {
+	while (reaperRunning) {
+		if (deadRenderers.empty()) {
+			unique_lock<mutex> lk(reaperMtx);
+			if (deadRenderers.empty()) {
+				reaperCond.wait(lk, [this]() { return !deadRenderers.empty(); });
+			}
+		} else {
+			unique_lock<mutex> lk(reaperMtx);
+			// only this thread should remove items from deadRenderers
+			assert(!deadRenderers.empty() && "There were some items in deadRenderers before lock and now there arent!");
+			auto worker = move(deadRenderers.back());
+			deadRenderers.pop_back();
+			lk.unlock();
+
+			assert(!!worker.worker && "Already free-ed Renderer inside deadRenderers");
+			if (worker.worker) {
+				Logger::log(Logger::Info, "worker.worker->stop()");
+				worker.worker->stop();
+				Logger::log(Logger::Info, "worker.worker.reset()");
+				worker.worker.reset();
+			}
+		}
+	}
+}
+
+
 void ZmqProxyServer::run() {
 	zmq::socket_t backend(context, ZMQ_ROUTER);
 	zmq::socket_t frontend(context, ZMQ_ROUTER);
@@ -101,14 +153,14 @@ void ZmqProxyServer::run() {
 		backend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
 		frontend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
 
-		int wait = EXPORTER_TIMEOUT * 2;
+		int wait = SOCKET_IO_TIMEOUT;
 		frontend.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
-		wait = EXPORTER_TIMEOUT * 2;
+		wait = SOCKET_IO_TIMEOUT;
 		frontend.setsockopt(ZMQ_RCVTIMEO, &wait, sizeof(wait));
 
-		wait = EXPORTER_TIMEOUT * 2;
+		wait = SOCKET_IO_TIMEOUT;
 		backend.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
-		wait = EXPORTER_TIMEOUT * 2;
+		wait = SOCKET_IO_TIMEOUT;
 		backend.setsockopt(ZMQ_RCVTIMEO, &wait, sizeof(wait));
 
 		backend.bind("inproc://backend");
@@ -118,6 +170,10 @@ void ZmqProxyServer::run() {
 		qApp->quit();
 		return;
 	}
+
+	reaperRunning = true;
+	auto reaper = thread(&ZmqProxyServer::reaperThreadBase, this);
+
 
 	zmq::pollitem_t pollItems[] = {
 		{frontend, 0, ZMQ_POLLIN, 0},
@@ -135,6 +191,7 @@ void ZmqProxyServer::run() {
 
 		int pollResult = 0;
 		try {
+			Logger::log(Logger::Info, "zmq::poll()");
 			pollResult = zmq::poll(pollItems, 2, 100);
 		} catch (zmq::error_t & ex) {
 			Logger::log(Logger::Error, "zmq::poll:", ex.what());
@@ -149,10 +206,13 @@ void ZmqProxyServer::run() {
 				zmq::message_t idMsg, ctrlMsg, payloadMsg;
 				bool recv = true;
 				try {
+					Logger::log(Logger::Info, "frontend.recv(&idMsg)");
 					recv = recv && frontend.recv(&idMsg);
 					assert(idMsg.more() && "Missing control frame and payload from client's message!");
+					Logger::log(Logger::Info, "frontend.recv(&ctrlMsg)");
 					recv = recv && frontend.recv(&ctrlMsg);
 					assert(ctrlMsg.more() && "Missing payload from client's message!");
+					Logger::log(Logger::Info, "frontend.recv(&payloadMsg)");
 					recv = recv && frontend.recv(&payloadMsg);
 					assert(!payloadMsg.more() && "Unexpected parts after client's payload!");
 				} catch (zmq::error_t & ex) {
@@ -185,13 +245,17 @@ void ZmqProxyServer::run() {
 						assert(frame.control == ControlMessage::HEARTBEAT_CONNECT_MSG && "Heartbeat did not send correct handshake");
 					}
 					assert(payloadMsg.size() == 0 && "Missing empty frame after handshake!");
+					Logger::log(Logger::Info, "addWorker(clId, now, frame.type)");
 					addWorker(clId, now, frame.type);
 				} else {
 					workerIter->second.lastKeepAlive = now;
 					lastHeartbeat = std::max(lastHeartbeat, now);
 					try {
+						Logger::log(Logger::Info, "backend.send(idMsg, ZMQ_SNDMORE)");
 						backend.send(idMsg, ZMQ_SNDMORE);
+						Logger::log(Logger::Info, "backend.send(ctrlMsg, ZMQ_SNDMORE)");
 						backend.send(ctrlMsg, ZMQ_SNDMORE);
+						Logger::log(Logger::Info, "backend.send(payloadMsg)");
 						backend.send(payloadMsg);
 					} catch (zmq::error_t & ex) {
 						if (ex.num() == EHOSTUNREACH) {
@@ -204,15 +268,13 @@ void ZmqProxyServer::run() {
 
 				dataTransfered += sizeof(client_id_t) + payloadMsg.size();
 
-				int more = 0;
-				size_t more_size = sizeof (more);
-				try {
-					frontend.getsockopt(ZMQ_RCVMORE, &more, &more_size);
-				} catch (zmq::error_t & ex) {
-					Logger::log(Logger::Error, "zmq::socket_t::getsockopt:", ex.what());
+				const auto moreCheck = checkSocketOpt(frontend, ZMQ_RCVMORE);
+				if (moreCheck.first == 0 || moreCheck.second) {
 					break;
 				}
-				if (!more) {
+
+				const auto sndCheck = checkSocketOpt(backend, ZMQ_SNDMORE);
+				if (!sndCheck.first || sndCheck.second) {
 					break;
 				}
 			}
@@ -228,10 +290,15 @@ void ZmqProxyServer::run() {
 				zmq::message_t idMsg, ctrlMsg, payloadMsg;
 
 				try {
+					Logger::log(Logger::Info, "backend.recv(&idMsg)");
 					backend.recv(&idMsg);
 					assert(idMsg.more() && "Missing control frame and payload from render's message!");
+
+					Logger::log(Logger::Info, "backend.recv(&ctrlMsg)");
 					backend.recv(&ctrlMsg);
 					assert(ctrlMsg.more() && "Missing payload from render's message!");
+
+					Logger::log(Logger::Info, "backend.recv(&payloadMsg)");
 					backend.recv(&payloadMsg);
 					assert(!payloadMsg.more() && "Unexpected parts after renderer's payload!");
 				} catch (zmq::error_t & ex) {
@@ -248,16 +315,23 @@ void ZmqProxyServer::run() {
 
 				// check for routing here
 				try {
+					Logger::log(Logger::Info, "frontend.send(idMsg, ZMQ_SNDMORE)");
 					frontend.send(idMsg, ZMQ_SNDMORE);
+					Logger::log(Logger::Info, "frontend.send(ctrlMsg, ZMQ_SNDMORE)");
 					frontend.send(ctrlMsg, ZMQ_SNDMORE);
+					Logger::log(Logger::Info, "frontend.send(payloadMsg)");
 					frontend.send(payloadMsg);
 				} catch (zmq::error_t & ex) {
 					if (ex.num() == EHOSTUNREACH) {
 						auto workerIter = workers.find(clId);
 						if (workerIter != workers.end()) {
 							Logger::log(Logger::Warning, "Renderer sending data to disconnected client - stopping it!");
-							workerIter->second.worker->stop();
-							workers.erase(workerIter);
+							{
+								lock_guard<mutex> lk(reaperMtx);
+								deadRenderers.emplace_back(move(workerIter->second));
+								workers.erase(workerIter); // should be no-op since worker is moved in dead que
+							}
+							reaperCond.notify_one();
 						}
 					} else {
 						Logger::log(Logger::Error, "Error while handling renderer (", clId ,") message: ", ex.what());
@@ -266,15 +340,13 @@ void ZmqProxyServer::run() {
 
 				dataTransfered += sizeof(client_id_t) + payloadMsg.size();
 
-				int more = 0;
-				size_t more_size = sizeof (more);
-				try {
-					backend.getsockopt(ZMQ_RCVMORE, &more, &more_size);
-				} catch (zmq::error_t & ex) {
-					Logger::log(Logger::Error, ex.what());
+				const auto moreCheck = checkSocketOpt(backend, ZMQ_RCVMORE);
+				if (moreCheck.first == 0 || moreCheck.second) {
 					break;
 				}
-				if (!more) {
+
+				const auto sndCheck = checkSocketOpt(frontend, ZMQ_SNDMORE);
+				if (!sndCheck.first || sndCheck.second) {
 					break;
 				}
 			}
@@ -301,13 +373,30 @@ void ZmqProxyServer::run() {
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
 
+	// stop reaper
+	reaperRunning = false;
+	reaper.join();
+
+	// close sockets and context
 	frontend.close();
 	backend.close();
 	context.close();
+
+	// stop all renderers
+	Logger::log(Logger::Info, "for (auto & w : workers) w.second.worker->stop()");
 	for (auto & w : workers) {
 		w.second.worker->stop();
 	}
+	// clear all active renderers
+	Logger::log(Logger::Info, "workers.clear()");
 	workers.clear();
+
+	// now clear all renderers that were marked for freeing
+	Logger::log(Logger::Info, "deadRenderers.clear()");
+	{
+		lock_guard<mutex> lk(reaperMtx);
+		deadRenderers.clear();
+	}
 
 	Logger::log(Logger::Debug, "Server thread stopping.");
 	qApp->quit();
