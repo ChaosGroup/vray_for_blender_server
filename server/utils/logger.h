@@ -27,6 +27,7 @@ void hookFormat(std::ostream & out, const T & val) {
 
 template <>
 inline void hookFormat(std::ostream & out, const float & val) {
+	// good enough precision for cpp dump
 	if (std::fabs(std::roundf(val) - val) < 0.001f) {
 		out << static_cast<int>(std::roundf(val)) << '.';
 	} else {
@@ -136,8 +137,8 @@ inline void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::Attr
 class Logger {
 public:
 	enum Level {
-		Info,
 		APIDump,
+		Info,
 		Profile,
 		Debug,
 		Warning,
@@ -163,12 +164,10 @@ public:
 	/// @rest ... - parts of the message
 	template <typename ... R>
 	static void log(Level lvl, const R & ... rest) {
-		if (lvl == APIDump && getInstance().currentLevel != APIDump) {
-			// skip Info if not required
-			return;
+		if (lvl >= getInstance().currentLevel) {
+			std::stringstream stream("", std::ios_base::ate | std::ios_base::in | std::ios_base::out);
+			logImpl(lvl, stream, rest...);
 		}
-		std::stringstream stream("", std::ios_base::ate | std::ios_base::in | std::ios_base::out);
-		logImpl(lvl, stream, rest...);
 	}
 
 	/// Log message with default Debug level
@@ -193,15 +192,13 @@ private:
 	/// Implementation of Logger::log without any copies of it's arguments
 	template <typename T, typename ... R>
 	static void logImpl(Level lvl, std::stringstream & stream, const T & val, const R & ... rest) {
-		if (lvl == APIDump && getInstance().currentLevel != APIDump) {
-			// skip APIDump if not required
-			return;
+		if (lvl >= getInstance().currentLevel) {
+			if (lvl != APIDump) {
+				stream << ' ';
+			}
+			LoggerFormat::hookFormat(stream, val);
+			logImpl(lvl, stream, rest...);
 		}
-		if (lvl != APIDump) {
-			stream << ' ';
-		}
-		LoggerFormat::hookFormat(stream, val);
-		logImpl(lvl, stream, rest...);
 	}
 
 	/// Base case for logImpl

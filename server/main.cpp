@@ -100,8 +100,9 @@ int main(int argc, char *argv[]) {
 	std::ofstream infoDump;
 
 	bool firstLog = true;
+	auto filterLevel = settings.logLevel;
 	if (settings.dumpInfoLog) {
-		settings.logLevel = Logger::Info;
+		settings.logLevel = Logger::APIDump;
 		infoDump.open("dumpInfoLog.txt", std::ios::trunc | std::ios::ate);
 	}
 	Logger::getInstance().setCurrentlevel(settings.logLevel);
@@ -110,18 +111,18 @@ int main(int argc, char *argv[]) {
 	auto lastProfileTime = begin;
 	auto lastLogTime = begin;
 
-	Logger::getInstance().setCallback([&settings, &infoDump, &lastLogTime, &firstLog, &lastProfileTime] (Logger::Level lvl, const std::string & msg) {
+	Logger::getInstance().setCallback([filterLevel, &settings, &infoDump, &lastLogTime, &firstLog, &lastProfileTime] (Logger::Level lvl, const std::string & msg) {
 		using namespace std;
 		using namespace std::chrono;
-		if (settings.logLevel <= Logger::Info && lvl == Logger::Info) {
+		if (filterLevel <= Logger::Info && lvl == Logger::Info) {
 			printf("ZMQ_INFO: %s\n", msg.c_str());
-		} else if (settings.logLevel <= Logger::Debug && lvl == Logger::Debug) {
+		} else if (filterLevel <= Logger::Debug && lvl == Logger::Debug) {
 			printf("ZMQ_DEBUG: %s\n", msg.c_str());
-		} else if (settings.logLevel <= Logger::Warning && lvl == Logger::Warning) {
+		} else if (filterLevel <= Logger::Warning && lvl == Logger::Warning) {
 			printf("ZMQ_WARNING: %s\n", msg.c_str());
-		} else if (settings.logLevel <= Logger::Error && lvl == Logger::Error) {
+		} else if (filterLevel <= Logger::Error && lvl == Logger::Error) {
 			printf("ZMQ_ERROR: %s\n", msg.c_str());
-		} else if (lvl == Logger::Info && settings.dumpInfoLog) {
+		} else if (lvl == Logger::APIDump && settings.dumpInfoLog) {
 			if (settings.dumpInfoLog && infoDump) {
 				if (!firstLog) {
 					const auto now = high_resolution_clock::now();

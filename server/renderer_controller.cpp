@@ -20,8 +20,18 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 }
 
 RendererController::~RendererController() {
-	stopRenderer();
 	stop();
+	stopRenderer();
+}
+
+void RendererController::stopRenderer() {
+	Logger::log(Logger::Debug, "Freeing renderer object");
+
+	std::lock_guard<std::mutex> l(rendererMtx);
+	if (renderer) {
+		Logger::log(Logger::APIDump, "renderer.stop();");
+		renderer.reset();
+	}
 }
 
 void RendererController::handle(VRayMessage & message) {
@@ -453,16 +463,14 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		options.noDR = true;
 		options.showFrameBuffer = showVFB;
-		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", type == VRayMessage::RendererType::RT, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
+		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", options.keepRTRunning, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
 		renderer.reset(new VRay::VRayRenderer(options));
 		if (!renderer) {
 			completed = false;
 		} else {
-			auto mode = type == VRayMessage::RendererType::RT ? VRay::RendererOptions::RENDER_MODE_RT_CPU : VRay::RendererOptions::RENDER_MODE_PRODUCTION;
-			completed = renderer->setRenderMode(mode);
 			const bool useAnimatedValues = false;
 			renderer->useAnimatedValues(useAnimatedValues);
-			Logger::log(Logger::APIDump, "renderer.setRenderMode(RendererOptions::RenderMode(", mode, "));\nrenderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
+			Logger::log(Logger::APIDump, "renderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
 
 			renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
 			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
@@ -586,9 +594,10 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	}
 
 	if (!completed) {
+		const auto * err = renderer ? renderer->getLastError().toString() : "[empty] renderer";
 		Logger::log(Logger::Warning,
 			"Failed renderer action:", static_cast<int>(message.getRendererAction()),
-			"\nerror:", renderer->getLastError());
+			"\nerror:", err);
 	}
 }
 
@@ -675,19 +684,6 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 		outstandingMessages.push(VRayMessage::msgImageSet(std::move(set)));
 	}
 }
-
-
-void RendererController::stopRenderer() {
-	Logger::log(Logger::Debug, "Freeing renderer object");
-
-	std::lock_guard<std::mutex> l(rendererMtx);
-	if (renderer) {
-		Logger::log(Logger::APIDump, "renderer.stop();");
-		renderer->stop();
-		renderer.reset();
-	}
-}
-
 
 void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void *) {
 	float progress = static_cast<float>(elementNumber) / elementsCount;

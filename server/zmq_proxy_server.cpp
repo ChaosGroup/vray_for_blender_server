@@ -245,8 +245,10 @@ void ZmqProxyServer::run() {
 						assert(frame.control == ControlMessage::HEARTBEAT_CONNECT_MSG && "Heartbeat did not send correct handshake");
 					}
 					assert(payloadMsg.size() == 0 && "Missing empty frame after handshake!");
-					Logger::log(Logger::Info, "addWorker(clId, now, frame.type)");
-					addWorker(clId, now, frame.type);
+					if (frame.control == ControlMessage::HEARTBEAT_CONNECT_MSG || frame.control == ControlMessage::EXPORTER_CONNECT_MSG) {
+						Logger::log(Logger::Info, "addWorker(clId, now, frame.type)");
+						addWorker(clId, now, frame.type);
+					}
 				} else {
 					workerIter->second.lastKeepAlive = now;
 					lastHeartbeat = std::max(lastHeartbeat, now);
