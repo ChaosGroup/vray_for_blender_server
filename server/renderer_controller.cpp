@@ -420,18 +420,18 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	bool completed = true;
 	switch (message.getRendererAction()) {
 	case VRayMessage::RendererAction::SetCurrentFrame:
-		Logger::log(Logger::APIDump, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
-		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
-		renderer->setCurrentFrame(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::APIDump, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->value, ");");
+		currentFrame = message.getValue<AttrSimpleType<float>>()->value;
+		renderer->setCurrentFrame(message.getValue<AttrSimpleType<float>>()->value);
 		break;
 	case VRayMessage::RendererAction::SetCurrentTime:
-		Logger::log(Logger::APIDump, "renderer.setCurrentTime(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
-		currentFrame = message.getValue<AttrSimpleType<float>>()->m_Value;
-		renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::APIDump, "renderer.setCurrentTime(", message.getValue<AttrSimpleType<float>>()->value, ");");
+		currentFrame = message.getValue<AttrSimpleType<float>>()->value;
+		renderer->setCurrentTime(message.getValue<AttrSimpleType<float>>()->value);
 		break;
 	case VRayMessage::RendererAction::ClearFrameValues:
-		Logger::log(Logger::APIDump, "renderer.clearAllPropertyValuesUpToTime(", message.getValue<AttrSimpleType<float>>()->m_Value, ");");
-		completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->m_Value);
+		Logger::log(Logger::APIDump, "renderer.clearAllPropertyValuesUpToTime(", message.getValue<AttrSimpleType<float>>()->value, ");");
+		completed = renderer->clearAllPropertyValuesUpToTime(message.getValue<AttrSimpleType<float>>()->value);
 		break;
 	case VRayMessage::RendererAction::Pause:
 		Logger::log(Logger::APIDump, "renderer.pause();");
@@ -483,8 +483,8 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		break;
 	}
 	case VRayMessage::RendererAction::SetRenderMode:
-		completed = renderer->setRenderMode(static_cast<VRay::RendererOptions::RenderMode>(message.getValue<AttrSimpleType<int>>()->m_Value));
-		Logger::log(Logger::APIDump, "renderer.setRenderMode(RendererOptions::RenderMode(", message.getValue<AttrSimpleType<int>>()->m_Value, ")); // success == ", completed);
+		completed = renderer->setRenderMode(static_cast<VRay::RendererOptions::RenderMode>(message.getValue<AttrSimpleType<int>>()->value));
+		Logger::log(Logger::APIDump, "renderer.setRenderMode(RendererOptions::RenderMode(", message.getValue<AttrSimpleType<int>>()->value, ")); // success == ", completed);
 
 		break;
 	case VRayMessage::RendererAction::Resize:
@@ -495,20 +495,20 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		Logger::log(Logger::APIDump, "renderer.setImageSize(", width, ",", height, "); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::AddHosts:
-		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
-		Logger::log(Logger::APIDump, "renderer.addHosts(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
+		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->value);
+		Logger::log(Logger::APIDump, "renderer.addHosts(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::RemoveHosts:
-		completed = 0 == renderer->removeHosts(message.getValue<AttrSimpleType<std::string>>()->m_Value);
-		Logger::log(Logger::APIDump, "renderer.removeHosts(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
+		completed = 0 == renderer->removeHosts(message.getValue<AttrSimpleType<std::string>>()->value);
+		Logger::log(Logger::APIDump, "renderer.removeHosts(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::LoadScene:
-		completed = 0 == renderer->load(message.getValue<AttrSimpleType<std::string>>()->m_Value);
-		Logger::log(Logger::APIDump, "renderer.load(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
+		completed = 0 == renderer->load(message.getValue<AttrSimpleType<std::string>>()->value);
+		Logger::log(Logger::APIDump, "renderer.load(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::AppendScene:
-		completed = 0 == renderer->append(message.getValue<AttrSimpleType<std::string>>()->m_Value);
-		Logger::log(Logger::APIDump, "renderer.append(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
+		completed = 0 == renderer->append(message.getValue<AttrSimpleType<std::string>>()->value);
+		Logger::log(Logger::APIDump, "renderer.append(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::ExportScene:
 	{
@@ -516,37 +516,37 @@ void RendererController::rendererMessage(VRayMessage & message) {
 		exportParams.useHexFormat = false;
 		exportParams.compressed = false;
 
-		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->m_Value, exportParams);
+		completed = 0 == renderer->exportScene(message.getValue<AttrSimpleType<std::string>>()->value, exportParams);
 
-		Logger::log(Logger::APIDump, "renderer.exportScene(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\"); // success == ", completed);
+		Logger::log(Logger::APIDump, "renderer.exportScene(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	}
 	case VRayMessage::RendererAction::GetImage:
-		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->m_Value));
+		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->value));
 		break;
 	case VRayMessage::RendererAction::SetQuality:
-		jpegQuality = message.getValue<AttrSimpleType<int>>()->m_Value;
+		jpegQuality = message.getValue<AttrSimpleType<int>>()->value;
 		jpegQuality = std::max(0, std::min(100, jpegQuality));
 		break;
 	case VRayMessage::RendererAction::SetCurrentCamera: {
-		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->m_Value);
+		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->value);
 		if (!cameraPlugin) {
 			// lets try to delay, maybe out of order export
-			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", message.getValue<AttrSimpleType<std::string>>()->m_Value, ") which is not yet exported - delaying.");
+			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", message.getValue<AttrSimpleType<std::string>>()->value, ") which is not yet exported - delaying.");
 
 			auto buffLog = Logger::getInstance().makeBuffered();
-			buffLog.log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->m_Value, "to set as current camera.");
+			buffLog.log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->value, "to set as current camera.");
 
-			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->m_Value].emplace_back(std::move(message), std::move(buffLog));
+			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->value].emplace_back(std::move(message), std::move(buffLog));
 		} else {
 			completed = renderer->setCamera(cameraPlugin);
 		}
-		Logger::log(Logger::APIDump, "renderer.setCamera(renderer.getPlugin(\"", message.getValue<AttrSimpleType<std::string>>()->m_Value, "\")); // success == ", completed);
+		Logger::log(Logger::APIDump, "renderer.setCamera(renderer.getPlugin(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\")); // success == ", completed);
 		break;
 	}
 	case VRayMessage::RendererAction::SetCommitAction: {
 		bool isFlush = false;
-		switch (static_cast<CommitAction>(message.getValue<AttrSimpleType<int>>()->m_Value)) {
+		switch (static_cast<CommitAction>(message.getValue<AttrSimpleType<int>>()->value)) {
 		case CommitAction::CommitNow:
 			renderer->commit(false);
 			Logger::log(Logger::APIDump, "renderer.commit(false);");
@@ -566,7 +566,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 			Logger::log(Logger::APIDump, "renderer.setAutoCommit(false);");
 			break;
 		default:
-			Logger::log(Logger::Warning, "Invalid CommitAction: ", message.getValue<AttrSimpleType<int>>()->m_Value);
+			Logger::log(Logger::Warning, "Invalid CommitAction: ", message.getValue<AttrSimpleType<int>>()->value);
 		}
 
 		if (isFlush) {
@@ -581,7 +581,7 @@ void RendererController::rendererMessage(VRayMessage & message) {
 	}
 		break;
 	case VRayMessage::RendererAction::SetVfbShow:
-		if (message.getValue<AttrSimpleType<int>>()->m_Value && showVFB) {
+		if (message.getValue<AttrSimpleType<int>>()->value && showVFB) {
 			renderer->vfb.show(true, false);
 			Logger::log(Logger::APIDump, "renderer.vfb.show(true, false);");
 		} else {
