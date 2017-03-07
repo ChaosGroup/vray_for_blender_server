@@ -78,7 +78,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 
 void printInfo() {
 	puts("VRayZmqServer");
-	printf("Version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
+	printf("Version %d.%d:%d()\n", VERSION_MAJOR, VERSION_MINOR, ZMQ_PROTOCOL_VERSION);
 	puts("");
 }
 
