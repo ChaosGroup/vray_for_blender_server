@@ -39,6 +39,7 @@ if(WIN32)
 	endif()
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	link_directories(/usr/lib64)
 endif()
 
 include_directories(extern/vray-zmq-wrapper/include)
