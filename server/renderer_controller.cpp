@@ -34,6 +34,10 @@ void RendererController::stopRenderer() {
 	}
 }
 
+VRay::ValueList RendererController::toVrayValueList(const VRayBaseTypes::AttrListValue & list) {
+	return {};
+}
+
 void RendererController::handle(VRayMessage & message) {
 	bool success = false;
 	try {
@@ -245,7 +249,6 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 		}
 		case VRayBaseTypes::ValueType::ValueTypeListString:
-
 		{
 			const VRayBaseTypes::AttrListString & slist = *message.getValue<VRayBaseTypes::AttrListString>();
 			VRay::VUtils::CharStringRefList stringList(slist.getCount());
@@ -257,6 +260,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 
 			Logger::log(Logger::APIDump, "renderer.getPlugin(\"", message.getPlugin(),
 				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListString>()->getData(), ", ", currentFrame, "); // success == ", success);
+			break;
+		}
+		case VRayBaseTypes::ValueType::ValueTypeListValue:
+		{
+			const auto & list = *message.getValue<VRayBaseTypes::AttrListValue>();
+			success = plugin.setValueAtTime(message.getProperty(), toVrayValueList(list), currentFrame);
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:

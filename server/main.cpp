@@ -78,8 +78,7 @@ bool parseArgv(ArgvSettings & settings, int argc, char * argv[]) {
 
 void printInfo() {
 	puts("VRayZmqServer");
-	printf("Version %d.%d:%d APPSDK:%s\n", VERSION_MAJOR, VERSION_MINOR, ZMQ_PROTOCOL_VERSION, VRay::getSDKVersion().toString().c_str());
-	puts("");
+	printf("Version %d.%d:%d\n", VERSION_MAJOR, VERSION_MINOR, ZMQ_PROTOCOL_VERSION);
 }
 
 void printHelp() {
@@ -187,10 +186,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	printInfo();
-	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\n\nLoading appsdk: %s\n\n",
+	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\nLoading appsdk: %s\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
 	VRay::VRayInit init(path);
+
+	printf("AppSDK version: %s\n\n", VRay::getSDKVersion().toString().c_str());
 
 	int retCode = 0;
 	try {

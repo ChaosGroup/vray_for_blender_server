@@ -88,6 +88,9 @@ private:
 	/// @current - the supposed current state - if this->runState != current then nothing happens
 	/// @newState - the state after the transition
 	void transitionState(RunState current, RunState newState);
+
+	/// Convert interface value list to vray value list
+	VRay::ValueList toVrayValueList(const VRayBaseTypes::AttrListValue & list);
 private:
 
 	RunState runState;  ///< Internal state to make correct transitions
