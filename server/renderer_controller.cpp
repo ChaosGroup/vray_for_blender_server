@@ -34,7 +34,7 @@ void RendererController::stopRenderer() {
 	}
 }
 
-void RendererController::handle(VRayMessage & message) {
+void RendererController::handle(VRayMessage && message) {
 	bool success = false;
 	try {
 		switch (message.getType()) {
@@ -43,7 +43,7 @@ void RendererController::handle(VRayMessage & message) {
 				Logger::getInstance().log(Logger::Warning, "Can't change plugin - no renderer loaded!");
 				return;
 			}
-			this->pluginMessage(message);
+			this->pluginMessage(std::move(message));
 			break;
 		case VRayMessage::Type::ChangeRenderer: {
 			auto actionType = message.getRendererAction();
@@ -61,7 +61,7 @@ void RendererController::handle(VRayMessage & message) {
 				Logger::getInstance().log(Logger::Warning, "Can't change renderer - no renderer loaded!");
 				return;
 			}
-			this->rendererMessage(message);
+			this->rendererMessage(std::move(message));
 			break;
 		}
 		default:
@@ -116,7 +116,7 @@ std::pair<bool, VRay::Value> RendererController::toVrayValue(const VRayBaseTypes
 }
 
 
-void RendererController::pluginMessage(VRayMessage & message) {
+void RendererController::pluginMessage(VRayMessage && message) {
 	bool success = true;
 	if (message.getPluginAction() == VRayMessage::PluginAction::Update) {
 		VRay::Plugin plugin = renderer->getPlugin(message.getPlugin());
@@ -417,7 +417,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 			if (toInsert != delayedMessages.end()) {
 				for (auto & msg : toInsert->second) {
 					Logger::log(Logger::Debug, "Inserting delayed plugin [", msg.first.getPlugin(), "] referencing (", toInsert->first, ").");
-					handle(msg.first);
+					handle(std::move(msg.first));
 				}
 				delayedMessages.erase(toInsert);
 			}
@@ -459,7 +459,7 @@ void RendererController::pluginMessage(VRayMessage & message) {
 	}
 }
 
-void RendererController::rendererMessage(VRayMessage & message) {
+void RendererController::rendererMessage(VRayMessage && message) {
 	std::unique_lock<std::mutex> rendLock(rendererMtx);
 	if (!renderer && message.getRendererAction() != VRayMessage::RendererAction::Init) {
 		return;

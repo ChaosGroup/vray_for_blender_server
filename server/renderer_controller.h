@@ -38,8 +38,9 @@ public:
 	RendererController & operator=(const RendererController &) = delete;
 
 	/// Handle an incomming message - calls appropriate @pluginMessage or @rendererMessage and handles errors
+	/// This function takes ownership of the provided message and might move it to extend it's lifetime
 	/// @message - the message
-	void handle(VRayMessage & message);
+	void handle(VRayMessage && message);
 
 	/// Stop serving messages
 	void stop();
@@ -76,10 +77,10 @@ private:
 	void sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrImage::ImageType fullImageType, VRayBaseTypes::ImageSourceType sourceType);
 
 	/// Update plugin in current renderer from message data
-	void pluginMessage(VRayMessage & message);
+	void pluginMessage(VRayMessage && message);
 
 	/// Update renderer state from message data
-	void rendererMessage(VRayMessage & message);
+	void rendererMessage(VRayMessage && message);
 
 	/// Starts serving messages
 	void run();
