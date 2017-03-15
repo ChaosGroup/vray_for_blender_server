@@ -34,10 +34,6 @@ void RendererController::stopRenderer() {
 	}
 }
 
-VRay::ValueList RendererController::toVrayValueList(const VRayBaseTypes::AttrListValue & list) {
-	return {};
-}
-
 void RendererController::handle(VRayMessage & message) {
 	bool success = false;
 	try {
@@ -79,6 +75,46 @@ void RendererController::handle(VRayMessage & message) {
 		Logger::getInstance().log(Logger::Error, e.what());
 	}
 }
+
+std::pair<bool, VRay::Value> RendererController::toVrayValue(const VRayBaseTypes::AttrValue & val, VRayMessage & message) {
+	using namespace VRayBaseTypes;
+	switch (val.type) {
+	case ValueType::ValueTypeListValue: {
+		const auto & list = val.as<AttrListValue>();
+		VRay::ValueList vList(list.getCount());
+		for (int c = 0; c < list.getCount(); c++) {
+			auto converted = toVrayValue((*list)[c], message);
+			if (!converted.first) {
+				return{false, VRay::Value()};
+			}
+			vList[c] = converted.second;
+		}
+		return {true, VRay::Value(vList)};
+	}
+	case ValueType::ValueTypeListPlugin: {
+		const auto & list = val.as<AttrListPlugin>();
+		VRay::ValueList vList(list.getCount());
+		for (int c = 0; c < list.getCount(); ++c) {
+			const auto & plugin = (*list)[c];
+			auto pluginRef = plugin.plugin;
+			if (!plugin.output.empty()) {
+				pluginRef += "::" + plugin.output;
+			}
+			auto plg = renderer->getPlugin(pluginRef);
+			if (!plg) {
+				auto buffLog = Logger::getInstance().makeBuffered();
+				buffLog.log(Logger::Error, "Failed setting:", message.getProperty(), "=", pluginRef, "for plugin", message.getPlugin());
+				delayedMessages[plugin.plugin].emplace_back(std::move(message), std::move(buffLog));
+				return {false, VRay::Value()};
+			}
+			vList[c] = VRay::Value(plg);
+		}
+		return {true, VRay::Value(vList)};
+	}
+	default: return {false, VRay::Value()};
+	}
+}
+
 
 void RendererController::pluginMessage(VRayMessage & message) {
 	bool success = true;
@@ -262,10 +298,12 @@ void RendererController::pluginMessage(VRayMessage & message) {
 				"\").setValueAtTime(\"", message.getProperty(), "\",", *message.getValue<VRayBaseTypes::AttrListString>()->getData(), ", ", currentFrame, "); // success == ", success);
 			break;
 		}
-		case VRayBaseTypes::ValueType::ValueTypeListValue:
-		{
-			const auto & list = *message.getValue<VRayBaseTypes::AttrListValue>();
-			success = plugin.setValueAtTime(message.getProperty(), toVrayValueList(list), currentFrame);
+		case VRayBaseTypes::ValueType::ValueTypeListValue:{
+			auto res = toVrayValue(message.getAttrValue(), message);
+			success = res.first;
+			if (success) {
+				success = plugin.setValueAtTime(message.getProperty(), res.second, currentFrame);
+			}
 			break;
 		}
 		case VRayBaseTypes::ValueType::ValueTypeMapChannels:
@@ -885,8 +923,7 @@ void RendererController::run() {
 			assert(!!frame && "Client sent malformed control frame");
 
 			if (frame.control == ControlMessage::DATA_MSG) {
-				VRayMessage vmsg(payloadMsg);
-				handle(vmsg);
+				handle(VRayMessage::fromZmqMessage(payloadMsg));
 			} else if (frame.control == ControlMessage::PING_MSG) {
 				sendHB = true;
 			}

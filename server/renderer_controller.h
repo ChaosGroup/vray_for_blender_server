@@ -90,7 +90,11 @@ private:
 	void transitionState(RunState current, RunState newState);
 
 	/// Convert interface value list to vray value list
-	VRay::ValueList toVrayValueList(const VRayBaseTypes::AttrListValue & list);
+	/// @val - the value to be converted
+	/// @message - the current message being inserted - needted so it can be delayed if needed
+	/// @return - bool true if we can insert the returned value, false on error
+	///         - VRay::Value that is the converted result
+	std::pair<bool, VRay::Value> toVrayValue(const VRayBaseTypes::AttrValue & val, VRayMessage & message);
 private:
 
 	RunState runState;  ///< Internal state to make correct transitions
