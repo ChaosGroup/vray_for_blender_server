@@ -813,7 +813,7 @@ void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char
 
 	{
 		lock_guard<mutex> lock(messageMtx);
-		outstandingMessages.push(VRayMessage::msgSingleValue(VRayBaseTypes::AttrSimpleType<std::string>(msg)));
+		outstandingMessages.push(VRayMessage::msgVRayLog(msg));
 	}
 }
 
