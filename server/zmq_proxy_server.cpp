@@ -122,24 +122,30 @@ void ZmqProxyServer::reaperThreadBase() {
 	while (reaperRunning) {
 		if (deadRenderers.empty()) {
 			unique_lock<mutex> lk(reaperMtx);
-			if (deadRenderers.empty()) {
-				reaperCond.wait(lk, [this]() { return !deadRenderers.empty(); });
+			if (deadRenderers.empty() && reaperRunning) {
+				reaperCond.wait(lk, [this]() { return !deadRenderers.empty() || !reaperRunning; });
 			}
 		} else {
 			unique_lock<mutex> lk(reaperMtx);
 			// only this thread should remove items from deadRenderers
 			assert(!deadRenderers.empty() && "There were some items in deadRenderers before lock and now there arent!");
+			while (!deadRenderers.empty() && !deadRenderers.back().worker) {
+				deadRenderers.pop_back(); // clear null ptrs since they are no-op
+			}
+			if (deadRenderers.empty()) {
+				continue; // in case there we only null ptrs inside
+			}
 			auto worker = move(deadRenderers.back());
-			deadRenderers.pop_back();
 			lk.unlock();
 
 			assert(!!worker.worker && "Already free-ed Renderer inside deadRenderers");
-			if (worker.worker) {
-				Logger::log(Logger::Info, "worker.worker->stop()");
-				worker.worker->stop();
-				Logger::log(Logger::Info, "worker.worker.reset()");
-				worker.worker.reset();
-			}
+			Logger::log(Logger::Info, "worker.worker->stop()");
+			worker.worker->stop();
+			Logger::log(Logger::Info, "worker.worker.reset()");
+			worker.worker.reset();
+
+			lk.lock();
+			deadRenderers.pop_back(); // remove it from here when it is already freeed
 		}
 	}
 }
@@ -373,31 +379,35 @@ void ZmqProxyServer::run() {
 		}
 	}
 
-	Logger::log(Logger::Debug, "Server stopping all renderers.");
-
-	// stop reaper
-	reaperRunning = false;
-	reaper.join();
-
+	Logger::log(Logger::Debug, "Closing server sockets.");
 	// close sockets and context
 	frontend.close();
 	backend.close();
 	context.close();
 
-	// stop all renderers
-	Logger::log(Logger::Info, "for (auto & w : workers) w.second.worker->stop()");
-	for (auto & w : workers) {
-		w.second.worker->stop();
-	}
-	// clear all active renderers
-	Logger::log(Logger::Info, "workers.clear()");
-	workers.clear();
-
-	// now clear all renderers that were marked for freeing
-	Logger::log(Logger::Info, "deadRenderers.clear()");
+	Logger::log(Logger::Debug, "Server stopping all renderers.");
 	{
 		lock_guard<mutex> lk(reaperMtx);
-		deadRenderers.clear();
+		for (auto & w : workers) {
+			deadRenderers.emplace_back(move(w.second));
+		}
+	}
+	// start reaper reaping
+	reaperCond.notify_one();
+
+	if (!deadRenderers.empty()) {
+		this_thread::sleep_for(milliseconds(200));
+	}
+
+	if (!deadRenderers.empty()) {
+		Logger::log(Logger::Warning, "Detaching reaper thread");
+		// this is most likly stuck on free
+		exit(1); // just exit we cant do anything here
+	} else {
+		Logger::log(Logger::Debug, "Joining reaper thread");
+		reaperRunning = false;
+		reaperCond.notify_all(); // reaper waits on this for items or flag
+		reaperThread.join();
 	}
 
 	Logger::log(Logger::Debug, "Server thread stopping.");

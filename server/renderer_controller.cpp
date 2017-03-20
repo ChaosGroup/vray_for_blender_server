@@ -498,10 +498,13 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	}
 	case VRayMessage::RendererAction::Free:
-		rendLock.unlock();
-		stopRenderer();
-		rendLock.lock();
+		renderer->stop();
 		elementsToSend.clear();
+		// TODO: uncomment bellow when free-ing is fixed from appsdk
+		//rendLock.unlock();
+		//stopRenderer();
+		//rendLock.lock();
+		//elementsToSend.clear();
 
 		break;
 	case VRayMessage::RendererAction::Init:
