@@ -802,19 +802,8 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 
 
 void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void *) {
-
-	if (level <= VRay::MessageError) {
-		Logger::log(Logger::Error, "VRAY:", msg);
-	} else if (level <= VRay::MessageWarning) {
-		Logger::log(Logger::Warning, "VRAY:", msg);
-	} else {
-		Logger::log(Logger::Debug, "VRAY:", msg);
-	}
-
-	{
-		lock_guard<mutex> lock(messageMtx);
-		outstandingMessages.push(VRayMessage::msgVRayLog(msg));
-	}
+	lock_guard<mutex> lock(messageMtx);
+	outstandingMessages.push(VRayMessage::msgVRayLog(level, msg));
 }
 
 void RendererController::stop() {
