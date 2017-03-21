@@ -121,6 +121,7 @@ private:
 	VRayMessage::RendererType type; ///< RT or Animation
 	float currentFrame; ///< Currently rendered frame
 	int jpegQuality; ///< Desiered jpeg quality for images sent to client
+	VRayBaseTypes::AttrImage::ImageType viewportType; ///< Desiered image type for imageUpdate callback
 
 	std::mutex rendererMtx; ///< Protects all callbacks in order to ensure they are executing with valid renderer
 };

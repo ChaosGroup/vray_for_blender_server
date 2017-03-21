@@ -7,16 +7,17 @@
 using namespace VRayBaseTypes;
 using namespace std;
 
-RendererController::RendererController(zmq::context_t & zmqContext, uint64_t clientId, ClientType type, bool showVFB):
-	runState(IDLE),
-	clType(type),
-	clientId(clientId),
-	zmqContext(zmqContext),
-	renderer(nullptr),
-	showVFB(showVFB),
-	currentFrame(-1000),
-	type(VRayMessage::RendererType::None),
-	jpegQuality(60) {
+RendererController::RendererController(zmq::context_t & zmqContext, uint64_t clientId, ClientType type, bool showVFB)
+	: runState(IDLE)
+	, clType(type)
+	, clientId(clientId)
+	, zmqContext(zmqContext)
+	, renderer(nullptr)
+	, showVFB(showVFB)
+	, currentFrame(-1000)
+	, type(VRayMessage::RendererType::None)
+	, jpegQuality(60)
+	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG) {
 }
 
 RendererController::~RendererController() {
@@ -638,6 +639,9 @@ void RendererController::rendererMessage(VRayMessage && message) {
 			Logger::log(Logger::APIDump, "renderer.vfb.show(false, false);");
 		}
 		break;
+	case VRayMessage::RendererAction::SetViewportImageFormat:
+		viewportType = static_cast<VRayBaseTypes::AttrImage::ImageType>(message.getValue<AttrSimpleType<int>>()->value);
+		Logger::log(Logger::Debug, "Viewport image type set to", viewportType);
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
@@ -654,10 +658,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 	AttrImageSet set(sourceType);
 
 	auto allElements = renderer->getRenderElements();
-
-
 	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elToSend;
-
 	{
 		std::lock_guard<std::mutex> lk(elemsToSendMtx);
 		elToSend = elementsToSend;
@@ -755,7 +756,7 @@ void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* m
 
 void RendererController::imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
 	if (renderer && !renderer->isAborted()) {
-		sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG, VRayBaseTypes::ImageSourceType::RtImageUpdate);
+		sendImages(img, viewportType, VRayBaseTypes::ImageSourceType::RtImageUpdate);
 	}
 }
 
