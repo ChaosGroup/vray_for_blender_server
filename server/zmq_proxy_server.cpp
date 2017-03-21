@@ -379,6 +379,11 @@ void ZmqProxyServer::run() {
 		}
 	}
 
+	Logger::log(Logger::Debug, "Stopping reaper thread.");
+	reaperRunning = false;
+	reaperCond.notify_all(); // reaper waits on this for items or flag
+	reaperThread.join();
+
 	Logger::log(Logger::Debug, "Closing server sockets.");
 	// close sockets and context
 	frontend.close();
@@ -386,29 +391,8 @@ void ZmqProxyServer::run() {
 	context.close();
 
 	Logger::log(Logger::Debug, "Server stopping all renderers.");
-	{
-		lock_guard<mutex> lk(reaperMtx);
-		for (auto & w : workers) {
-			deadRenderers.emplace_back(move(w.second));
-		}
-	}
-	// start reaper reaping
-	reaperCond.notify_one();
-
-	if (!deadRenderers.empty()) {
-		this_thread::sleep_for(milliseconds(200));
-	}
-
-	if (!deadRenderers.empty()) {
-		Logger::log(Logger::Warning, "Detaching reaper thread");
-		// this is most likly stuck on free
-		exit(1); // just exit we cant do anything here
-	} else {
-		Logger::log(Logger::Debug, "Joining reaper thread");
-		reaperRunning = false;
-		reaperCond.notify_all(); // reaper waits on this for items or flag
-		reaperThread.join();
-	}
+	deadRenderers.clear();
+	workers.clear();
 
 	Logger::log(Logger::Debug, "Server thread stopping.");
 	qApp->quit();
