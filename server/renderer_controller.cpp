@@ -642,6 +642,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	case VRayMessage::RendererAction::SetViewportImageFormat:
 		viewportType = static_cast<VRayBaseTypes::AttrImage::ImageType>(message.getValue<AttrSimpleType<int>>()->value);
 		Logger::log(Logger::Debug, "Viewport image type set to", viewportType);
+		break;
 	default:
 		Logger::log(Logger::Warning, "Invalid renderer action: ", static_cast<int>(message.getRendererAction()));
 	}
