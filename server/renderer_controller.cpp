@@ -26,11 +26,10 @@ RendererController::~RendererController() {
 
 void RendererController::stopRenderer() {
 	Logger::log(Logger::Debug, "Freeing renderer object");
-
-	std::lock_guard<std::mutex> l(rendererMtx);
 	if (renderer) {
-		Logger::log(Logger::APIDump, "renderer.stop();");
-		renderer.reset();
+		std::unique_lock<std::mutex> rendLock(rendererMtx);
+		delete renderer;
+		renderer = nullptr;
 	}
 }
 
@@ -499,12 +498,12 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	}
 	case VRayMessage::RendererAction::Free:
 		renderer->stop();
-		elementsToSend.clear();
-		// TODO: uncomment bellow when free-ing is fixed from appsdk
-		//rendLock.unlock();
-		//stopRenderer();
-		//rendLock.lock();
-		//elementsToSend.clear();
+		{
+			std::lock_guard<std::mutex> lk(elemsToSendMtx);
+			elementsToSend.clear();
+		}
+		delete renderer;
+		renderer = nullptr;
 
 		break;
 	case VRayMessage::RendererAction::Init:
@@ -514,21 +513,18 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		options.noDR = true;
 		options.showFrameBuffer = showVFB;
 		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", options.keepRTRunning, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
-		renderer.reset(new VRay::VRayRenderer(options));
-		if (!renderer) {
-			completed = false;
-		} else {
-			const bool useAnimatedValues = false;
-			renderer->useAnimatedValues(useAnimatedValues);
-			Logger::log(Logger::APIDump, "renderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
+		renderer = new VRay::VRayRenderer(options);
 
-			renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
-			renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
-			renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
-			renderer->setOnBucketReady<RendererController, &RendererController::bucketReady>(*this);
+		const bool useAnimatedValues = false;
+		renderer->useAnimatedValues(useAnimatedValues);
+		Logger::log(Logger::APIDump, "renderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
 
-			renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
-		}
+		renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
+		renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
+		renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
+		renderer->setOnBucketReady<RendererController, &RendererController::bucketReady>(*this);
+
+		renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 
 		break;
 	}
@@ -572,7 +568,10 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	}
 	case VRayMessage::RendererAction::GetImage:
+	{
+		std::lock_guard<std::mutex> lk(elemsToSendMtx);
 		elementsToSend.insert(static_cast<VRay::RenderElement::Type>(message.getValue<AttrSimpleType<int>>()->value));
+	}
 		break;
 	case VRayMessage::RendererAction::SetQuality:
 		jpegQuality = message.getValue<AttrSimpleType<int>>()->value;
@@ -656,7 +655,15 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 
 	auto allElements = renderer->getRenderElements();
 
-	for (const auto &type : elementsToSend) {
+
+	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elToSend;
+
+	{
+		std::lock_guard<std::mutex> lk(elemsToSendMtx);
+		elToSend = elementsToSend;
+	}
+
+	for (const auto &type : elToSend) {
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{
@@ -747,7 +754,6 @@ void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* m
 
 
 void RendererController::imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
-	std::lock_guard<std::mutex> l(rendererMtx);
 	if (renderer && !renderer->isAborted()) {
 		sendImages(img, VRayBaseTypes::AttrImage::ImageType::JPG, VRayBaseTypes::ImageSourceType::RtImageUpdate);
 	}
@@ -756,7 +762,6 @@ void RendererController::imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img
 
 void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 	(void)arg;
-	std::lock_guard<std::mutex> l(rendererMtx);
 
 	if (renderer) {
 		if (!renderer->isAborted()) {
@@ -781,7 +786,6 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 
 void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const char *, VRay::VRayImage * img, void * arg) {
 	(void)arg;
-	std::lock_guard<std::mutex> l(rendererMtx);
 
 	if (renderer && !renderer->isAborted()) {
 		AttrImageSet set(VRayBaseTypes::ImageSourceType::BucketImageReady);

@@ -114,8 +114,9 @@ private:
 	/// When commit action comes this is flushed and the storred error messages (in Logger object) are also displayed
 	std::unordered_map<std::string, std::vector<std::pair<VRayMessage, Logger>>> delayedMessages;
 
-	std::unique_ptr<VRay::VRayRenderer> renderer; ///< Pointer to VRayRenderer
+	VRay::VRayRenderer * renderer; ///< Pointer to VRayRenderer
 	std::unordered_set<VRay::RenderElement::Type, std::hash<int>> elementsToSend; ///< Renderer elements to send to client when sending images
+	std::mutex elemsToSendMtx;
 	bool showVFB; ///< Enable/disable vfb
 	VRayMessage::RendererType type; ///< RT or Animation
 	float currentFrame; ///< Currently rendered frame
