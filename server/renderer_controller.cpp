@@ -537,7 +537,11 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	case VRayMessage::RendererAction::Resize:
 		int width, height;
 		message.getRendererSize(width, height);
-		completed = renderer->setImageSize(width, height);
+		if (width > 1 && height > 1) {
+			completed = renderer->setImageSize(width, height);
+		} else {
+			completed = false;
+		}
 
 		Logger::log(Logger::APIDump, "renderer.setImageSize(", width, ",", height, "); // success == ", completed);
 		break;
