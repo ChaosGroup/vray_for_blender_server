@@ -178,7 +178,7 @@ void ZmqProxyServer::run() {
 	}
 
 	reaperRunning = true;
-	auto reaper = thread(&ZmqProxyServer::reaperThreadBase, this);
+	reaperThread = thread(&ZmqProxyServer::reaperThreadBase, this);
 
 
 	zmq::pollitem_t pollItems[] = {
