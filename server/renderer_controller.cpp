@@ -530,9 +530,21 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	}
 	case VRayMessage::RendererAction::SetRenderMode:
-		completed = renderer->setRenderMode(static_cast<VRay::RendererOptions::RenderMode>(message.getValue<AttrSimpleType<int>>()->value));
-		Logger::log(Logger::APIDump, "renderer.setRenderMode(RendererOptions::RenderMode(", message.getValue<AttrSimpleType<int>>()->value, ")); // success == ", completed);
+	{
+		const auto before = renderer->getRenderMode();
+		const auto after = static_cast<VRay::RendererOptions::RenderMode>(message.getValue<AttrSimpleType<int>>()->value);
+		if (before != after) {
+			const bool restart = renderer->getState() > VRay::RendererState::IDLE_FRAME_DONE; // restart only if it was already running
+			Logger::log(Logger::APIDump, "renderer.setRenderMode(RendererOptions::RenderMode(", after, ")); // success == ", completed);
+			completed = renderer->setRenderMode(after);
+			if (completed && restart) {
+				Logger::log(Logger::APIDump, "renderer.startSync();");
+				renderer->startSync();
+			}
+		}
 
+
+	}
 		break;
 	case VRayMessage::RendererAction::Resize:
 		int width, height;
