@@ -159,6 +159,9 @@ void ZmqProxyServer::run() {
 		backend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
 		frontend.setsockopt(ZMQ_ROUTER_MANDATORY, 1);
 
+		backend.setsockopt(ZMQ_SNDHWM, 0);
+		frontend.setsockopt(ZMQ_SNDHWM, 0);
+
 		int wait = SOCKET_IO_TIMEOUT;
 		frontend.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
 		wait = SOCKET_IO_TIMEOUT;
