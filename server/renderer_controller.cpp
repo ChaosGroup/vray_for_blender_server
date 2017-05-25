@@ -510,6 +510,9 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	case VRayMessage::RendererAction::Init:
 	{
 		VRay::RendererOptions options;
+		if (type == VRayMessage::RendererType::None) {
+			Logger::log(Logger::Error, "Invalid RendererType::None");
+		}
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		options.noDR = true;
 		options.showFrameBuffer = showVFB;
