@@ -16,38 +16,30 @@
 # limitations under the License.
 #
 
-string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" _HOST_SYSTEM_NAME)
-
-set(APPSDK_VERSION "447" CACHE STRING "V-Ray AppSDK version")
-set(APPSDK_PATH "$ENV{HOME}/src/appsdk_releases" CACHE PATH "V-Ray AppSDK location")
-set(APPSDK_ROOT "${APPSDK_PATH}/${APPSDK_VERSION}/${_HOST_SYSTEM_NAME}" CACHE PATH "V-Ray AppSDK root" FORCE)
 
 if(WIN32)
 	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
 endif()
 
-macro(use_vray_appsdk)
-	if(NOT EXISTS ${APPSDK_ROOT})
-		message(FATAL_ERROR "V-Ray AppSDK root (\"${APPSDK_ROOT}\") doesn't exist!")
+macro(use_vray_appsdk _appsdk_root)
+	if(NOT EXISTS ${_appsdk_root})
+		message(FATAL_ERROR "V-Ray AppSDK root (\"${_appsdk_root}\") doesn't exist!")
 	endif()
 
 	find_library(VRAY_APPSDK_LIB
 		NAMES VRaySDKLibrary
-		PATHS ${APPSDK_ROOT}/bin ${APPSDK_ROOT}/lib
+		PATHS ${_appsdk_root}/bin ${_appsdk_root}/lib
 	)
 
 	if(NOT VRAY_APPSDK_LIB)
-		message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${APPSDK_ROOT}/bin)")
+		message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${_appsdk_root}/bin)")
 	else()
-		message(STATUS "Using V-Ray AppSDK: ${APPSDK_ROOT}")
+		message(STATUS "Using V-Ray AppSDK: ${_appsdk_root}")
 	endif()
 
-	include_directories(${APPSDK_ROOT}/cpp/include)
-	link_directories(${APPSDK_ROOT}/bin)
-	link_directories(${APPSDK_ROOT}/lib)
-
-	# DEPRECATED: should be removed
-	link_directories(${APPSDK_PATH}/devel)
+	include_directories(${_appsdk_root}/cpp/include)
+	link_directories(${_appsdk_root}/bin)
+	link_directories(${_appsdk_root}/lib)
 endmacro()
 
 
