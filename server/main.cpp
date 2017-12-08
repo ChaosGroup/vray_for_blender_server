@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
 		static char pathBuf[pathSize] = {0, };
 		const auto pathValue = "PATH=" + vrayPath + os_pathsep + std::string(userPath ? userPath : "");
 		strncpy(pathBuf, pathValue.c_str(), pathSize);
-		#ifdef _WIN32
+#ifdef _WIN32
 		_putenv(pathBuf);
 #else
 		putenv(pathBuf);
