@@ -111,7 +111,11 @@ std::pair<bool, VRay::Value> RendererController::toVrayValue(const VRayBaseTypes
 		}
 		return {true, VRay::Value(vList)};
 	}
-	default: return {false, VRay::Value()};
+	case ValueType::ValueTypeFloat:
+		return {true, VRay::Value(val.as<AttrSimpleType<float>>())};
+	default:
+		Logger::log(Logger::Error, "Could not convert generic value of type", val.type, "to vray value!");
+		return {false, VRay::Value()};
 	}
 }
 
