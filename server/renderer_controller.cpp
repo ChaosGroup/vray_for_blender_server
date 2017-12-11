@@ -376,15 +376,14 @@ void RendererController::pluginMessage(VRayMessage && message) {
 					}
 				}
 
-				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
 				logBuff.log(Logger::APIDump, "\t{\n\t\tVUtils::ValueRefList in(4);");
 				logBuff.log(Logger::APIDump, "\t\tin[0].setDouble(", item.index, ");");
 				logBuff.log(Logger::APIDump, "\t\tin[1].setTransform(", *tm, ");");
 				logBuff.log(Logger::APIDump, "\t\tin[2].setTransform(", *vel, ");");
-				logBuff.log(Logger::APIDump, "\t\tin[3].setObjectID(VUtils::ObjectID{", plugin.getId(), "});/*", item.node.plugin, "*/");
+				logBuff.log(Logger::APIDump, "\t\tin[3].setPlugin(renderer->getPlugin(\"", item.node.plugin, "\"));");
 				logBuff.log(Logger::APIDump, "\t\ti[", i + 1, "].setList(in);\n\t}");
 
-				instance[3].setObjectID(pluginId);
+				instance[3].setPlugin(refPlugin);
 				instancer[i + 1].setList(instance);
 			}
 
