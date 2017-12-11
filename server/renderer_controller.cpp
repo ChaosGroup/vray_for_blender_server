@@ -112,7 +112,7 @@ std::pair<bool, VRay::Value> RendererController::toVrayValue(const VRayBaseTypes
 		return {true, VRay::Value(vList)};
 	}
 	case ValueType::ValueTypeFloat:
-		return {true, VRay::Value(val.as<AttrSimpleType<float>>())};
+		return {true, VRay::Value(val.as<AttrSimpleType<float>>().value)};
 	default:
 		Logger::log(Logger::Error, "Could not convert generic value of type", val.type, "to vray value!");
 		return {false, VRay::Value()};
@@ -368,16 +368,12 @@ void RendererController::pluginMessage(VRayMessage && message) {
 				instance[1].setTransform(*tm);
 				instance[2].setTransform(*vel);
 
-				auto plugin = renderer->getPlugin(item.node.plugin);
-				if (!plugin) {
-					Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", item.node.plugin, ") which is not yet exported - delaying.");
-
-					auto buffLog = Logger::getInstance().makeBuffered();
-					buffLog.log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
-
-					delayedMessages[item.node.plugin].emplace_back(std::move(message), std::move(buffLog));
-					delayed = true;
-					break;
+				auto refPlugin = renderer->getPlugin(item.node.plugin);
+				if (!refPlugin) {
+					refPlugin = renderer->getOrCreatePlugin(item.node.plugin, "Node");
+					if (!refPlugin) {
+						Logger::log(Logger::Warning, "Instancer (", message.getPlugin() ,") referencing not existing plugin [", item.node.plugin, "]");
+					}
 				}
 
 				VRay::VUtils::ObjectID pluginId = { plugin.getId() };
@@ -392,15 +388,13 @@ void RendererController::pluginMessage(VRayMessage && message) {
 				instancer[i + 1].setList(instance);
 			}
 
-			if (!delayed) {
-				if (instancer.size() == inst.data.getCount() + 1) {
-					success = plugin.setValueAtTime(message.getProperty(), instancer, currentFrame);
-				}
-
-				logBuff.log(Logger::APIDump, "\trenderer.getPlugin(\"", message.getPlugin(), "\").setValueAtTime(\"", message.getProperty(), "\",i, ", currentFrame, ");\n} // success == ", success);
-
-				Logger::getInstance().log(logBuff); // dump buff
+			if (instancer.size() == inst.data.getCount() + 1) {
+				success = plugin.setValueAtTime(message.getProperty(), instancer, currentFrame);
 			}
+
+			logBuff.log(Logger::APIDump, "\trenderer.getPlugin(\"", message.getPlugin(), "\").setValueAtTime(\"", message.getProperty(), "\",i, ", currentFrame, ");\n} // success == ", success);
+
+			Logger::getInstance().log(logBuff); // dump buff
 
 			break;
 		}
