@@ -64,6 +64,9 @@ private:
 	/// Callback for VRayRenderer::setOnImageReady, sends image to client
 	void imageDone(VRay::VRayRenderer & renderer, void * arg);
 
+	/// Callback for VRayRenderer::setOnVFBClosed, free renderer object
+	void closeVFB(VRay::VRayRenderer & renderer, void * arg);
+
 	/// Callback for VRayRenderer::setOnBucketReady, sends bucket to client
 	void bucketReady(VRay::VRayRenderer & renderer, int x, int y, const char * host, VRay::VRayImage * img, void * arg);
 
@@ -96,6 +99,9 @@ private:
 	/// @return - bool true if we can insert the returned value, false on error
 	///         - VRay::Value that is the converted result
 	std::pair<bool, VRay::Value> toVrayValue(const VRayBaseTypes::AttrValue & val, VRayMessage & message);
+
+	/// Check if the currently allocated renderer is suitable for persistence
+	bool canPersistCurrentRenderer() const;
 private:
 
 	RunState runState;  ///< Internal state to make correct transitions
@@ -124,6 +130,7 @@ private:
 	VRayBaseTypes::AttrImage::ImageType viewportType; ///< Desiered image type for imageUpdate callback
 
 	std::mutex rendererMtx; ///< Protects all callbacks in order to ensure they are executing with valid renderer
+	bool vfbClosed; ///< True if user closed VFB and we dont want to save current renderer as persistent
 };
 
 

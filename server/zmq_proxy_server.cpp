@@ -145,9 +145,9 @@ void ZmqProxyServer::reaperThreadBase() {
 			lk.unlock();
 
 			assert(!!worker.worker && "Already free-ed Renderer inside deadRenderers");
-			Logger::log(Logger::Info, "worker.worker->stop()");
+			Logger::log(Logger::Debug, "worker.worker->stop()");
 			worker.worker->stop();
-			Logger::log(Logger::Info, "worker.worker.reset()");
+			Logger::log(Logger::Debug, "worker.worker.reset()");
 			worker.worker.reset();
 		}
 	}

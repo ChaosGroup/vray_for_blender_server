@@ -7,6 +7,113 @@
 using namespace VRayBaseTypes;
 using namespace std;
 
+
+struct PersistentRenderer {
+	VRay::VRayRenderer * renderer; ///< Pointer to saved instance of vray renderer
+	mutex mtx; ///< Protects access to all members, since we can have multiple RendererController instances
+	bool hasController; ///< True if there is associated RendererController with the @renderer
+	bool closedVFB; ///< True if the current renderer has not controller (@hasController == false) and the VFB was closed
+
+	PersistentRenderer()
+		: renderer(nullptr)
+		, hasController(false)
+		, closedVFB(false)
+	{}
+
+	/// If not instance is saved, save the passed argument and set it to null
+	/// @param instance - the instance that will be saved if none is
+	/// @return - true if instance was saved, false otherwise
+	bool saveInstance(VRay::VRayRenderer *& instance);
+
+	/// Obtain the saved pointer, and set hasController to true
+	/// @return - the saved pointer, could be nullptr
+	VRay::VRayRenderer * useSavedInstance();
+
+	/// Signal that vfb was closed for some instance, if the passed instance
+	/// is the same as the saved, free it and set the argument to nullptr;
+	/// @param instance - pointer to the argument for the VFB close callback
+	/// @return true if saved renderer is the one VFB is closed for
+	bool rendererVFBClosed(VRay::VRayRenderer * instance);
+
+private:
+
+	/// Attached callback to saved renderer instances
+	/// NOTE: This is needed because for persistent renderer instances the RendererController is deallocated
+	///       and it's callback can't be used
+	void vfbClosedCB(VRay::VRayRenderer & cbRenderer, void *);
+
+	/// Check if current saved renderer instance has it's vfb closed and deallocate it if yes
+	void checkForDelete();
+
+} persistent;
+
+
+void PersistentRenderer::checkForDelete() {
+	if (closedVFB) {
+		delete renderer;
+		renderer = nullptr;
+		closedVFB = false;
+	}
+}
+
+bool PersistentRenderer::rendererVFBClosed(VRay::VRayRenderer * instance) {
+	if (instance == renderer) {
+		renderer = nullptr;
+		Logger::log(Logger::Info, "VFB closed for persisten renderer, abandoning instance");
+		return true;
+	}
+	return false;
+}
+
+
+void PersistentRenderer::vfbClosedCB(VRay::VRayRenderer & cbRenderer, void *) {
+	if (renderer == &cbRenderer) {
+		Logger::log(Logger::Info, "VFB Closed after RendererController is stopped");
+		closedVFB = true;
+	} else {
+		Logger::log(Logger::Info, "VFB Closed after RendererController is stopped NOT OWNING RENDERER");
+	}
+}
+
+
+bool PersistentRenderer::saveInstance(VRay::VRayRenderer *& instance) {
+	lock_guard<mutex> lock(mtx);
+	const auto saved = renderer;
+	checkForDelete();
+	if (!renderer) {
+		assert(saved != instance, "We deleted rendere that someone was keeping");
+	}
+	if (!renderer || (renderer == instance && hasController)) {
+		Logger::log(Logger::Info, "Destroying RendererController for persistentInstance, saving renderer to persist");
+		hasController = false;
+		instance->setOnProgress(nullptr);
+		instance->setOnRTImageUpdated(nullptr);
+		instance->setOnImageReady(nullptr);
+		instance->setOnBucketReady(nullptr);
+		instance->setOnDumpMessage(nullptr);
+		renderer = instance;
+		instance->setOnVFBClosed<PersistentRenderer, &PersistentRenderer::vfbClosedCB>(*this);
+		instance = nullptr;
+		return true;
+	}
+
+	return false;
+}
+
+
+VRay::VRayRenderer * PersistentRenderer::useSavedInstance() {
+	lock_guard<mutex> lock(mtx);
+	checkForDelete();
+	if (renderer && !hasController) {
+		Logger::log(Logger::Debug, "PersistentRenderer::useSavedInstance re-using saved instance");
+		hasController = true;
+		return renderer;
+	}
+	Logger::log(Logger::Debug, "PersistentRenderer::useSavedInstance called but there is no persistent renderer");
+	return nullptr;
+}
+
+
 RendererController::RendererController(zmq::context_t & zmqContext, uint64_t clientId, ClientType type, bool showVFB)
 	: runState(IDLE)
 	, clType(type)
@@ -17,8 +124,9 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 	, currentFrame(-1000)
 	, type(VRayMessage::RendererType::None)
 	, jpegQuality(60)
-	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG) {
-}
+	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG)
+	, vfbClosed(false)
+{}
 
 RendererController::~RendererController() {
 	stop();
@@ -27,16 +135,40 @@ RendererController::~RendererController() {
 
 void RendererController::stopRenderer() {
 	Logger::log(Logger::Debug, "Freeing renderer object");
+	std::unique_lock<std::mutex> rendLock(rendererMtx);
 	if (renderer) {
-		std::unique_lock<std::mutex> rendLock(rendererMtx);
+		if (canPersistCurrentRenderer()) {
+			persistent.saveInstance(renderer);
+		}
 		delete renderer;
 		renderer = nullptr;
 	}
 }
 
+bool RendererController::canPersistCurrentRenderer() const
+{
+	if (type == VRayMessage::RendererType::Animation || type == VRayMessage::RendererType::SingleFrame) {
+		if (vfbClosed) {
+			Logger::log(Logger::Info, "Can't persist instance with closed vfb");
+			return false;
+		} else {
+			return true;
+		}
+	}
+	Logger::log(Logger::Info, "Can't persist instance which is not for final render");
+	return false;
+}
+
+
 void RendererController::handle(VRayMessage && message) {
 	bool success = false;
 	try {
+		if (vfbClosed) {
+			Logger::log(Logger::Info, "RendererController::handle :: VFB was closed - stopping client");
+			stopRenderer();
+			return;
+		}
+
 		switch (message.getType()) {
 		case VRayMessage::Type::ChangePlugin:
 			if (!renderer) {
@@ -495,26 +627,36 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	}
 	case VRayMessage::RendererAction::Free:
+		Logger::log(Logger::Debug, "RendererAction::Free :: stop and free");
 		renderer->stop();
 		{
 			std::lock_guard<std::mutex> lk(elemsToSendMtx);
 			elementsToSend.clear();
 		}
+		if (canPersistCurrentRenderer()) {
+			persistent.saveInstance(renderer);
+		}
 		delete renderer;
 		renderer = nullptr;
-
 		break;
 	case VRayMessage::RendererAction::Init:
 	{
-		VRay::RendererOptions options;
 		if (type == VRayMessage::RendererType::None) {
 			Logger::log(Logger::Error, "Invalid RendererType::None");
 		}
+
+		if (type == VRayMessage::RendererType::Animation || type == VRayMessage::RendererType::SingleFrame) {
+			renderer = persistent.useSavedInstance();
+		}
+
+		VRay::RendererOptions options;
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
 		options.noDR = true;
 		options.showFrameBuffer = showVFB;
 		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", options.keepRTRunning, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
-		renderer = new VRay::VRayRenderer(options);
+		if (!renderer) {
+			renderer = new VRay::VRayRenderer(options);
+		}
 
 		const bool useAnimatedValues = false;
 		renderer->useAnimatedValues(useAnimatedValues);
@@ -524,6 +666,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
 		renderer->setOnImageReady<RendererController, &RendererController::imageDone>(*this);
 		renderer->setOnBucketReady<RendererController, &RendererController::bucketReady>(*this);
+		renderer->setOnVFBClosed<RendererController, &RendererController::closeVFB>(*this);
 
 		renderer->setOnDumpMessage<RendererController, &RendererController::vrayMessageDumpHandler>(*this);
 
@@ -542,8 +685,6 @@ void RendererController::rendererMessage(VRayMessage && message) {
 				renderer->startSync();
 			}
 		}
-
-
 	}
 		break;
 	case VRayMessage::RendererAction::Resize:
@@ -595,6 +736,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		jpegQuality = std::max(0, std::min(100, jpegQuality));
 		break;
 	case VRayMessage::RendererAction::SetCurrentCamera: {
+		// TODO: can we not delay and create here
 		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->value);
 		if (!cameraPlugin) {
 			// lets try to delay, maybe out of order export
@@ -694,6 +836,7 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 				img->getSize(width, height);
 				attrImage = AttrImage(data, size, fullImageType, width, height);
 			} else if (fullImageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
+				// TODO: check if we need to changeGamma
 				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, jpegQuality));
 				img->getSize(width, height);
 				attrImage = AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height);
@@ -760,7 +903,16 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 	}
 }
 
-void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void *) {
+void RendererController::onProgress(VRay::VRayRenderer & cbRenderer, const char* msg, int elementNumber, int elementsCount, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
+
 	float progress = static_cast<float>(elementNumber) / elementsCount;
 
 	lock_guard<mutex> lock(messageMtx);
@@ -771,15 +923,31 @@ void RendererController::onProgress(VRay::VRayRenderer & renderer, const char* m
 }
 
 
-void RendererController::imageUpdate(VRay::VRayRenderer &, VRay::VRayImage * img, void * arg) {
+void RendererController::imageUpdate(VRay::VRayRenderer &cbRenderer, VRay::VRayImage * img, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
+
 	if (renderer && !renderer->isAborted()) {
 		sendImages(img, viewportType, VRayBaseTypes::ImageSourceType::RtImageUpdate);
 	}
 }
 
 
-void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
-	(void)arg;
+void RendererController::imageDone(VRay::VRayRenderer &cbRenderer, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
 
 	if (renderer) {
 		if (!renderer->isAborted()) {
@@ -802,8 +970,15 @@ void RendererController::imageDone(VRay::VRayRenderer &, void * arg) {
 	}
 }
 
-void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const char *, VRay::VRayImage * img, void * arg) {
-	(void)arg;
+void RendererController::bucketReady(VRay::VRayRenderer &cbRenderer, int x, int y, const char *, VRay::VRayImage * img, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
 
 	if (renderer && !renderer->isAborted()) {
 		AttrImageSet set(VRayBaseTypes::ImageSourceType::BucketImageReady);
@@ -823,19 +998,51 @@ void RendererController::bucketReady(VRay::VRayRenderer &, int x, int y, const c
 }
 
 
-void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &, const char * msg, int level, void *) {
+void RendererController::closeVFB(VRay::VRayRenderer & cbRenderer, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
+	vfbClosed = true;
+	if (!persistent.rendererVFBClosed(&cbRenderer)) {
+		Logger::log(Logger::Debug, "RendererController::closeVFB :: Marking vfb as closed");
+	}
+
+	Logger::log(Logger::Debug, "RendererController::closeVFB :: Sending abort message to client");
+	// TODO: fix rendering after user stopped render in blender
+	//lock_guard<mutex> lock(messageMtx);
+	//outstandingMessages.push(VRayMessage::msgRendererState(VRayMessage::RendererState::Abort, this->currentFrame));
+}
+
+
+void RendererController::vrayMessageDumpHandler(VRay::VRayRenderer &cbRenderer, const char * msg, int level, void *) {
+	unique_lock<mutex> persistentLock(persistent.mtx);
+
+	if (&cbRenderer == persistent.renderer) {
+		if (!persistent.hasController) {
+			Logger::log(Logger::Debug, "Should not call callbacks on deallocated RendererController");
+			return;
+		}
+	}
+
 	lock_guard<mutex> lock(messageMtx);
 	outstandingMessages.push(VRayMessage::msgVRayLog(level, msg));
 }
 
 void RendererController::stop() {
 	if (runState != RUNNING) {
+		Logger::log(Logger::Warning, "Can't stop stopped RendererController");
 		return;
 	}
 	transitionState(RUNNING, IDLE);
 
 	assert(runnerThread.joinable() && "Missmatch between runState and actual thread state.");
 	if (runnerThread.joinable()) {
+		Logger::log(Logger::Debug, "Joining RendererController::runnerThread");
 		runnerThread.join();
 	}
 
@@ -853,6 +1060,7 @@ bool RendererController::start() {
 	transitionState(IDLE, STARTING);
 
 	runnerThread = thread(&RendererController::run, this);
+	Logger::log(Logger::Debug, "RendererController::start :: thread started");
 
 	{
 		unique_lock<mutex> l(stateMtx);
@@ -866,6 +1074,16 @@ bool RendererController::isRunning() const {
 }
 
 void RendererController::transitionState(RunState current, RunState newState) {
+	auto stateToStr = [](RunState rs) {
+		switch (rs) {
+		case IDLE: return "IDLE";
+		case STARTING: return "STARTING";
+		case RUNNING: return "RUNNING";
+		case STOPPING: return "STOPPING";
+		}
+	};
+	Logger::log(Logger::Debug, "transitionState(", stateToStr(current), ",", stateToStr(newState), ");");
+
 	{
 		lock_guard<mutex> l(stateMtx);
 		assert(current == runState && "Unexpected state transition!");
