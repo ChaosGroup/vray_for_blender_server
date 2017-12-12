@@ -51,6 +51,7 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 	}
 
 	lastTimeoutCheck = now;
+	bool signalReaper = false;
 	for (auto workerIter = workers.begin(), end = workers.end(); workerIter != end; /*nop*/) {
 		auto inactiveTime = duration_cast<milliseconds>(now - workerIter->second.lastKeepAlive).count();
 		auto maxInactive = HEARBEAT_TIMEOUT;
@@ -65,10 +66,15 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 				lock_guard<mutex> lk(reaperMtx);
 				deadRenderers.emplace_back(move(workerIter->second));
 				workerIter = workers.erase(workerIter); // should be no-op since worker is moved in dead que
+				signalReaper = true;
 			}
 		} else {
 			++workerIter;
 		}
+	}
+
+	if (signalReaper) {
+		reaperCond.notify_all();
 	}
 
 	return true;
@@ -143,9 +149,6 @@ void ZmqProxyServer::reaperThreadBase() {
 			worker.worker->stop();
 			Logger::log(Logger::Info, "worker.worker.reset()");
 			worker.worker.reset();
-
-			lk.lock();
-			deadRenderers.pop_back(); // remove it from here when it is already freeed
 		}
 	}
 }
