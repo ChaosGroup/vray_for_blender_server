@@ -91,6 +91,7 @@ bool PersistentRenderer::saveInstance(VRay::VRayRenderer *& instance) {
 		instance->setOnImageReady(nullptr);
 		instance->setOnBucketReady(nullptr);
 		instance->setOnDumpMessage(nullptr);
+		instance->reset();
 		renderer = instance;
 		instance->setOnVFBClosed<PersistentRenderer, &PersistentRenderer::vfbClosedCB>(*this);
 		instance = nullptr;
