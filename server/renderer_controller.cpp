@@ -81,7 +81,7 @@ bool PersistentRenderer::saveInstance(VRay::VRayRenderer *& instance) {
 	const auto saved = renderer;
 	checkForDelete();
 	if (!renderer) {
-		assert(saved != instance, "We deleted rendere that someone was keeping");
+		assert(saved != instance && "Rendere still in use by RendererController is freed");
 	}
 	if (!renderer || (renderer == instance && hasController)) {
 		Logger::log(Logger::Info, "Destroying RendererController for persistentInstance, saving renderer to persist");
