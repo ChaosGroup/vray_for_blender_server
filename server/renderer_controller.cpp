@@ -1081,8 +1081,9 @@ void RendererController::transitionState(RunState current, RunState newState) {
 		case RUNNING: return "RUNNING";
 		case STOPPING: return "STOPPING";
 		}
+		return "UNKNOWN";
 	};
-	Logger::log(Logger::Debug, "transitionState(", stateToStr(current), ",", stateToStr(newState), ");");
+	Logger::log(Logger::Info, "transitionState(", stateToStr(current), ",", stateToStr(newState), ");");
 
 	{
 		lock_guard<mutex> l(stateMtx);
