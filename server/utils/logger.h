@@ -129,6 +129,24 @@ inline void hookFormat(std::ostream & out, const std::vector<VRayBaseTypes::Attr
 	}
 	out << "}";
 }
+
+template <>
+inline void hookFormat(std::ostream & out, const std::vector<std::string> & arr) {
+	out << "ValueList{";
+	if (!arr.empty()) {
+		out << "Value(\"";
+		hookFormat(out, arr[0]);
+		out << "\")";
+	}
+
+	for (int c = 1; c < arr.size(); ++c) {
+		out << ",Value(\"";
+		hookFormat(out, arr[c]);
+		out << "\")";
+	}
+	out << "}";
+}
+
 } // namespace LoggerFormat
 
 /// Global singleton class used for logging
