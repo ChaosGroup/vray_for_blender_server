@@ -623,9 +623,13 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		Logger::log(Logger::APIDump, "renderer.startSync();");
 		renderer->startSync();
 		break;
-	case VRayMessage::RendererAction::Stop:{
+	case VRayMessage::RendererAction::Stop:
 		Logger::log(Logger::APIDump, "renderer.stop();");
 		renderer->stop();
+		break;
+	case VRayMessage::RendererAction::Reset: {
+		Logger::log(Logger::APIDump, "renderer.reset();");
+		renderer->reset();
 		break;
 	}
 	case VRayMessage::RendererAction::Free:
