@@ -61,13 +61,16 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 		}
 
 		if (inactiveTime > maxInactive || !workerIter->second.worker->isRunning()) {
-			Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
-			{
-				lock_guard<mutex> lk(reaperMtx);
-				deadRenderers.emplace_back(move(workerIter->second));
-				workerIter = workers.erase(workerIter); // should be no-op since worker is moved in dead que
-				signalReaper = true;
+			stoppedClients.insert(workerIter->first);
+			if (inactiveTime > maxInactive) {
+				Logger::log(Logger::Debug, "Client (", workerIter->first, ") timed out - stopping it's renderer");
+			} else {
+				Logger::log(Logger::Debug, "Client (", workerIter->first, ")'s renderer stopped - freeing");
 			}
+			lock_guard<mutex> lk(reaperMtx);
+			deadRenderers.emplace_back(move(workerIter->second));
+			workerIter = workers.erase(workerIter); // should be no-op since worker is moved in dead que
+			signalReaper = true;
 		} else {
 			++workerIter;
 		}
@@ -249,8 +252,9 @@ void ZmqProxyServer::run() {
 				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
 
 				auto workerIter = workers.find(clId);
+				const auto stoppedController = stoppedClients.find(clId) != stoppedClients.end();
 
-				if (workerIter == workers.end()) {
+				if (workerIter == workers.end() && !stoppedController) {
 					if (frame.type == ClientType::Exporter) {
 						assert(frame.control == ControlMessage::EXPORTER_CONNECT_MSG && "Exporter did not send correct handshake");
 					} else if (frame.type == ClientType::Heartbeat) {
@@ -261,7 +265,7 @@ void ZmqProxyServer::run() {
 						Logger::log(Logger::Info, "addWorker(clId, now, frame.type)");
 						addWorker(clId, now, frame.type);
 					}
-				} else {
+				} else if (!stoppedController) {
 					workerIter->second.lastKeepAlive = now;
 					lastHeartbeat = std::max(lastHeartbeat, now);
 					try {

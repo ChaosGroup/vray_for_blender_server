@@ -143,6 +143,7 @@ void RendererController::stopRenderer() {
 		}
 		delete renderer;
 		renderer = nullptr;
+		vfbClosed = true;
 	}
 }
 
@@ -639,6 +640,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		}
 		delete renderer;
 		renderer = nullptr;
+		vfbClosed = true;
 		break;
 	case VRayMessage::RendererAction::Init:
 	{
@@ -1071,7 +1073,7 @@ bool RendererController::start() {
 }
 
 bool RendererController::isRunning() const {
-	return runState == RUNNING;
+	return runState == RUNNING && vfbClosed == false;
 }
 
 void RendererController::transitionState(RunState current, RunState newState) {

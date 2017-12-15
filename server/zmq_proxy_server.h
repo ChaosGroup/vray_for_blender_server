@@ -17,6 +17,7 @@
 #endif
 #include <vraysdk.hpp>
 #include "renderer_controller.h"
+#include <set>
 
 /// Wrapper class over uint64_t to enable custom printing in Logger
 /// Contains minimal implemetation required
@@ -129,6 +130,7 @@ private:
 
 	std::unordered_map<client_id_t, WorkerWrapper> workers; ///< Map of all active clients
 	zmq::context_t context; ///< The ZMQ context
+	std::set<client_id_t> stoppedClients; ///< List of all clients, for which a RendererController has been deleted
 
 	time_point lastDataCheck; ///< Last time @reportStats did work
 	time_point lastTimeoutCheck; ///< Last time @checkForTimeout did work
