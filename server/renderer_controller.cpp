@@ -59,7 +59,7 @@ void PersistentRenderer::checkForDelete() {
 bool PersistentRenderer::rendererVFBClosed(VRay::VRayRenderer * instance) {
 	if (instance == renderer) {
 		renderer = nullptr;
-		Logger::log(Logger::Info, "VFB closed for persisten renderer, abandoning instance");
+		Logger::log(Logger::Debug, "VFB closed for persisten renderer, abandoning instance");
 		return true;
 	}
 	return false;
@@ -68,10 +68,10 @@ bool PersistentRenderer::rendererVFBClosed(VRay::VRayRenderer * instance) {
 
 void PersistentRenderer::vfbClosedCB(VRay::VRayRenderer & cbRenderer, void *) {
 	if (renderer == &cbRenderer) {
-		Logger::log(Logger::Info, "VFB Closed after RendererController is stopped");
+		Logger::log(Logger::Debug, "VFB Closed after RendererController is stopped");
 		closedVFB = true;
 	} else {
-		Logger::log(Logger::Info, "VFB Closed after RendererController is stopped NOT OWNING RENDERER");
+		Logger::log(Logger::Debug, "VFB Closed after RendererController is stopped NOT OWNING RENDERER");
 	}
 }
 
@@ -81,10 +81,10 @@ bool PersistentRenderer::saveInstance(VRay::VRayRenderer *& instance) {
 	const auto saved = renderer;
 	checkForDelete();
 	if (!renderer) {
-		assert(saved != instance && "Rendere still in use by RendererController is freed");
+		assert(saved != instance && "Renderer still in use by RendererController is freed");
 	}
 	if (!renderer || (renderer == instance && hasController)) {
-		Logger::log(Logger::Info, "Destroying RendererController for persistentInstance, saving renderer to persist");
+		Logger::log(Logger::Debug, "Destroying RendererController for persistentInstance, saving renderer to persist");
 		hasController = false;
 		instance->setOnProgress(nullptr);
 		instance->setOnRTImageUpdated(nullptr);
@@ -135,7 +135,7 @@ RendererController::~RendererController() {
 }
 
 void RendererController::stopRenderer() {
-	Logger::log(Logger::Debug, "Freeing renderer object");
+	Logger::log(Logger::Debug, "Freeing RendererController object");
 	std::unique_lock<std::mutex> rendLock(rendererMtx);
 	if (renderer) {
 		if (canPersistCurrentRenderer()) {
@@ -810,7 +810,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		const auto * err = renderer ? renderer->getLastError().toString() : "[empty] renderer";
 		Logger::log(Logger::Warning,
 			"Failed renderer action:", static_cast<int>(message.getRendererAction()),
-			"\nerror:", err);
+			"\n\tgetLastError().toString() :", err);
 	}
 }
 
