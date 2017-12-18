@@ -53,7 +53,7 @@ public:
 	bool isRunning() const;
 private:
 	/// Cleany stop amd free the renderer
-	void stopRenderer();
+	void stopRenderer(bool lockMtx = true);
 
 	/// Callback for VRayRenderer::setOnProgress, sends message and progress in [0,1]
 	void onProgress(VRay::VRayRenderer & renderer, const char* msg, int elementNumber, int elementsCount, void * arg);

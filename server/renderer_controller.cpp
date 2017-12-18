@@ -91,6 +91,8 @@ bool PersistentRenderer::saveInstance(VRay::VRayRenderer *& instance) {
 		instance->setOnImageReady(nullptr);
 		instance->setOnBucketReady(nullptr);
 		instance->setOnDumpMessage(nullptr);
+		// TODO: figgure out why clear leaves some geometry
+		// instance->clearAllPropertyValuesUpToTime(std::numeric_limits<float>::max());
 		instance->reset();
 		renderer = instance;
 		instance->setOnVFBClosed<PersistentRenderer, &PersistentRenderer::vfbClosedCB>(*this);
@@ -134,10 +136,14 @@ RendererController::~RendererController() {
 	stopRenderer();
 }
 
-void RendererController::stopRenderer() {
+void RendererController::stopRenderer(bool lockMtx) {
 	Logger::log(Logger::Debug, "Freeing RendererController object");
-	std::unique_lock<std::mutex> rendLock(rendererMtx);
+	unique_lock<mutex> rendLock(rendererMtx, defer_lock);
+	if (lockMtx) {
+		rendLock.lock();
+	}
 	if (renderer) {
+		renderer->stop();
 		if (canPersistCurrentRenderer()) {
 			persistent.saveInstance(renderer);
 		}
@@ -625,7 +631,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	case VRayMessage::RendererAction::Stop:
 		Logger::log(Logger::APIDump, "renderer.stop();");
-		renderer->stop();
+		stopRenderer(false);
 		break;
 	case VRayMessage::RendererAction::Reset: {
 		Logger::log(Logger::APIDump, "renderer.reset();");
@@ -639,8 +645,13 @@ void RendererController::rendererMessage(VRayMessage && message) {
 			std::lock_guard<std::mutex> lk(elemsToSendMtx);
 			elementsToSend.clear();
 		}
-		if (canPersistCurrentRenderer()) {
-			persistent.saveInstance(renderer);
+		{
+			lock_guard<mutex> persistentLock(persistent.mtx);
+			if (persistent.renderer == renderer) {
+				persistent.renderer = nullptr;
+				persistent.hasController = false;
+				persistent.closedVFB = false;
+			}
 		}
 		delete renderer;
 		renderer = nullptr;
