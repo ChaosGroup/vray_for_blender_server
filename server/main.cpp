@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\nLoading appsdk: %s\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
-	VRay::VRayInit init(path);
+	VRay::VRayInit init(path, settings.showVFB);
 
 	printf("AppSDK version: %s\n\n", VRay::getSDKVersion().toString().c_str());
 

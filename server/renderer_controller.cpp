@@ -124,8 +124,8 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 	, zmqContext(zmqContext)
 	, renderer(nullptr)
 	, showVFB(showVFB)
-	, currentFrame(-1000)
 	, type(VRayMessage::RendererType::None)
+	, currentFrame(-1000)
 	, jpegQuality(60)
 	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG)
 	, vfbClosed(false)
@@ -198,21 +198,21 @@ void RendererController::handle(VRayMessage && message) {
 			}
 
 			if (!renderer && actionType != VRayMessage::RendererAction::Init) {
-				Logger::getInstance().log(Logger::Warning, "Can't change renderer - no renderer loaded!");
+				Logger::log(Logger::Warning, "Can't change renderer - no renderer loaded!");
 				return;
 			}
 			this->rendererMessage(std::move(message));
 			break;
 		}
 		default:
-			Logger::getInstance().log(Logger::Error, "Unknown message type");
+			Logger::log(Logger::Error, "Unknown message type");
 			return;
 		}
 	} catch (VRay::VRayException & e) {
-		Logger::getInstance().log(Logger::Error, e.what());
+		Logger::log(Logger::Error, e.what());
 		transitionState(runState, IDLE);
 	} catch (std::exception & e) {
-		Logger::getInstance().log(Logger::Error, e.what());
+		Logger::log(Logger::Error, e.what());
 	}
 }
 

@@ -181,12 +181,23 @@ public:
 	/// @lvl - the level for this particular log message
 	/// @rest ... - parts of the message
 	template <typename ... R>
-	static void log(Level lvl, const R & ... rest) {
+	static void log(Logger & instance, Level lvl, const R & ... rest) {
 		if (lvl >= getInstance().currentLevel) {
 			std::stringstream stream("", std::ios_base::ate | std::ios_base::in | std::ios_base::out);
-			logImpl(lvl, stream, rest...);
+			getInstance().logImpl(lvl, stream, rest...);
 		}
 	}
+
+
+	/// Multiple argument function used to conviniently join different type of arguments in one message
+	/// @lvl - the level for this particular log message
+	/// @rest ... - parts of the message
+	template <typename ... R>
+	static void log(Level lvl, const R & ... rest) {
+		Logger::log(getInstance(), lvl, rest...);
+	}
+
+
 
 	/// Log message with default Debug level
 	static void log(const std::string & msg) {
@@ -209,8 +220,8 @@ private:
 
 	/// Implementation of Logger::log without any copies of it's arguments
 	template <typename T, typename ... R>
-	static void logImpl(Level lvl, std::stringstream & stream, const T & val, const R & ... rest) {
-		if (lvl >= getInstance().currentLevel) {
+	void logImpl(Level lvl, std::stringstream & stream, const T & val, const R & ... rest) {
+		if (lvl >= currentLevel) {
 			if (lvl != APIDump) {
 				stream << ' ';
 			}
@@ -220,7 +231,7 @@ private:
 	}
 
 	/// Base case for logImpl
-	static void logImpl(Level lvl, std::stringstream & msg);
+	void logImpl(Level lvl, std::stringstream & msg);
 
 	bool isBuffered; ///< If set to true all messages will be buffered in instance
 	std::vector<std::pair<Level, std::string>> bufferedMessages; ///< Serves as alternative destination for messages (instead of callback)

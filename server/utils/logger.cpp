@@ -10,17 +10,16 @@ void Logger::setCallback(Logger::StringCb cb) {
 
 /// Base case for the logImpl - calls the callback with the generated string and Level
 void Logger::logImpl(Logger::Level lvl, std::stringstream & stream) {
-	auto & inst = getInstance();
-	if (lvl == APIDump && inst.currentLevel != APIDump) {
+	if (lvl == APIDump && currentLevel != APIDump) {
 		return;
 	}
 	auto msg = stream.str();
 	// just hack replace all slashes to fix paths
 	std::replace(msg.begin(), msg.end(), '\\', '/');
-	if (inst.isBuffered) {
-		inst.bufferedMessages.push_back(std::make_pair(lvl, msg));
+	if (isBuffered) {
+		bufferedMessages.push_back(std::make_pair(lvl, msg));
 	} else {
-		inst.msgCallback(lvl, msg);
+		msgCallback(lvl, msg);
 	}
 }
 
