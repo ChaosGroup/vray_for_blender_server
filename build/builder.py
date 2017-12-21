@@ -83,6 +83,10 @@ if __name__ == '__main__':
     parser.add_argument('--kdrive2_path', default = "")
     args = parser.parse_args()
 
+    install_path = os.path.normpath(args.install_path)
+    if not os.path.exists(install_path):
+        os.makedirs(install_path)
+
     if not os.path.exists(args.source_path):
         exit_error("Invaliud source_path: %s" % source_path)
 
@@ -107,7 +111,7 @@ if __name__ == '__main__':
 
     cmake.append('-DQT_ROOT=%s' % os.path.join(args.kdrive2_path, 'qt', '5.6'))
     cmake.append('-DCMAKE_BUILD_TYPE=Release')
-    cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % args.install_path)
+    cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % install_path)
     cmake.append('-DLIBS_ROOT=%s' % args.libs_path)
     cmake.append(args.source_path)
 
