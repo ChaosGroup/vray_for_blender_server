@@ -41,6 +41,15 @@ def get_ninja_path(src_dir):
     return 'ninja'
 
 
+def get_qt_path(sdk_path):
+    if is_win():
+        return os.path.join(args.kdrive2_path, 'qt', '5.6')
+    if is_lnx():
+        return os.path.join(args.kdrive2_path, 'qt', 'maya2018')
+    if is_mac():
+        return os.path.join(args.kdrive2_path, 'qt', 'maya2018')
+
+
 def setup_msvc_2015(sdkPath):
     env = {
         'INCLUDE' : [
@@ -109,7 +118,7 @@ if __name__ == '__main__':
         cmake.append("-DCMAKE_CXX_COMPILER=g++")
         cmake.append("-DWITH_STATIC_LIBC=ON")
 
-    cmake.append('-DQT_ROOT=%s' % os.path.join(args.kdrive2_path, 'qt', '5.6'))
+    cmake.append('-DQT_ROOT=%s' % get_qt_path(args.kdrive2_path))
     cmake.append('-DCMAKE_BUILD_TYPE=Release')
     cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % install_path)
     cmake.append('-DLIBS_ROOT=%s' % args.libs_path)
