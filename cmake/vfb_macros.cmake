@@ -26,6 +26,10 @@ macro(use_qt _qt_root)
 		message(FATAL_ERROR "Could not find QT: \"${_qt_root}\"")
 	endif()
 
+	if (UNIX AND NOT APPLE)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -licuuc")
+	endif()
+
 	set(QT_INCLUDES
 		${QT_ROOT}/include
 		${QT_ROOT}/include/QtCore
