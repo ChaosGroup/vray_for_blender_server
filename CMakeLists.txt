@@ -23,7 +23,7 @@ project(VRayZmqServer)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(vfb_macros)
 
-
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(LIBS_ROOT        ""  CACHE PATH "Custom libs root - zmq, sodium")
 set(QT_ROOT          ""  CACHE PATH "Optional QT5 path")
 set(INSTALL_LOCAL    ON  CACHE BOOL "Do Install step")
