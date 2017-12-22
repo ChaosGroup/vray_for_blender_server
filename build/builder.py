@@ -47,7 +47,7 @@ def get_qt_path(sdk_path):
     if is_lnx():
         return os.path.join(args.kdrive2_path, 'qt', 'maya2018')
     if is_mac():
-        return os.path.join(args.kdrive2_path, 'qt', 'maya2018')
+        return os.path.join(args.kdrive2_path, 'qt', 'maya2017')
 
 
 def setup_msvc_2015(sdkPath):
