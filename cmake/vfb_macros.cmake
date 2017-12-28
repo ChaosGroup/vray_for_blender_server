@@ -56,6 +56,7 @@ endmacro()
 
 macro(link_with_qt)
 	if (UNIX AND NOT APPLE)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,${QT_LIBPATH}")
 		target_link_libraries(${PROJECT_NAME} libicui18n.so)
 		target_link_libraries(${PROJECT_NAME} libicuuc.so)
 		target_link_libraries(${PROJECT_NAME} libicudata.so)
