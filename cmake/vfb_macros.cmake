@@ -44,7 +44,6 @@ macro(use_qt _qt_root)
 			set(QT_LIB_PREFIX "lib")
 		else()
 			set(QT_LIBPATH ${QT_ROOT}/lib)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rpath-link=${QT_LIBPATH}")
 			set(QT_LIB_EXT ".so")
 			set(QT_LIB_PREFIX "lib")
 		endif()
@@ -56,9 +55,9 @@ endmacro()
 
 
 macro(link_with_qt)
-	target_link_libraries(${PROJECT_NAME} ${QT_LIBPATH}/${QT_LIB_PREFIX}Qt5Core${QT_LIB_EXT})
-	target_link_libraries(${PROJECT_NAME} ${QT_LIBPATH}/${QT_LIB_PREFIX}Qt5Gui${QT_LIB_EXT})
-	target_link_libraries(${PROJECT_NAME} ${QT_LIBPATH}/${QT_LIB_PREFIX}Qt5Widgets${QT_LIB_EXT})
+	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Core${QT_LIB_EXT})
+	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Gui${QT_LIB_EXT})
+	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Widgets${QT_LIB_EXT})
 endmacro()
 
 
