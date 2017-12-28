@@ -51,15 +51,17 @@ macro(use_qt _qt_root)
 
 	include_directories(${QT_INCLUDES})
 	link_directories(${QT_LIBPATH})
+	if (UNIX AND NOT APPLE)
+		link_directories(${QT_ROOT}/../../maya/maya2018/lib)
+	endif()
 endmacro()
 
 
 macro(link_with_qt)
 	if (UNIX AND NOT APPLE)
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,${QT_LIBPATH}")
-		target_link_libraries(${PROJECT_NAME} libicui18n.so)
-		target_link_libraries(${PROJECT_NAME} libicuuc.so)
-		target_link_libraries(${PROJECT_NAME} libicudata.so)
+		# target_link_libraries(${PROJECT_NAME} libicui18n.so)
+		# target_link_libraries(${PROJECT_NAME} libicuuc.so)
+		# target_link_libraries(${PROJECT_NAME} libicudata.so)
 	endif()
 
 	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Core${QT_LIB_EXT})
