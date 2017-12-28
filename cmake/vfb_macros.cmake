@@ -55,6 +55,10 @@ endmacro()
 
 
 macro(link_with_qt)
+	if (UNIX AND NOT APPLE)
+		target_link_libraries(${PROJECT_NAME} icui18n icuuc icudata)
+	endif()
+
 	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Core${QT_LIB_EXT})
 	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Gui${QT_LIB_EXT})
 	target_link_libraries(${PROJECT_NAME} ${QT_LIB_PREFIX}Qt5Widgets${QT_LIB_EXT})
