@@ -716,6 +716,28 @@ void RendererController::rendererMessage(VRayMessage && message) {
 
 		Logger::log(Logger::APIDump, "renderer.setImageSize(", width, ",", height, "); // success == ", completed);
 		break;
+	case VRayMessage::RendererAction::SetRenderRegion: {
+		const auto & coords = *message.getValue<AttrListInt>()->getData();
+		if (coords.size() != 4) {
+			Logger::log(Logger::Error, "SetRenderRegion expects 4 ints");
+		} else {
+			completed = renderer->setRenderRegion(coords[0], coords[1], coords[2], coords[3]);
+			Logger::log(Logger::APIDump, "renderer.setRenderRegion(", coords[0], coords[1], coords[2], coords[3], "); // success == ", completed);
+		}
+
+		break;
+		}
+	case VRayMessage::RendererAction::SetCropRegion: {
+		const auto & coords = *message.getValue<AttrListInt>()->getData();
+		if (coords.size() != 4) {
+			Logger::log(Logger::Error, "SetRenderRegion expects 4 ints");
+		} else {
+			completed = renderer->setCropRegion(coords[2], coords[3], coords[0], coords[1]);
+			Logger::log(Logger::APIDump, "renderer.setCropRegion(", coords[2], coords[3], coords[0], coords[1], "); // success == ", completed);
+		}
+
+		break;
+		}
 	case VRayMessage::RendererAction::AddHosts:
 		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->value);
 		Logger::log(Logger::APIDump, "renderer.addHosts(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
@@ -845,21 +867,29 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 		switch (type) {
 		case VRay::RenderElement::Type::NONE:
 		{
+			int left, top, rWidth, rHeight;
+			renderer->getRenderRegion(left, top, rWidth, rHeight);
+			// The image we recieve is owned by the renderer and will be freed by it, so we can safely overwrite the pointer
+			img = img->crop(left, top, rWidth, rHeight);
 			size_t size;
 			int width, height;
+			if (!img->getSize(width, height)) {
+				Logger::log(Logger::Error, "Failed to get size of final image");
+				break;
+			}
 			AttrImage attrImage;
 			if (fullImageType == VRayBaseTypes::AttrImage::ImageType::RGBA_REAL) {
+				// TODO(optimisation): we dont need to crop the image for this case, we can jus copy it inside the AttrImage
 				VRay::AColor * data = img->getPixelData(size);
 				size *= sizeof(VRay::AColor);
-				img->getSize(width, height);
 				attrImage = AttrImage(data, size, fullImageType, width, height);
 			} else if (fullImageType == VRayBaseTypes::AttrImage::ImageType::JPG) {
 				// TODO: check if we need to changeGamma
 				std::unique_ptr<VRay::Jpeg> jpeg(img->getJpeg(size, jpegQuality));
-				img->getSize(width, height);
 				attrImage = AttrImage(jpeg.get(), size, VRayBaseTypes::AttrImage::ImageType::JPG, width, height);
 			}
 			set.images.emplace(static_cast<VRayBaseTypes::RenderChannelType>(type), std::move(attrImage));
+			delete img;
 			break;
 		}
 		case VRay::RenderElement::Type::ZDEPTH:
@@ -894,7 +924,9 @@ void RendererController::sendImages(VRay::VRayImage * img, VRayBaseTypes::AttrIm
 						VRay::VRayImage *img = element.getImage();
 
 						int width, height;
-						img->getSize(width, height);
+						if (!img->getSize(width, height)) {
+							Logger::log(Logger::Error, "Failed to get image size of final image");
+						}
 						size_t size;
 						VRay::AColor *data = img->getPixelData(size);
 						size *= sizeof(VRay::AColor);
@@ -1003,7 +1035,10 @@ void RendererController::bucketReady(VRay::VRayRenderer &cbRenderer, int x, int 
 
 		int width, height;
 		size_t size;
-		img->getSize(width, height);
+		if (!img->getSize(width, height)) {
+			Logger::log(Logger::Error, "Failed to get size of bucket");
+			return;
+		}
 		const VRay::AColor * data = img->getPixelData(size);
 		size *= sizeof(VRay::AColor);
 		set.images.emplace(VRayBaseTypes::RenderChannelType::RenderChannelTypeNone, VRayBaseTypes::AttrImage(data, size, VRayBaseTypes::AttrImage::ImageType::RGBA_REAL, width, height, x, y));
