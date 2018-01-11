@@ -211,9 +211,9 @@ int main(int argc, char *argv[]) {
 		}
 
 	} catch (std::exception & e) {
-		Logger::getInstance().log(Logger::Error, e.what());
+		Logger::log(Logger::Error, e.what());
 	} catch (VRay::VRayException & e) {
-		Logger::getInstance().log(Logger::Error, e.what());
+		Logger::log(Logger::Error, e.what());
 	}
 
 	Logger::log(Logger::Debug, "Main thread stopping.");
