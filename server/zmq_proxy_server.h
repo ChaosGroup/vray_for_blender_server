@@ -103,7 +103,7 @@ private:
 	/// @return - pair of int and bool
 	///           int - the returned option value
 	///           bool - flag set to true if exception occured
-	std::pair<int, bool> checkSocketOpt(zmq::socket_t & socket, int option);
+	std::pair<int, bool> checkSocketOpt(zmq::socket_t & socket, int option) const;
 
 	/// Create a Renderer for a given client
 	/// @clientId - the ID of the client

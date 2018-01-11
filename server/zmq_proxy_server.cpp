@@ -24,11 +24,12 @@ ZmqProxyServer::WorkerWrapper::WorkerWrapper(std::unique_ptr<RendererController>
 }
 
 ZmqProxyServer::ZmqProxyServer(const string & port, bool showVFB, bool checkHeartbeat)
-    : port(port)
+    : checkHeartbeat(checkHeartbeat)
+    , showVFB(showVFB)
+    , port(port)
     , context(1)
     , dataTransfered(0)
-    , showVFB(showVFB)
-    , checkHeartbeat(checkHeartbeat)
+    , reaperRunning(false)
 {
 }
 
@@ -84,7 +85,7 @@ bool ZmqProxyServer::checkForTimeouts(time_point now) {
 }
 
 bool ZmqProxyServer::reportStats(time_point now) {
-	auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
+	const auto dataReportDiff = duration_cast<milliseconds>(now - lastDataCheck).count();
 	if (dataReportDiff <= 1000) {
 		return false;
 	}
@@ -114,7 +115,7 @@ bool ZmqProxyServer::reportStats(time_point now) {
 	return true;
 }
 
-std::pair<int, bool> ZmqProxyServer::checkSocketOpt(zmq::socket_t & socket, int option) {
+std::pair<int, bool> ZmqProxyServer::checkSocketOpt(zmq::socket_t & socket, int option) const {
 	std::pair<int, bool> result;
 	size_t more_size = sizeof (result.first);
 	try {
@@ -249,7 +250,7 @@ void ZmqProxyServer::run() {
 					stopServing = true;
 				}
 
-				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
+				const client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
 
 				auto workerIter = workers.find(clId);
 				const auto stoppedController = stoppedClients.find(clId) != stoppedClients.end();
@@ -329,7 +330,7 @@ void ZmqProxyServer::run() {
 				assert(idMsg.size() == sizeof(client_id_t) && "ID frame with unexpected size");
 				assert(!!frame && "Malformed frame sent from renderer/heartbeat");
 
-				client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
+				const client_id_t clId = *reinterpret_cast<client_id_t*>(idMsg.data());
 
 				// check for routing here
 				try {
