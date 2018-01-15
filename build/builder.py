@@ -97,13 +97,13 @@ if __name__ == '__main__':
         os.makedirs(install_path)
 
     if not os.path.exists(args.source_path):
-        exit_error("Invaliud source_path: %s" % source_path)
+        exit_error("Invaliud source_path: %s" % args.source_path)
 
     if not os.path.exists(args.libs_path):
-        exit_error("Invaliud libs_path: %s" % libs_path)
+        exit_error("Invaliud libs_path: %s" % args.libs_path)
 
     if not os.path.exists(args.kdrive2_path):
-        exit_error("Invaliud kdrive2_path: %s" % kdrive2_path)
+        exit_error("Invaliud kdrive2_path: %s" % args.kdrive2_path)
 
     if is_win():
         setup_msvc_2015(args.kdrive2_path)
