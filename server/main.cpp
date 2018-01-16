@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
 	const char * sdkPathName = "VRAY_ZMQSERVER_APPSDK_PATH";
 
 	const char * path = std::getenv(sdkPathName);
-	path = nullptr;
+
 	if (!path) {
 		printf("Undefined %s, will try to load appsdk from LD_LIBRARY_PATH OR PATH\n", sdkPathName);
 	} else {
