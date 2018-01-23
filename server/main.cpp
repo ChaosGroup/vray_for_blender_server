@@ -191,7 +191,8 @@ int main(int argc, char *argv[]) {
 
 	VRay::VRayInit init(path, settings.showVFB);
 
-	printf("AppSDK version: %s\n\n", VRay::getSDKVersion().toString().c_str());
+	printf("AppSDK version: %s\n", VRay::getSDKVersion().toString().c_str());
+	printf("V-Ray version: %s\n\n", VRay::getVRayVersion().toString().c_str());
 
 	int retCode = 0;
 	try {
