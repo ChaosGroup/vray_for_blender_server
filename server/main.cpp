@@ -189,13 +189,13 @@ int main(int argc, char *argv[]) {
 	printf("Starting VRayZmqServer on all interfaces with port %s, showing VFB: %s, log level %d\nLoading appsdk: %s\n",
 		settings.port.c_str(), (settings.showVFB ? "true" : "false"), settings.logLevel, path);
 
-	VRay::VRayInit init(path, settings.showVFB);
-
-	printf("AppSDK version: %s\n", VRay::getSDKVersion().toString().c_str());
-	printf("V-Ray version: %s\n\n", VRay::getVRayVersion().toString().c_str());
-
 	int retCode = 0;
 	try {
+		VRay::VRayInit init(path, settings.showVFB);
+
+		printf("AppSDK version: %s\n", VRay::getSDKVersion().toString().c_str());
+		printf("V-Ray version: %s\n\n", VRay::getVRayVersion().toString().c_str());
+
 		int argc = 0;
 		char *argv[1] = { nullptr };
 		QApplication qapp(argc, argv);
