@@ -123,13 +123,16 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 	, clientId(clientId)
 	, zmqContext(zmqContext)
 	, renderer(nullptr)
-	, showVFB(showVFB)
 	, type(VRayMessage::RendererType::None)
 	, currentFrame(-1000)
 	, jpegQuality(60)
 	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG)
 	, vfbClosed(false)
-{}
+{
+	options.showFrameBuffer = showVFB;
+	options.inProcess = true;
+	options.noDR = true;
+}
 
 RendererController::~RendererController() {
 	stop();
@@ -186,21 +189,27 @@ void RendererController::handle(VRayMessage && message) {
 			this->pluginMessage(std::move(message));
 			break;
 		case VRayMessage::Type::ChangeRenderer: {
-			auto actionType = message.getRendererAction();
-			if (actionType == VRayMessage::RendererAction::SetRendererType) {
+			const auto actionType = message.getRendererAction();
+			if (actionType == VRayMessage::RendererAction::Init) {
 				if (renderer) {
-					Logger::log(Logger::Error, "Can't set renderer type after init!");
-				} else {
-					type = message.getRendererType();
-					Logger::log(Logger::Debug, "Setting type to", static_cast<int>(type));
+					Logger::log(Logger::Error, "Already init");
+					return;
 				}
-				return;
-			}
 
-			if (!renderer && actionType != VRayMessage::RendererAction::Init) {
+				VRayMessage::DRFlags flags = message.getDrFlags();
+				type = message.getRendererType();
+				if (static_cast<int>(flags) & static_cast<int>(VRayMessage::DRFlags::EnableDr)) {
+					options.noDR = false;
+				}
+
+				if (static_cast<int>(flags) & static_cast<int>(VRayMessage::DRFlags::RenderOnlyOnHosts)) {
+					options.inProcess = false;
+				}
+			} else if (!renderer) {
 				Logger::log(Logger::Warning, "Can't change renderer - no renderer loaded!");
 				return;
 			}
+
 			this->rendererMessage(std::move(message));
 			break;
 		}
@@ -492,7 +501,7 @@ void RendererController::pluginMessage(VRayMessage && message) {
 			instancer[0] = VRay::VUtils::Value(inst.frameNumber);
 
 			auto logBuff = Logger::getInstance().makeBuffered();
-
+			// TODO: fixme
 			logBuff.log(Logger::APIDump, "{\n\tVUtils::ValueRefList i(", inst.data.getCount() + 1, ");\n\ti[0]=VUtils::Value(", inst.frameNumber, ");");
 
 			for (int i = 0; i < inst.data.getCount(); ++i) {
@@ -516,6 +525,7 @@ void RendererController::pluginMessage(VRayMessage && message) {
 					}
 				}
 
+				// TODO: fixme
 				logBuff.log(Logger::APIDump, "\t{\n\t\tVUtils::ValueRefList in(4);");
 				logBuff.log(Logger::APIDump, "\t\tin[0].setDouble(", item.index, ");");
 				logBuff.log(Logger::APIDump, "\t\tin[1].setTransform(", *tm, ");");
@@ -602,7 +612,8 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		return;
 	}
 	bool completed = true;
-	switch (message.getRendererAction()) {
+	const VRayMessage::RendererAction action = message.getRendererAction();
+	switch (action) {
 	case VRayMessage::RendererAction::SetCurrentFrame:
 		Logger::log(Logger::APIDump, "renderer.setCurrentFrame(", message.getValue<AttrSimpleType<float>>()->value, ");");
 		currentFrame = message.getValue<AttrSimpleType<float>>()->value;
@@ -667,18 +678,17 @@ void RendererController::rendererMessage(VRayMessage && message) {
 			renderer = persistent.useSavedInstance();
 		}
 
-		VRay::RendererOptions options;
 		options.keepRTRunning = type == VRayMessage::RendererType::RT;
-		options.noDR = true;
-		options.showFrameBuffer = showVFB;
-		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", options.keepRTRunning, ";o.noDR=true;o.showFrameBuffer=", showVFB, ";VRayRenderer renderer(o);");
+		Logger::log(Logger::APIDump, "RendererOptions o;o.keepRTRunning=", options.keepRTRunning, ";o.noDR=true;o.showFrameBuffer=", options.showFrameBuffer, ";VRayRenderer renderer(o);");
 		if (!renderer) {
 			renderer = new VRay::VRayRenderer(options);
+		} else {
+			renderer->setOptions(options);
 		}
 
 		const bool useAnimatedValues = false;
 		renderer->useAnimatedValues(useAnimatedValues);
-		Logger::log(Logger::APIDump, "renderer.useAnimatedValues(",useAnimatedValues,"); // success == ", completed);
+		Logger::log(Logger::APIDump, "renderer.useAnimatedValues(", useAnimatedValues, "); // success == ", completed);
 
 		renderer->setOnProgress<RendererController, &RendererController::onProgress>(*this);
 		renderer->setOnRTImageUpdated<RendererController, &RendererController::imageUpdate>(*this);
@@ -738,13 +748,9 @@ void RendererController::rendererMessage(VRayMessage && message) {
 
 		break;
 		}
-	case VRayMessage::RendererAction::AddHosts:
-		completed = 0 == renderer->addHosts(message.getValue<AttrSimpleType<std::string>>()->value);
+	case VRayMessage::RendererAction::ResetsHosts:
+		completed = 0 == renderer->resetHosts(message.getValue<AttrSimpleType<std::string>>()->value);
 		Logger::log(Logger::APIDump, "renderer.addHosts(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
-		break;
-	case VRayMessage::RendererAction::RemoveHosts:
-		completed = 0 == renderer->removeHosts(message.getValue<AttrSimpleType<std::string>>()->value);
-		Logger::log(Logger::APIDump, "renderer.removeHosts(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\"); // success == ", completed);
 		break;
 	case VRayMessage::RendererAction::LoadScene:
 		completed = 0 == renderer->load(message.getValue<AttrSimpleType<std::string>>()->value);
@@ -777,19 +783,21 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		break;
 	case VRayMessage::RendererAction::SetCurrentCamera: {
 		// TODO: can we not delay and create here
-		auto cameraPlugin = renderer->getPlugin(message.getValue<AttrSimpleType<std::string>>()->value);
+		const std::string cameraPluginName = message.getValue<AttrSimpleType<std::string>>()->value;
+		const auto cameraPlugin = renderer->getPlugin(cameraPluginName);
 		if (!cameraPlugin) {
 			// lets try to delay, maybe out of order export
-			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", message.getValue<AttrSimpleType<std::string>>()->value, ") which is not yet exported - delaying.");
+			Logger::log(Logger::Debug, "Plugin [", message.getPlugin(), "] references (", cameraPluginName, ") which is not yet exported - delaying.");
 
 			auto buffLog = Logger::getInstance().makeBuffered();
-			buffLog.log(Logger::Warning, "Failed to find", message.getValue<AttrSimpleType<std::string>>()->value, "to set as current camera.");
+			// TODO: fixme
+			buffLog.log(Logger::Warning, "Failed to find", cameraPluginName, "to set as current camera.");
 
 			delayedMessages[message.getValue<AttrSimpleType<std::string>>()->value].emplace_back(std::move(message), std::move(buffLog));
 		} else {
 			completed = renderer->setCamera(cameraPlugin);
 		}
-		Logger::log(Logger::APIDump, "renderer.setCamera(renderer.getPlugin(\"", message.getValue<AttrSimpleType<std::string>>()->value, "\")); // success == ", completed);
+		Logger::log(Logger::APIDump, "renderer.setCamera(renderer.getPlugin(\"", cameraPluginName, "\")); // success == ", completed);
 		break;
 	}
 	case VRayMessage::RendererAction::SetCommitAction: {
@@ -829,7 +837,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	}
 		break;
 	case VRayMessage::RendererAction::SetVfbShow:
-		if (message.getValue<AttrSimpleType<int>>()->value && showVFB) {
+		if (message.getValue<AttrSimpleType<int>>()->value && options.showFrameBuffer) {
 			renderer->vfb.show(true, false);
 			Logger::log(Logger::APIDump, "renderer.vfb.show(true, false);");
 		} else {
@@ -848,7 +856,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	if (!completed) {
 		const auto * err = renderer ? renderer->getLastError().toString() : "[empty] renderer";
 		Logger::log(Logger::Warning,
-			"Failed renderer action:", static_cast<int>(message.getRendererAction()),
+			"Failed renderer action:", static_cast<int>(action),
 			"\n\tgetLastError().toString() :", err);
 	}
 }
