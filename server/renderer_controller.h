@@ -113,7 +113,7 @@ private:
 	uint64_t clientId; ///< Our id
 	zmq::context_t & zmqContext; ///< The zmq context to pass to socket
 	std::mutex messageMtx; ///< Lock protecting the queue for sending
-	std::queue<VRayMessage> outstandingMessages; ///< Queue for messages to be sent
+	std::queue<zmq::message_t> outstandingMessages; ///< Queue for messages to be sent
 
 	/// Hash map that stores plugins that reference other plugins that are not yet exported
 	/// When creating a new plugin, this map is checked to see if some other plugin is waiting for the new one

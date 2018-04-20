@@ -1250,7 +1250,7 @@ void RendererController::run() {
 					try {
 						sent = zmqRendererSocket.send(ControlFrame::make(clType), ZMQ_SNDMORE);
 						if (sent) {
-							zmqRendererSocket.send(outstandingMessages.front().getMessage());
+							zmqRendererSocket.send(std::move(outstandingMessages.front()));
 						}
 					} catch (zmq::error_t & ex) {
 						if (ex.num() != ETERM) {
@@ -1278,7 +1278,7 @@ void RendererController::run() {
 			int wait = EXPORTER_TIMEOUT / 2;
 			zmqRendererSocket.setsockopt(ZMQ_SNDTIMEO, &wait, sizeof(wait));
 			zmqRendererSocket.send(ControlFrame::make(), ZMQ_SNDMORE);
-			zmqRendererSocket.send(VRayMessage::msgRendererState(VRayMessage::RendererState::Abort, currentFrame).getMessage());
+			zmqRendererSocket.send(VRayMessage::msgRendererState(VRayMessage::RendererState::Abort, currentFrame));
 		} catch (zmq::error_t & ex) {
 			if (ex.num() != ETERM) {
 				Logger::log(Logger::Error, "Error while renderer is sending cleanup message:", ex.what());
