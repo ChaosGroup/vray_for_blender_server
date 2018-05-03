@@ -530,7 +530,7 @@ void RendererController::pluginMessage(VRayMessage && message) {
 				logBuff.log(Logger::APIDump, "\t\tin[0].setDouble(", item.index, ");");
 				logBuff.log(Logger::APIDump, "\t\tin[1].setTransform(", *tm, ");");
 				logBuff.log(Logger::APIDump, "\t\tin[2].setTransform(", *vel, ");");
-				logBuff.log(Logger::APIDump, "\t\tin[3].setPlugin(renderer->getPlugin(\"", item.node.plugin, "\"));");
+				logBuff.log(Logger::APIDump, "\t\tin[3].setPlugin(renderer.getPlugin(\"", item.node.plugin, "\"));");
 				logBuff.log(Logger::APIDump, "\t\ti[", i + 1, "].setList(in);\n\t}");
 
 				instance[3].setPlugin(refPlugin);
@@ -732,7 +732,7 @@ void RendererController::rendererMessage(VRayMessage && message) {
 			Logger::log(Logger::Error, "SetRenderRegion expects 4 ints");
 		} else {
 			completed = renderer->setRenderRegion(coords[0], coords[1], coords[2], coords[3]);
-			Logger::log(Logger::APIDump, "renderer.setRenderRegion(", coords[0], coords[1], coords[2], coords[3], "); // success == ", completed);
+			Logger::log(Logger::APIDump, "renderer.setRenderRegion(", coords[0], ",", coords[1], ",", coords[2], ",", coords[3], "); // success == ", completed);
 		}
 
 		break;
