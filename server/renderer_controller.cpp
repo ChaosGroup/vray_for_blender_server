@@ -129,7 +129,8 @@ RendererController::RendererController(zmq::context_t & zmqContext, uint64_t cli
 	, viewportType(VRayBaseTypes::AttrImage::ImageType::JPG)
 	, vfbClosed(false)
 {
-	options.showFrameBuffer = showVFB;
+	options.enableFrameBuffer = showVFB;
+	options.showFrameBuffer = false;
 	options.inProcess = true;
 	options.noDR = true;
 }
@@ -837,12 +838,11 @@ void RendererController::rendererMessage(VRayMessage && message) {
 	}
 		break;
 	case VRayMessage::RendererAction::SetVfbShow:
-		if (message.getValue<AttrSimpleType<int>>()->value && options.showFrameBuffer) {
-			renderer->vfb.show(true, false);
-			Logger::log(Logger::APIDump, "renderer.vfb.show(true, false);");
-		} else {
-			renderer->vfb.show(false, false);
-			Logger::log(Logger::APIDump, "renderer.vfb.show(false, false);");
+		options = renderer->getOptions();
+		if (message.getValue<AttrSimpleType<int>>()->value != options.showFrameBuffer) {
+			const bool show = message.getValue<AttrSimpleType<int>>()->value;
+			renderer->vfb.show(show, false);
+			Logger::log(Logger::APIDump, "renderer.vfb.show(", show, ", false);");
 		}
 		break;
 	case VRayMessage::RendererAction::SetViewportImageFormat:
