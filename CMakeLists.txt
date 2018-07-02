@@ -28,14 +28,14 @@ set(LIBS_ROOT        ""  CACHE PATH "Custom libs root - zmq, sodium")
 set(QT_ROOT          ""  CACHE PATH "Optional QT5 path")
 set(INSTALL_LOCAL    ON  CACHE BOOL "Do Install step")
 
-if (${INSTALL_LOCAL} AND NOT EXISTS ${CMAKE_INSTALL_PREFIX})
-	message(FATAL_ERROR "Missing CMAKE_INSTALL_PREFIX \"${CMAKE_INSTALL_PREFIX}\" for option INSTALL_LOCAL")
+if (${INSTALL_LOCAL} AND NOT EXISTS ${VRAY_ZMQ_SERVER_INSTALL_PREFIX})
+	message(FATAL_ERROR "Missing VRAY_ZMQ_SERVER_INSTALL_PREFIX for option INSTALL_LOCAL")
 endif()
+
+message(STATUS "V-Ray AppSDK ZMQ server install path: \"${VRAY_ZMQ_SERVER_INSTALL_PREFIX}\"")
 
 include_directories(extern/vray-zmq-wrapper/include)
 include_directories(extern/vray-zmq-wrapper/extern/cppzmq)
-
-
 
 file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h")
@@ -43,7 +43,6 @@ file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.h)
 list(APPEND HEADERS "${WRAPPER_HEADERS}")
 file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.hpp)
 list(APPEND HEADERS "${WRAPPER_HEADERS}")
-
 
 use_qt(${QT_ROOT})
 use_vray_appsdk(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/appsdk)
@@ -62,8 +61,7 @@ if(UNIX AND NOT APPLE)
 	target_link_libraries(${PROJECT_NAME} pthread rt dl)
 endif()
 
-
-set(INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/V-Ray/VRayZmqServer/")
+set(INSTALL_PREFIX "${VRAY_ZMQ_SERVER_INSTALL_PREFIX}/V-Ray/VRayZmqServer/")
 
 if(WIN32)
 	install(TARGETS ${PROJECT_NAME} RUNTIME

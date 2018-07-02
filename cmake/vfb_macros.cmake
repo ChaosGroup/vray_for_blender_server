@@ -124,7 +124,7 @@ macro(use_vray_appsdk _appsdk_root)
 	if(NOT VRAY_APPSDK_LIB)
 		message(FATAL_ERROR "V-Ray AppSDK libraries are not found! Check APPSDK_PATH variable (current search path ${_appsdk_root}/bin)")
 	else()
-		message(STATUS "Using V-Ray AppSDK: ${_appsdk_root}")
+		message(STATUS "V-Ray AppSDK path: ${_appsdk_root}")
 	endif()
 
 	add_definitions(-DVRAY_SDK_INTEROPERABILITY)
