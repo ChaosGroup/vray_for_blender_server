@@ -37,8 +37,8 @@ message(STATUS "V-Ray AppSDK ZMQ server install path: \"${VRAY_ZMQ_SERVER_INSTAL
 include_directories(extern/vray-zmq-wrapper/include)
 include_directories(extern/vray-zmq-wrapper/extern/cppzmq)
 
-file(GLOB_RECURSE SOURCES "*.cpp")
-file(GLOB_RECURSE HEADERS "*.h")
+file(GLOB SOURCES "server/*.cpp")
+file(GLOB HEADERS "server/*.h")
 file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.h)
 list(APPEND HEADERS "${WRAPPER_HEADERS}")
 file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.hpp)
