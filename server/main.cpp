@@ -17,7 +17,7 @@
 #include <fstream>
 #include <chrono>
 
-#include <qapplication.h>
+#include <QApplication>
 
 struct ArgvSettings {
 	ArgvSettings()

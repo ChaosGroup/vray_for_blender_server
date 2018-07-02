@@ -21,6 +21,7 @@ cmake_minimum_required(VERSION 3.0.0 FATAL_ERROR)
 project(VRayZmqServer)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 include(vfb_macros)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -33,12 +34,14 @@ if (${INSTALL_LOCAL} AND NOT EXISTS ${VRAY_ZMQ_SERVER_INSTALL_PREFIX})
 endif()
 
 message(STATUS "V-Ray AppSDK ZMQ server install path: \"${VRAY_ZMQ_SERVER_INSTALL_PREFIX}\"")
+message(STATUS "Qt root: \"${QT_ROOT}\"")
+message(STATUS "SDK root: \"${LIBS_ROOT}\"")
 
 include_directories(extern/vray-zmq-wrapper/include)
 include_directories(extern/vray-zmq-wrapper/extern/cppzmq)
 
-file(GLOB SOURCES "server/*.cpp")
-file(GLOB HEADERS "server/*.h")
+file(GLOB_RECURSE SOURCES "server/*.cpp")
+file(GLOB_RECURSE HEADERS "server/*.h")
 file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.h)
 list(APPEND HEADERS "${WRAPPER_HEADERS}")
 file(GLOB WRAPPER_HEADERS extern/vray-zmq-wrapper/include/*.hpp)
@@ -48,11 +51,14 @@ use_qt(${QT_ROOT})
 use_vray_appsdk(${LIBS_ROOT}/${CMAKE_SYSTEM_NAME}/appsdk)
 use_zmq(${LIBS_ROOT})
 
-if(WITH_STATIC_LIBC)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+if(UNIX AND NOT APPLE)
+	if(WITH_STATIC_LIBC)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+	endif()
 endif()
 
 add_executable(${PROJECT_NAME} "${SOURCES};${HEADERS}")
+
 link_with_vray_appsdk(${PROJECT_NAME})
 link_with_zmq(${PROJECT_NAME})
 link_with_qt()
