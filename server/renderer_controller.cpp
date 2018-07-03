@@ -841,8 +841,12 @@ void RendererController::rendererMessage(VRayMessage && message) {
 		options = renderer->getOptions();
 		if (message.getValue<AttrSimpleType<int>>()->value != options.showFrameBuffer) {
 			const bool show = message.getValue<AttrSimpleType<int>>()->value;
+
 			renderer->vfb.show(show, false);
 			Logger::log(Logger::APIDump, "renderer.vfb.show(", show, ", false);");
+
+			renderer->vfb.setAlwaysOnTop(true);
+			Logger::log(Logger::APIDump, "renderer.vfb.setAlwaysOnTop(true);");
 		}
 		break;
 	case VRayMessage::RendererAction::SetViewportImageFormat:
