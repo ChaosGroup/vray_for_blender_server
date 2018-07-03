@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     cmake.append('-DQT_ROOT=%s' % get_qt_path(args.kdrive2_path))
     cmake.append('-DCMAKE_BUILD_TYPE=Release')
-    cmake.append('-DCMAKE_INSTALL_PREFIX=%s' % install_path)
+    cmake.append('-DVRAY_ZMQ_SERVER_INSTALL_PREFIX=%s' % install_path)
     cmake.append('-DLIBS_ROOT=%s' % args.libs_path)
     cmake.append(args.source_path)
 
