@@ -43,44 +43,35 @@ def get_ninja_path(src_dir):
 
 def get_qt_path(sdk_path):
     if is_win():
-        return os.path.join(args.kdrive2_path, 'qt', '5.6')
+        return os.path.join(sdk_path, 'Windows', 'qt')
     if is_lnx():
-        return os.path.join(args.kdrive2_path, 'qt', 'maya2018')
+        return os.path.join(sdk_path, 'Linux', 'qt')
     if is_mac():
-        return os.path.join(args.kdrive2_path, 'qt', 'maya2017')
+        return os.path.join(sdk_path, 'Darwin', 'qt')
 
-
-def setup_msvc_2015(sdkPath):
+def setup_msvc_2015_xpak(rootDir):
     env = {
         'INCLUDE' : [
-            "{KDRIVE}/msvs2015/PlatformSDK/Include/shared",
-            "{KDRIVE}/msvs2015/PlatformSDK/Include/um",
-            "{KDRIVE}/msvs2015/PlatformSDK/Include/winrt",
-            "{KDRIVE}/msvs2015/PlatformSDK/Include/ucrt",
-            "{KDRIVE}/msvs2015/include",
-            "{KDRIVE}/msvs2015/atlmfc/include",
+            "{xpakRoot}/MSVS2015/include",
+            "{xpakRoot}/MSVS2015/atlmfc/include",
         ],
 
         'LIB' : [
-            "{KDRIVE}/msvs2015/PlatformSDK/Lib/winv6.3/um/x64",
-            "{KDRIVE}/msvs2015/PlatformSDK/Lib/ucrt/x64",
-            "{KDRIVE}/msvs2015/atlmfc/lib/amd64",
-            "{KDRIVE}/msvs2015/lib/amd64",
+            "{xpakRoot}/MSVS2015/PlatformSDK/Lib/winv6.3/um/x64",
+            "{xpakRoot}/MSVS2015/PlatformSDK/Lib/ucrt/x64",
+            "{xpakRoot}/MSVS2015/atlmfc/lib/x64",
+            "{xpakRoot}/MSVS2015/lib/x64",
         ],
 
         'PATH' : [
-            "{KDRIVE}/msvs2015/bin/amd64",
-            "{KDRIVE}/msvs2015/bin",
-            "{KDRIVE}/msvs2015/PlatformSDK/bin/x64",
+            "{xpakRoot}/MSVS2015/bin/Hostx64/x64",
+            "{xpakRoot}/MSVS2015/bin",
+            "{xpakRoot}/MSVS2015/PlatformSDK/bin/x64",
         ] + os.environ['PATH'].split(os.pathsep),
-
-        '__MS_VC_INSTALL_PATH' : [
-            "{KDRIVE}/msvs2015"
-        ],
     }
 
     for var in env:
-        os.environ[var] = os.pathsep.join(env[var]).format(KDRIVE=sdkPath)
+        os.environ[var] = os.pathsep.join(env[var]).format(xpakRoot=rootDir)
 
 
 
@@ -89,7 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('--install_path', default = "./")
     parser.add_argument('--source_path', default = "")
     parser.add_argument('--libs_path', default = "")
-    parser.add_argument('--kdrive2_path', default = "")
+    parser.add_argument('--xpak_path', default = "")
     args = parser.parse_args()
 
     install_path = os.path.normpath(args.install_path)
@@ -102,11 +93,11 @@ if __name__ == '__main__':
     if not os.path.exists(args.libs_path):
         exit_error("Invaliud libs_path: %s" % args.libs_path)
 
-    if not os.path.exists(args.kdrive2_path):
-        exit_error("Invaliud kdrive2_path: %s" % args.kdrive2_path)
+    if not os.path.exists(args.xpak_path):
+        exit_error("Invaliud xpak_path: %s" % args.xpak_path)
 
     if is_win():
-        setup_msvc_2015(args.kdrive2_path)
+        setup_msvc_2015(args.xpak_path)
 
     cmake = ['cmake']
 
@@ -118,7 +109,7 @@ if __name__ == '__main__':
         cmake.append("-DCMAKE_CXX_COMPILER=g++")
         cmake.append("-DWITH_STATIC_LIBC=ON")
 
-    cmake.append('-DQT_ROOT=%s' % get_qt_path(args.kdrive2_path))
+    cmake.append('-DQT_ROOT=%s' % get_qt_path(args.libs_path))
     cmake.append('-DCMAKE_BUILD_TYPE=Release')
     cmake.append('-DVRAY_ZMQ_SERVER_INSTALL_PREFIX=%s' % install_path)
     cmake.append('-DLIBS_ROOT=%s' % args.libs_path)

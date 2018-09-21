@@ -51,9 +51,6 @@ macro(use_qt _qt_root)
 
 	include_directories(${QT_INCLUDES})
 	link_directories(${QT_LIBPATH})
-	if (UNIX AND NOT APPLE)
-		link_directories(${QT_ROOT}/../../maya/maya2018/lib)
-	endif()
 endmacro()
 
 
